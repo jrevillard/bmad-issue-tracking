@@ -1,0 +1,14 @@
+diff --git a/_bmad/bmm/workflows/4-implementation/sprint-status/workflow.yaml b/_bmad/bmm/workflows/4-implementation/sprint-status/workflow.yaml
+index 290b1ce3..6257ce87 100644
+--- a/_bmad/bmm/workflows/4-implementation/sprint-status/workflow.yaml
++++ b/_bmad/bmm/workflows/4-implementation/sprint-status/workflow.yaml
+@@ -17,6 +17,9 @@ instructions: "{installed_path}/instructions.md"
+ # Inputs
+ sprint_status_file: "{implementation_artifacts}/sprint-status.yaml"
+ 
++# Issue tracker tracking
++issue_tracking_enabled: "{config_source}:issue_tracking:enabled"
++
+ # Smart input file references
+ input_file_patterns:
+   sprint_status:

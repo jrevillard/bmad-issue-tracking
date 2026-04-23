@@ -1,0 +1,11 @@
+diff --git a/_bmad/bmm/workflows/4-implementation/dev-story/workflow.yaml b/_bmad/bmm/workflows/4-implementation/dev-story/workflow.yaml
+index b5ee9308..870f5de6 100644
+--- a/_bmad/bmm/workflows/4-implementation/dev-story/workflow.yaml
++++ b/_bmad/bmm/workflows/4-implementation/dev-story/workflow.yaml
+@@ -18,3 +18,6 @@ story_file: "" # Explicit story path; auto-discovered if empty
+ implementation_artifacts: "{config_source}:implementation_artifacts"
+ sprint_status: "{implementation_artifacts}/sprint-status.yaml"
+ project_context: "**/project-context.md"
++
++# Issue tracker tracking
++issue_tracking_enabled: "{config_source}:issue_tracking:enabled"

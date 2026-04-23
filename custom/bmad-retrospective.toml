@@ -1,0 +1,21 @@
+# Issue Tracking override for bmad-retrospective
+# Creates an issue (GitLab or GitHub) when a retrospective is saved.
+# Overrides merge: scalars win, arrays append.
+
+[workflow]
+
+# Scalar: runs after Step 12 (Final Summary and Handoff).
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After saving the retrospective document and updating sprint-status, create an issue for the retrospective by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
+3. Search for an existing retrospective issue (title contains "epic-{epic_number}-retrospective"). If found, skip creation.
+4. If no issue exists, create it with:
+   - Title: "{retrospective_title}"
+   - Labels: type{sep}retrospective, status{sep}done, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_number} (use :: for GitLab, : for GitHub)
+   - Description: the retrospective document content
+   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.
+"""

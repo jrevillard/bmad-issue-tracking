@@ -1,0 +1,36 @@
+diff --git a/_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml b/_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml
+index 3c4989f3..00f7bfce 100644
+--- a/_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml
++++ b/_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml
+@@ -213,6 +213,13 @@
+       </check>
+
+       <action>Store {{current_sprint_status}} for later use</action>
++
++      <!-- Sync to Issue tracker if tracking enabled -->
++      <check if="issue_tracking is enabled in config">
++        <action>Read the shared sync task at `_bmad/_config/custom/bmad-bmm-issue-sync.md` and follow Steps 1-4 to sync the story's in-progress status to the issue tracker. Use the platform CLI detected in Step 1 (glab or gh).</action>
++        <check if="Issue tracker is NOT reachable at any point">
++          <note>Issue tracker unavailable — status will be synced on next connection</note>
++        </check>
++      </check>
+      </check>
+
+      <check if="{{sprint_status}} file does NOT exist">
+@@ -350,6 +357,20 @@
+       <action>Update development_status[{{story_key}}] = "review"</action>
+       <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+       <output>✅ Story status updated to "review" in sprint-status.yaml</output>
++
++      <!-- Sync to Issue tracker if tracking enabled -->
++      <check if="issue_tracking is enabled in config">
++        <action>Read the shared sync task at `_bmad/_config/custom/bmad-bmm-issue-sync.md` and follow Steps 1-4 to sync the story's review status to the issue tracker. Use the platform CLI detected in Step 1 (glab or gh).</action>
++        <check if="Issue tracker is NOT reachable at any point">
++          <note>Issue tracker unavailable — status will be synced on next connection</note>
++        </check>
++
++        <output>⚠️ **Issue Tracking**: When creating the Merge/Pull Request for this story, include `Closes #ISSUE_NUMBER` in the MR/PR description to link it to the issue tracker issue.</output>
++      </check>
+      </check>
+
+      <check if="{sprint_status} file does NOT exist OR {{current_sprint_status}} == 'no-sprint-tracking'">

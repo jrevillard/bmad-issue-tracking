@@ -1,0 +1,17 @@
+diff --git a/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml b/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml
+index 0f1b7378..35b9ddfd 100644
+--- a/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml
++++ b/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.yaml
+@@ -21,8 +21,12 @@ project_context: "**/project-context.md"
+ project_name: "{config_source}:project_name"
+ 
+ # Tracking system configuration
+-tracking_system: "file-system" # Options: file-system, Future will support other options from config of mcp such as jira, linear, trello
+ project_key: "NOKEY" # Placeholder for tracker integrations; file-system uses a no-op key
++
++# Issue tracker tracking (read from config, fallback to disabled)
++issue_tracking_enabled: "{config_source}:issue_tracking:enabled"
++issue_tracking_prd_parent_issue: "{config_source}:issue_tracking:prd_parent_issue"
+ story_location: "{implementation_artifacts}" # Relative path for file-system, Future will support URL for Jira/Linear/Trello
+ story_location_absolute: "{implementation_artifacts}" # Absolute path for file operations
+ 

@@ -1,0 +1,21 @@
+# Issue Tracking override for bmad-create-story
+# Creates an issue (GitLab or GitHub) when a story file is created.
+# Overrides merge: scalars win, arrays append.
+
+[workflow]
+
+# Scalar: runs after Step 6 (Update sprint status and finalize).
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After saving the story file and updating sprint-status.yaml, create an issue for the story by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
+3. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". If found, skip creation.
+4. If no issue exists, create it with:
+   - Title: "{epic_num}.{story_num} {story_title}"
+   - Labels: type{sep}story, status{sep}ready-for-dev, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_num} (use :: for GitLab, : for GitHub)
+   - Description: **Sprint Key:** `{story_key}` / **Epic:** {epic_num} / **PRD:** {prd_key} / --- / {acceptance_criteria}
+   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.
+"""
