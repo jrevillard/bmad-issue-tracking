@@ -152,7 +152,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
   - `epic-N` → N | `epic-N-retrospective` → N | `qa-*` → first `epic-N` occurrence | `N-N-*` → first N
 
 <action>For each entry, determine the title:</action>
-  - **Epic**: Read `{planning_artifacts}/epic-N-*.md`. Format: `"Epic N: {heading}"`
+  - **Epic**: Read `{planning_artifacts}/epics.md` and extract the section starting with `## Epic N:` up to the next `## Epic` heading (or end of file). Format: `"Epic N: {first heading after ## Epic N:}"`
   - **Story**: Read `{story_location}/{entry_key}.md`. Format: `"EPIC.STORY {title}"`. If file missing, derive from key.
   - **QA**: Derive from key. Format: `"QA: {title}"`
   - **Retrospective**: Read `{story_location}/epic-N-retrospective.md`. Format: `"Retrospective: Epic N"`
@@ -173,7 +173,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 
     ---
 
-    {full content of story/epic file, or omit section if no file}
+    {full content of story file, or the extracted epic section from epics.md, or omit if no file}
     ```
   - Create with labels: `type{sep}{TYPE},status{sep}{YAML_STATUS},prd{sep}{prd_key},{prd_key}{sep}epic-{EPIC}`
   - Use the platform-appropriate create-issue command (note the `@` prefix difference for description files)
