@@ -12,35 +12,30 @@ Uses BMAD's native TOML customization where available and `.patch` files for wor
 
 ## Installation
 
-### 1. Copy module identity
+### 1. Install the module via BMAD installer
 
 ```bash
-cp module.yaml _bmad/
+npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking
 ```
 
-### 2. Run the install script
+This registers three skills as slash commands:
+- `/bmad-bmm-issue-sync` — Sync sprint status to issues
+- `/bmad-bmm-issue-link` — Link merged MRs/PRs to issues
+- `/bmad-issue-tracking-setup` — Apply integration patches (run once)
+
+### 2. Run the setup skill
+
+```
+/bmad-issue-tracking-setup
+```
+
+This applies TOML overrides, patches BMM workflow files, and configures the platform. You can also run the patch script manually:
 
 ```bash
-./patches/patch-bmm.sh
+bash skills/bmad-issue-tracking-setup/assets/patches/patch-bmm.sh --force
 ```
 
-Or specify the project root:
-
-```bash
-./patches/patch-bmm.sh /path/to/your/project
-```
-
-The script is **idempotent** — safe to run multiple times.
-
-### 3. Configure platform and PRD key
-
-Edit `_bmad/bmm/config.yaml` (injected by the install script):
-
-```yaml
-issue_tracking:
-  enabled: true
-  platform: gitlab  # or "github"
-```
+### 3. Configure PRD key
 
 Add `prd_key` to your PRD frontmatter:
 
@@ -52,7 +47,17 @@ prd_key: my-initiative
 
 ## What gets installed
 
-### TOML overrides (native BMAD customization)
+### Skills (via BMAD installer)
+
+Registered as slash commands in your IDE.
+
+| Skill | Command | Purpose |
+|---|---|---|
+| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues |
+| Link MRs/PRs | `/bmad-bmm-issue-link` | Link merged MRs/PRs to issues |
+| Setup | `/bmad-issue-tracking-setup` | One-time integration setup |
+
+### TOML overrides (via setup)
 
 Survive BMM updates automatically.
 
@@ -61,7 +66,7 @@ Survive BMM updates automatically.
 | `_bmad/custom/bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue when a story is created |
 | `_bmad/custom/bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue when a retrospective is saved |
 
-### Patch files (pending BMAD customization support)
+### Patch files (via setup)
 
 4 workflows don't have `customize.toml` yet ([BMAD issue #2303](https://github.com/bmad-code-org/BMAD-METHOD/issues/2303)).
 
@@ -73,9 +78,9 @@ Survive BMM updates automatically.
 | `*-sprint-planning-*` | `sprint-planning/` | Adds issue sync step |
 | `*-sprint-status-*` | `sprint-status/` | Adds issue reconciliation |
 
-### Shared custom tasks
+### Shared custom tasks (via setup)
 
-Copied to `_bmad/_config/custom/` — survive BMM updates.
+Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 
 - `bmad-bmm-issue-sync.md` — Sync `sprint-status.yaml` to issues (GitLab or GitHub)
 - `bmad-bmm-issue-link.md` — Link merged MRs/PRs to issues
@@ -110,9 +115,10 @@ Three-tier matching: pattern, AI context, manual.
 
 ## After BMM updates
 
+- **Skills** — update via `npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking`
 - **TOML overrides** — no action needed
 - **Shared tasks** — no action needed
-- **Patches** — re-run `./patches/patch-bmm.sh`. If a patch fails, inspect with `git apply --stat`.
+- **Patches** — re-run `/bmad-issue-tracking-setup` or `patch-bmm.sh`. If a patch fails, inspect with `git apply --stat`.
 
 ## Disabling
 

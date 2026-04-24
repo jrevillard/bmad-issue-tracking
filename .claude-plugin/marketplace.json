@@ -1,0 +1,23 @@
+{
+  "name": "bmad-issue-tracking",
+  "owner": { "name": "Jerome Revillard" },
+  "description": "BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Issues via their respective CLIs (glab / gh).",
+  "license": "MIT",
+  "homepage": "https://github.com/jrevillard/bmad-issue-tracking",
+  "repository": "https://github.com/jrevillard/bmad-issue-tracking",
+  "keywords": ["bmad", "gitlab", "github", "issue-tracking", "sprint"],
+  "plugins": [
+    {
+      "name": "bmad-issue-tracking",
+      "source": "./",
+      "description": "Unified GitLab/GitHub issue tracking for BMAD sprint workflows",
+      "version": "1.0.0",
+      "author": { "name": "Jerome Revillard" },
+      "skills": [
+        "./skills/bmad-bmm-issue-sync",
+        "./skills/bmad-bmm-issue-link",
+        "./skills/bmad-issue-tracking-setup"
+      ]
+    }
+  ]
+}

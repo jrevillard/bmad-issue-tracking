@@ -3,14 +3,14 @@
 # Copies TOML overrides and shared custom tasks, then applies .patch files.
 # Safe to re-run after BMM module updates.
 #
-# Usage: ./patches/patch-bmm.sh [--force] [PROJECT_ROOT]
+# Usage: ./patch-bmm.sh [--force] [PROJECT_ROOT]
 #   PROJECT_ROOT defaults to the repository root (detected from git).
 #   --force overwrites existing files instead of skipping them.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TASK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ASSETS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CUSTOM_DIR="_bmad/_config/custom"
 TOML_DIR="_bmad/custom"
 
@@ -58,36 +58,13 @@ SKIPPED=0
 FAILED=0
 
 # ──────────────────────────────────────────────
-# 1. Copy module.yaml
-# ──────────────────────────────────────────────
-
-MODULE_SRC="$TASK_DIR/module.yaml"
-MODULE_DST="$PROJECT_ROOT/_bmad/module.yaml"
-if [ -f "$MODULE_SRC" ]; then
-  if [ -f "$MODULE_DST" ] && [ "$FORCE" != true ]; then
-    echo "  SKIPPED: _bmad/module.yaml (already exists — use --force to overwrite)"
-    SKIPPED=$((SKIPPED + 1))
-  else
-    if [ -f "$MODULE_DST" ]; then
-      echo "  WARN: Overwriting existing _bmad/module.yaml (use --force only if intentional)"
-    fi
-    cp "$MODULE_SRC" "$MODULE_DST"
-    echo "  APPLIED: _bmad/module.yaml"
-    APPLIED=$((APPLIED + 1))
-  else
-    echo "  SKIPPED: _bmad/module.yaml (already exists)"
-    SKIPPED=$((SKIPPED + 1))
-  fi
-fi
-
-# ──────────────────────────────────────────────
-# 2. Copy shared custom tasks to _config/custom
+# 1. Copy shared custom tasks to _config/custom
 # ──────────────────────────────────────────────
 
 TARGET_CUSTOM="$PROJECT_ROOT/$CUSTOM_DIR"
 mkdir -p "$TARGET_CUSTOM"
 
-for task_file in "$TASK_DIR"/_config/custom/bmad-bmm-issue-*.md; do
+for task_file in "$ASSETS_DIR"/shared-tasks/bmad-bmm-issue-*.md; do
   [ -f "$task_file" ] || continue
   basename_f="$(basename "$task_file")"
   target="$TARGET_CUSTOM/$basename_f"
@@ -104,13 +81,13 @@ done
 echo ""
 
 # ──────────────────────────────────────────────
-# 3. Copy TOML overrides to _bmad/custom
+# 2. Copy TOML overrides to _bmad/custom
 # ──────────────────────────────────────────────
 
 TARGET_TOML="$PROJECT_ROOT/$TOML_DIR"
 mkdir -p "$TARGET_TOML"
 
-for toml_file in "$TASK_DIR"/custom/bmad-*.toml; do
+for toml_file in "$ASSETS_DIR"/custom/bmad-*.toml; do
   [ -f "$toml_file" ] || continue
   basename_f="$(basename "$toml_file")"
   target="$TARGET_TOML/$basename_f"
@@ -127,7 +104,7 @@ done
 echo ""
 
 # ──────────────────────────────────────────────
-# 4. Apply .patch files via git apply
+# 3. Apply .patch files via git apply
 # ──────────────────────────────────────────────
 
 for patch_file in "$SCRIPT_DIR"/*.patch; do

@@ -6,5 +6,3 @@ description: >-
   via their respective CLIs (glab / gh). Supports both cloud and self-hosted instances.
   Uses native BMAD TOML customization where available, patches for remaining workflows.
 extends-module: bmm
-config:
-  tasks: "_config/custom"
