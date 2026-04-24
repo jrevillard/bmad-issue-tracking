@@ -1,12 +1,17 @@
 ---
 name: bmad-bmm-issue-link
-description: 'Retroactively link merged MRs/PRs to their corresponding issues. Use when the user says "link MRs" or wants to connect merged work to issues.'
+description: 'Add cross-references between merged MRs/PRs and their corresponding issues. Use when the user says "link MRs" or wants to connect merged work to issues.'
 ---
 
-# Link Merged MRs/PRs to Issues
+# Cross-Reference Merged MRs/PRs to Issues
 
-> Shared custom BMAD task — retroactively links merged Merge Requests (GitLab) or Pull Requests (GitHub) to their corresponding issues.
+> Shared custom BMAD task — adds comments on merged MRs/PRs referencing their corresponding issues.
 > Reads `issue_tracking.platform` from config to pick the CLI.
+>
+> **Important:** Neither GitLab nor GitHub provides an API to programmatically link MRs/PRs to Issues.
+> This task uses **comment-based cross-referencing** instead: it posts a comment on each matched MR/PR
+> referencing the related issue (e.g., "Related to #42"). This creates a visible link without side effects
+> (does not auto-close the issue).
 
 ## Prerequisites
 
@@ -20,9 +25,15 @@ Read `issue_tracking.platform` from `_bmad/bmm/config.yaml`.
 
 | Aspect | GitLab | GitHub |
 |---|---|---|
-| Fetch merged | `glab api --paginate "projects/$PROJECT_ID/merge_requests?state=merged&per_page=500" --hostname $HOST` | `gh pr list --state merged --json number,title,body,headRefName,mergedAt --limit 500 -R "$OWNER/$REPO"` |
-| Link command | `glab api --method POST "projects/$PROJECT_ID/merge_requests/$IID/links" --hostname $HOST -f "target_issue_iid=$ISSUE_IID"` | `gh api "repos/$OWNER/$REPO/pulls/{number}/linked_issues" -f "issue_number=$ISSUE_NUMBER" [--hostname $HOST]` |
-| Reference syntax | `Closes #IID` in MR description | `Closes #NUMBER` in PR description |
+| Fetch merged MRs | `glab api --paginate "projects/$PROJECT_ID/merge_requests?state=merged&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/pulls?state=closed&per_page=100" --hostname $HOST --jq '.[] \| select(.merged_at != null)'` |
+| Fetch merged PRs | (same as above) | (same as above) |
+| Add comment | `glab api --method POST "projects/$PROJECT_ID/merge_requests/$IID/notes" --hostname $HOST -f "body=..."` | `gh api "repos/$OWNER/$REPO/issues/{number}/comments" --hostname $HOST -f "body=..."` |
+| List comments | `glab api "projects/$PROJECT_ID/merge_requests/$IID/notes" --hostname $HOST --paginate` | `gh api "repos/$OWNER/$REPO/issues/{number}/comments" --hostname $HOST --paginate` |
+| Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." --hostname $HOST` |
+
+**Note on GitHub merged PRs:** GitHub has no `state=merged` filter for the pulls API. Use `state=closed` and filter by `merged_at != null`. Use `--jq` to extract only merged PRs.
+
+**Note on GitHub `gh api`:** Does NOT accept `-R`. Uses `{owner}/{repo}` in endpoint URL.
 
 ## Error Handling
 
@@ -44,47 +55,57 @@ All commands may fail. Log a warning and continue.
 </step>
 
 <step n="2" goal="Fetch merged MRs/PRs and issues">
-<action>Fetch all merged MRs/PRs using the platform-appropriate fetch command. Build an in-memory index.</action>
-<action>Fetch all open and closed PRD issues using the platform-appropriate search with label `prd{sep}{prd_key}`. Build an in-memory index.</action>
+<action>Fetch all merged MRs/PRs using the platform-appropriate fetch command. Build an in-memory index keyed by MR/PR number.</action>
+<action>Fetch all PRD issues using the platform-appropriate search with label `prd{sep}{prd_key}`. Build an in-memory index keyed by issue number.</action>
 </step>
 
-<step n="3" goal="Tier 1 — Pattern matching">
+<step n="3" goal="Pattern matching">
 <action>For each merged MR/PR, attempt pattern matching against issue titles:</action>
 
 Pattern rules (in order):
-1. **Story key in title**: PR/MR title contains `N.N-` pattern. Extract story key and find issue whose title starts with `N.N `
+1. **Story key in title**: MR/PR title contains `N.N-` pattern. Extract story key and find issue whose title starts with `N.N `
 2. **Epic reference**: Title or branch name contains `epic-N`. Find issues with label `{prd_key}{sep}epic-N`
-3. **Branch name**: Parse `headRefName` for story key patterns (e.g., `feature/1-3-backend-auth`)
+3. **Branch name**: Parse `source_branch` (GitLab) or `head.ref` (GitHub) for story key patterns (e.g., `feature/1-3-backend-auth`)
 
-<action>For each match, link using the platform-appropriate link command.</action>
-<note>Track which MRs/PRs were linked and which remain unmatched.</note>
+<note>Track which MRs/PRs were matched and which remain unmatched.</note>
 </step>
 
-<step n="4" goal="Tier 2 — AI context matching">
-<action>For each unmatched MR/PR:</action>
-1. Read title and body
-2. Read changed files (platform-appropriate diff command)
-3. Compare against unmatched issue titles and bodies
-4. If confident match, link
+<step n="4" goal="Check for existing cross-references">
+<action>For each matched MR/PR, check if a cross-reference comment already exists:</action>
+1. List comments using the platform-appropriate list-comments command
+2. Check if any comment body contains `Related to #{ISSUE_NUMBER}` or `Closes #{ISSUE_NUMBER}`
+3. If already referenced → skip
 
-<action>Link matched MRs/PRs.</action>
+<note>This ensures idempotency — re-running the task won't add duplicate comments.</note>
 </step>
 
-<step n="5" goal="Tier 3 — Manual resolution">
-<action>Present unmatched MRs/PRs to the user for manual linking. Skip any the user wants left unlinked.</action>
+<step n="5" goal="Add cross-reference comments">
+<action>For each matched MR/PR without an existing cross-reference, post a comment:</action>
+
+Comment body:
+```
+Related to #{ISSUE_NUMBER}
+```
+
+<action>Use the platform-appropriate add-comment command.</action>
 </step>
 
-<step n="6" goal="Report summary">
+<step n="6" goal="Tier 2 — Manual resolution">
+<action>Present unmatched MRs/PRs to the user for manual cross-referencing. Skip any the user wants left unlinked.</action>
+</step>
+
+<step n="7" goal="Report summary">
 <action>Display:</action>
 
 ```
-MR/PR-Issue Linking Summary
-===========================
-Platform:        {platform}
-Pattern matched:  {n}
-AI matched:       {n}
-Manually linked:  {n}
-Unlinked:         {n}
+MR/PR-Issue Cross-Reference Summary
+====================================
+Platform:           {platform}
+Pattern matched:    {n}
+Already referenced: {n} (skipped)
+Comments added:     {n}
+Manually linked:    {n}
+Unlinked:           {n}
 ```
 
 </step>
