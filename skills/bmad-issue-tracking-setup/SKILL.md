@@ -46,9 +46,12 @@ cp <path>/custom/*.toml _bmad/custom/
 ```
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
+- `bmad-check-implementation-readiness.toml` (requires BMM 6.3.1+)
 - `bmad-code-review.toml` (requires BMM 6.3.1+)
+- `bmad-correct-course.toml` (requires BMM 6.3.1+)
 - `bmad-create-story.toml` (requires BMM 6.3.1+)
 - `bmad-dev-story.toml` (requires BMM 6.3.1+)
+- `bmad-edit-prd.toml` (requires BMM 6.3.1+)
 - `bmad-retrospective.toml` (requires BMM 6.3.1+)
 - `bmad-sprint-planning.toml` (requires BMM 6.3.1+)
 - `bmad-sprint-status.toml` (requires BMM 6.3.1+)

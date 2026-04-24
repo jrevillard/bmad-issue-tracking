@@ -1,0 +1,49 @@
+# Issue Tracking override for bmad-correct-course
+# Updates issue descriptions when story/epic/PRD files are modified during a course correction.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.3.1+ (customize.toml support for this skill).
+
+[workflow]
+
+# Scalar: runs after the correct-course workflow completes.
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After completing the correct-course workflow, update issue descriptions for any artifacts that were modified. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
+
+3. For each artifact modified during correct-course, update the corresponding issue description:
+
+   **Story files** (e.g., `{implementation_artifacts}/{story_key}.md`):
+   - Find the issue whose description contains the story key
+   - Read the full story file content
+   - Write description to `/tmp/desc.md` using this format:
+
+     ```
+     **Sprint Key:** `{story_key}`
+     **Epic:** {epic_num}
+     **PRD:** {prd_key}
+
+     ---
+
+     {full story file content}
+     ```
+
+   **Epic entries** (sections in `{planning_artifacts}/epics.md`):
+   - Find the epic issue whose title starts with "Epic {N}:"
+   - Extract the epic section from epics.md (from `## Epic N:` to the next `## Epic` or end of file)
+   - Write description using the same header format with epic number
+
+   **PRD** (`{planning_artifacts}/prd.md`):
+   - Find the PRD issue whose title starts with "PRD:"
+   - Read the full PRD content
+   - Write description using the same header format (omit Sprint Key and Epic lines)
+
+4. Update the issue description using the platform-appropriate command:
+   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "description=@/tmp/desc.md"` — do NOT send the `labels` parameter, it would replace all labels
+   - **GitHub:** `gh issue edit {number} --body-file "/tmp/desc.md" -R "$OWNER/$REPO" [--hostname $HOST]`
+
+5. Clean up temp files.
+"""

@@ -59,14 +59,17 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 
 | Override file | Target workflow | Hook | Behavior |
 |---|---|---|---|
+| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
 | `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
-| `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue when a story is created |
+| `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
+| `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue with full story file content |
 | `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
-| `bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue when a retrospective is saved |
+| `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
+| `bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue with retrospective content |
 | `bmad-sprint-planning.toml` | `sprint-planning` | `on_complete` | Triggers full issue sync |
 | `bmad-sprint-status.toml` | `sprint-status` | `on_complete` | Triggers full issue sync |
 
-> **Note:** `code-review`, `dev-story`, `sprint-planning`, and `sprint-status` require BMM 6.3.1+ (customize.toml support for these workflows). `create-story` and `retrospective` are supported since BMM 6.3.0.
+> **Note:** All overrides require BMM 6.3.1+ (customize.toml support). `create-story` and `retrospective` have had support since BMM 6.3.0; the remaining 7 workflows gain support in BMM 6.3.1.
 
 ### Shared custom tasks (via setup)
 
