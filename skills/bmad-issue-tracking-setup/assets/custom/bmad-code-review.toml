@@ -1,0 +1,66 @@
+# Issue Tracking override for bmad-code-review
+# Posts review findings as a comment on the issue and updates status.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.3.1+ (customize.toml support for this skill).
+
+[workflow]
+
+# Scalar: runs after the code review workflow completes.
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After completing the code review, sync the story's status and post a review summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
+3. Find the issue whose description contains the story key. If not found, skip.
+4. Update the issue status:
+   - If review passed (no critical or important open issues): set status label to `done`, close the issue.
+   - If review found issues requiring fixes: set status label to `in-progress`, reopen if closed.
+5. Post a review summary comment on the issue. Write the comment to `/tmp/code-review-comment.md`. Replace all `{...}` placeholders with actual values from the review. For `**Reviewer:**`, use "AI Code Review" if the review was performed by the AI agent, or the user's name if invoked manually. Use this template:
+
+```
+## Code Review
+**Reviewer:** {name of reviewer}
+**Verdict:** passed | changes requested
+
+### Verifications
+- {e.g., linting: passed}
+- {e.g., tests: passed}
+- {e.g., type checking: passed}
+
+### Findings
+
+#### Critical
+1. {description} — `{file}:{line}`
+
+#### Important
+1. {description} — `{file}:{line}`
+
+#### Minor
+1. {description}
+
+### Fixed
+- {what was corrected during the review}
+
+### Remaining
+- {what still needs to be addressed, or "none" if all fixed}
+```
+
+If there are no findings at all, simplify to:
+
+```
+## Code Review
+**Reviewer:** {name of reviewer}
+**Verdict:** passed
+
+### Verifications
+- linting: passed
+- tests: passed
+
+No issues found.
+```
+
+6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row).
+7. Clean up temp files.
+"""

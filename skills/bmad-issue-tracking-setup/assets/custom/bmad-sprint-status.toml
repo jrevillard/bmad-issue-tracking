@@ -1,0 +1,13 @@
+# Issue Tracking override for bmad-sprint-status
+# Triggers a full issue sync after sprint status reconciliation.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.3.1+ (customize.toml support for this skill).
+
+[workflow]
+
+# Scalar: runs after sprint status reconciliation completes.
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After completing sprint status reconciliation, sync all entries to the issue tracker by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Run the full sync (Steps 1 through 5).
+"""

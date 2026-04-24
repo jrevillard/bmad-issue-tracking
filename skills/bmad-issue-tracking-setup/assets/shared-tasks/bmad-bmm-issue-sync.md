@@ -42,10 +42,12 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 |---|---|---|
 | Auth check | `glab auth status --hostname $HOST` | `gh auth status [--hostname $HOST]` |
 | Create label | `glab api --method POST "projects/$PROJECT_ID/labels" --hostname $HOST -f "name=..." -f "color=..." -f "description=..."` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." [--hostname $HOST]` |
+| Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." [--hostname $HOST]` |
 | Create issue | `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=..." -F "description=@/tmp/desc.md" -f "labels=..."` | `gh issue create --title "..." --body-file "/tmp/desc.md" --label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --label "..." --state open -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Close issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` | `gh issue close {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Reopen issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=reopen"` | `gh issue reopen {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Add comment | `glab api --method POST "projects/$PROJECT_ID/issues/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh issue comment {number} --body-file "/tmp/comment.md" -R "$OWNER/$REPO" [--hostname $HOST]` |
 
 **Description file:** GitLab uses `-F "description=@/tmp/file.md"` (with `@` prefix). GitHub uses `--body-file "/tmp/file.md"` (no `@` prefix).
 
@@ -179,11 +181,12 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 
   **B) Match found → UPDATE (if needed):**
   - Check title match (case-sensitive)
-  - Check status label match. Map: `drafted`→`ready-for-dev`, `contexted`→`in-progress`
+  - Map YAML status to label name: `drafted`→`ready-for-dev`, `contexted`→`in-progress`, all others map directly (e.g., `backlog`→`backlog`). Compare the mapped label name against the issue's current status label.
   - If both match → **SKIP**
-  - If different → update using the platform-appropriate update-issue command:
-    - Remove existing `status{sep}*` label, add new one
-    - If `done`/`closed` → close state; if `in-progress`/`review`/`ready-for-dev` → open state; otherwise omit state
+  - If different → update using the platform-appropriate commands:
+    - **GitLab**: `glab api --method PUT` with `-f "labels=..."` and `-f "state_event=..."` in a single call. **WARNING:** The `labels` field replaces ALL labels on the issue. You MUST include all existing labels (type, prd, epic labels) plus the updated status label. Fetch the issue's current labels first, remove the old status label, add the new one.
+    - **GitHub**: `gh issue edit` with `--add-label "new-status"` and `--remove-label "old-status"` (targeted add/remove, preserves other labels). Then use separate `gh issue close` or `gh issue reopen` for state changes — `gh issue edit` has no `--state` flag.
+    - If `done` or `closed` → close; if `in-progress`, `review`, or `ready-for-dev` → reopen; if `backlog`, `deferred`, or `optional` → do NOT change open/closed state
 
 <note>yaml is the fallback authority during outage — auto-push to issue tracker</note>
 </step>

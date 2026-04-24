@@ -1,0 +1,36 @@
+# Issue Tracking override for bmad-dev-story
+# Posts an implementation summary when the story transitions to review, and updates status.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.3.1+ (customize.toml support for this skill).
+
+[workflow]
+
+# Scalar: runs after the dev-story workflow completes.
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After completing the dev story, sync the story's status and post an implementation summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
+3. Find the issue whose description contains the story key. If not found, skip.
+4. Update the issue status label based on the workflow outcome:
+   - If the story is ready for review: set status label to `review`, reopen if closed.
+   - If the story was completed (all acceptance criteria met): set status label to `done`, close the issue.
+   - Otherwise: set status label to `in-progress`, reopen if closed.
+5. If the final status is `review`, post an implementation summary comment. Write the comment to `/tmp/dev-story-comment.md`. Summarize the key changes in 2-5 bullet points. For "Notes", include any known limitations, areas that need special attention, or deviations from the original story. Use this template:
+
+```
+## Ready for Review
+
+### Implemented
+- {key change 1}
+- {key change 2}
+
+### Notes
+- {point of attention for the reviewer}
+```
+
+6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row). Skip if the final status is not `review`.
+7. Clean up temp files.
+"""

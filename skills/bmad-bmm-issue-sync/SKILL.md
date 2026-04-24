@@ -47,6 +47,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 | Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Close issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` | `gh issue close {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Reopen issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=reopen"` | `gh issue reopen {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Add comment | `glab api --method POST "projects/$PROJECT_ID/issues/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh issue comment {number} --body-file "/tmp/comment.md" -R "$OWNER/$REPO" [--hostname $HOST]` |
 
 **Description file:** GitLab uses `-F "description=@/tmp/file.md"` (with `@` prefix). GitHub uses `--body-file "/tmp/file.md"` (no `@` prefix).
 
@@ -180,12 +181,12 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 
   **B) Match found → UPDATE (if needed):**
   - Check title match (case-sensitive)
-  - Check status label match. Map: `drafted`→`ready-for-dev`, `contexted`→`in-progress`
+  - Map YAML status to label name: `drafted`→`ready-for-dev`, `contexted`→`in-progress`, all others map directly (e.g., `backlog`→`backlog`). Compare the mapped label name against the issue's current status label.
   - If both match → **SKIP**
   - If different → update using the platform-appropriate commands:
-    - **GitLab**: `glab api --method PUT` with `-f "labels=..."` and `-f "state_event=..."` in a single call
+    - **GitLab**: `glab api --method PUT` with `-f "labels=..."` and `-f "state_event=..."` in a single call. **WARNING:** The `labels` field replaces ALL labels on the issue. You MUST include all existing labels (type, prd, epic labels) plus the updated status label. Fetch the issue's current labels first, remove the old status label, add the new one.
     - **GitHub**: `gh issue edit` with `--add-label "new-status"` and `--remove-label "old-status"` (targeted add/remove, preserves other labels). Then use separate `gh issue close` or `gh issue reopen` for state changes — `gh issue edit` has no `--state` flag.
-    - If `done`/`closed` → close; if `in-progress`/`review`/`ready-for-dev` → reopen; otherwise omit state
+    - If `done` or `closed` → close; if `in-progress`, `review`, or `ready-for-dev` → reopen; if `backlog`, `deferred`, or `optional` → do NOT change open/closed state
 
 <note>yaml is the fallback authority during outage — auto-push to issue tracker</note>
 </step>

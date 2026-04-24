@@ -12,9 +12,9 @@ After saving the retrospective document and updating sprint-status, create an is
 
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Search for an existing retrospective issue (title contains "epic-{epic_number}-retrospective"). If found, skip creation.
+3. Search for an existing retrospective issue whose title starts with "Retrospective: Epic {epic_number}" or whose description contains "epic-{epic_number}-retrospective". If found, skip creation.
 4. If no issue exists, create it with:
-   - Title: "{retrospective_title}"
+   - Title: "Retrospective: Epic {epic_number}" (where {epic_number} is extracted from the sprint-status key, e.g., `3` from `epic-3-retrospective`)
    - Labels: type{sep}retrospective, status{sep}done, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_number} (use :: for GitLab, : for GitHub)
    - Description: the retrospective document content
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.

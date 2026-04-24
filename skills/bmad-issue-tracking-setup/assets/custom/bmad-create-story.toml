@@ -16,6 +16,6 @@ After saving the story file and updating sprint-status.yaml, create an issue for
 4. If no issue exists, create it with:
    - Title: "{epic_num}.{story_num} {story_title}"
    - Labels: type{sep}story, status{sep}ready-for-dev, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_num} (use :: for GitLab, : for GitHub)
-   - Description: **Sprint Key:** `{story_key}` / **Epic:** {epic_num} / **PRD:** {prd_key} / --- / {acceptance_criteria}
+   - Description: **Sprint Key:** `{story_key}` (the sprint-status entry key, e.g., `1-3-login-form`) / **Epic:** {epic_num} / **PRD:** {prd_key} / --- / {acceptance_criteria} (extracted from the story file's Acceptance Criteria section)
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.
 """
