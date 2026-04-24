@@ -1,3 +1,8 @@
+---
+name: bmad-bmm-issue-link
+description: 'Retroactively link merged MRs/PRs to their corresponding issues. Use when the user says "link MRs" or wants to connect merged work to issues.'
+---
+
 # Link Merged MRs/PRs to Issues
 
 > Shared custom BMAD task — retroactively links merged Merge Requests (GitLab) or Pull Requests (GitHub) to their corresponding issues.

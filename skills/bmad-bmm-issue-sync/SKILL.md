@@ -1,3 +1,8 @@
+---
+name: bmad-bmm-issue-sync
+description: 'Sync sprint-status.yaml entries to GitLab/GitHub Issues. Use when the user says "sync issues" or wants to push sprint status to the issue tracker.'
+---
+
 # Sync Sprint Status to Issues (GitLab or GitHub)
 
 > Shared custom BMAD task — syncs `sprint-status.yaml` to GitLab Issues or GitHub Issues.

@@ -1,3 +1,8 @@
+---
+name: bmad-issue-tracking-setup
+description: 'One-time setup for issue tracking integration. Use after installing the module to apply TOML overrides and patches.'
+---
+
 # Issue Tracking Setup
 
 One-time setup for BMAD Issue Tracking integration. Applies TOML overrides and patches to BMM workflow files.
