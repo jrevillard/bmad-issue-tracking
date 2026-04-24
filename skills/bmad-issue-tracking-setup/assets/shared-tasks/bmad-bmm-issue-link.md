@@ -25,15 +25,15 @@ Read `issue_tracking.platform` from `_bmad/bmm/config.yaml`.
 
 | Aspect | GitLab | GitHub |
 |---|---|---|
-| Fetch merged MRs | `glab api --paginate "projects/$PROJECT_ID/merge_requests?state=merged&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/pulls?state=closed&per_page=100" --hostname $HOST --jq '.[] \| select(.merged_at != null)'` |
+| Fetch merged MRs | `glab api --paginate "projects/$PROJECT_ID/merge_requests?state=merged&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/pulls?state=closed&per_page=100" --hostname $HOST` |
 | Fetch merged PRs | (same as above) | (same as above) |
-| Add comment | `glab api --method POST "projects/$PROJECT_ID/merge_requests/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh issue comment {number} --body-file "/tmp/comment.md" -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Add comment | `glab api --method POST "projects/$PROJECT_ID/merge_requests/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh pr comment {number} --body-file "/tmp/comment.md" -R "$OWNER/$REPO" [--hostname $HOST]` |
 | List comments | `glab api "projects/$PROJECT_ID/merge_requests/$IID/notes" --hostname $HOST --paginate` | `gh api "repos/$OWNER/$REPO/issues/{number}/comments" --hostname $HOST --paginate` |
 | Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." --hostname $HOST` |
 
-**Note on GitHub merged PRs:** GitHub has no `state=merged` filter for the pulls API. Use `state=closed` and filter by `merged_at != null`. Use `--jq` to extract only merged PRs.
+**Note on GitHub merged PRs:** GitHub has no `state=merged` filter for the pulls API. Fetch all closed PRs, then filter in-memory: include only items where `merged_at` is not null. Do NOT use `--jq` — the AI parses JSON natively.
 
-**Note on GitHub `gh api`:** Does NOT accept `-R`. Uses `{owner}/{repo}` in endpoint URL. Other `gh` subcommands (`gh issue comment`, `gh pr list`, etc.) DO accept `-R`.
+**Note on GitHub `gh api`:** Does NOT accept `-R`. Uses `{owner}/{repo}` in endpoint URL. Other `gh` subcommands (`gh issue comment`, `gh pr comment`, `gh pr list`, etc.) DO accept `-R`.
 
 ## Error Handling
 
@@ -63,7 +63,7 @@ All commands may fail. Log a warning and continue.
 <action>For each merged MR/PR, attempt pattern matching against issue titles:</action>
 
 Pattern rules (in order):
-1. **Story key in title**: MR/PR title contains `N-N-` pattern (e.g., `feat/1-3-login-form`). Extract the story key, convert dashes to dots (e.g., `1-3` → `1.3`), and find issue whose title starts with `N.N ` (e.g., `1.3 Login Form`)
+1. **Story key in title**: MR/PR title contains `N-N-` pattern (e.g., `feat/1-3-login-form`). Extract the story key, convert dashes to dots (e.g., `1-3` → `1.3`, `10-15` → `10.15`), and find issue whose title starts with `N.N ` (e.g., `1.3 Login Form`). Supports multi-digit epic and story numbers.
 2. **Epic reference**: Title or branch name contains `epic-N`. Find issues with label `{prd_key}{sep}epic-N`
 3. **Branch name**: Parse `source_branch` (GitLab) or `head.ref` (GitHub) for story key patterns (e.g., `feature/1-3-backend-auth`)
 

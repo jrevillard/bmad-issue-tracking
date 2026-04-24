@@ -4,5 +4,5 @@ version: 1.0.0
 description: >-
   BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Issues
   via their respective CLIs (glab / gh). Supports both cloud and self-hosted instances.
-  Uses native BMAD TOML customization where available, patches for remaining workflows.
+  Uses native BMAD TOML customization for all workflow integrations.
 extends-module: bmm

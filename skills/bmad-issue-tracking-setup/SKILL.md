@@ -55,6 +55,8 @@ cp <path>/custom/*.toml _bmad/custom/
 - `bmad-retrospective.toml` (requires BMM 6.3.1+)
 - `bmad-sprint-planning.toml` (requires BMM 6.3.1+)
 - `bmad-sprint-status.toml` (requires BMM 6.3.1+)
+
+<action>Verify each TOML file is valid by checking it contains a `[workflow]` section and an `on_complete` key.</action>
 </step>
 
 <step n="4" goal="Configure issue_tracking in BMM config">

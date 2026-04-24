@@ -17,7 +17,7 @@ After completing the code review, sync the story's status and post a review summ
 4. Update the issue status:
    - If review passed (no critical or important open issues): set status label to `done`, close the issue.
    - If review found issues requiring fixes: set status label to `in-progress`, reopen if closed.
-5. Post a review summary comment on the issue. Write the comment to `/tmp/code-review-comment.md`. Replace all `{...}` placeholders with actual values from the review. For `**Reviewer:**`, use "AI Code Review" if the review was performed by the AI agent, or the user's name if invoked manually. Use this template:
+5. Post a review summary comment on the issue. Write the comment to `/tmp/code-review-comment.md`. Fill in the template below with actual values from the review (these are illustrative placeholders, NOT config variables). For `**Reviewer:**`, use "AI Code Review" if the review was performed by the AI agent, or the user's name if invoked manually. Use this template:
 
 ```
 ## Code Review

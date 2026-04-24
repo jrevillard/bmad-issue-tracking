@@ -17,5 +17,9 @@ After saving the retrospective document and updating sprint-status, create an is
    - Title: "Retrospective: Epic {epic_number}" (where {epic_number} is extracted from the sprint-status key, e.g., `3` from `epic-3-retrospective`)
    - Labels: type{sep}retrospective, status{sep}done, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_number} (use :: for GitLab, : for GitHub)
    - Description: the retrospective document content
-   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.
+   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub).
+   Since the initial status label is `done`, close the issue immediately after creation:
+   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` (do NOT send `labels` parameter)
+   - **GitHub:** `gh issue close {number} -R "$OWNER/$REPO" [--hostname $HOST]`
+   Clean up temp files.
 """

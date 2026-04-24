@@ -10,12 +10,23 @@ First, check if issue tracking is enabled by reading `issue_tracking.enabled` fr
 
 After saving the story file and updating sprint-status.yaml, create an issue for the story by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
+Note: The BMM workflow may set the story status to `drafted` in sprint-status.yaml, but the issue is created with label `ready-for-dev` (the sync task maps `drafted` → `ready-for-dev`). This is intentional — the next full sync will reconcile if needed.
+
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
 3. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". If found, skip creation.
 4. If no issue exists, create it with:
    - Title: "{epic_num}.{story_num} {story_title}"
    - Labels: type{sep}story, status{sep}ready-for-dev, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_num} (use :: for GitLab, : for GitHub)
-   - Description: **Sprint Key:** `{story_key}` (the sprint-status entry key, e.g., `1-3-login-form`) / **Epic:** {epic_num} / **PRD:** {prd_key} / --- / {acceptance_criteria} (extracted from the story file's Acceptance Criteria section)
-   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub). Clean up temp files.
+   - Description: write to `/tmp/issue-desc.md` the full story file content, prefixed with a header:
+     ```
+     **Sprint Key:** `{story_key}` (the sprint-status entry key, e.g., `1-3-login-form`)
+     **Epic:** {epic_num}
+     **PRD:** {prd_key}
+
+     ---
+
+     {full content of the story file}
+     ```
+   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub) with the description file. Clean up temp files.
 """
