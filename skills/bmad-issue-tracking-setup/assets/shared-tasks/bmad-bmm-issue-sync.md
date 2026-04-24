@@ -101,8 +101,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 |-------|-------|-------------|
 | type{sep}prd | 1F78D1 | Product Requirements Document |
 | type{sep}epic | E74C3C | Epic grouping |
-| type{sep}story | 6699CC | Implementation story |
-| type{sep}qa | 9966CC | QA audit or test coverage |
+| type{sep}story | 6699CC | Implementation story (includes QA work tracked as stories) |
 | type{sep}retrospective | CC6699 | Epic retrospective |
 
 **PRD label:**
@@ -142,19 +141,17 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <action>Fetch ALL issues for this PRD using the search command with label `prd{sep}{prd_key}`. Build an in-memory index.</action>
 <action>Read sprint-status.yaml and parse ALL entries in development_status</action>
 
-<action>Classify each entry by key pattern:</action>
-  - **Epic**: `epic-N` (not ending with `-retrospective`) → type{sep}epic
+<action>Classify each entry by key pattern (matches BMM sprint-status classification):</action>
+  - **Epic**: starts with `epic-` and does not end with `-retrospective` → type{sep}epic
   - **Retrospective**: ends with `-retrospective` → type{sep}retrospective
-  - **QA**: starts with `qa-` → type{sep}qa
-  - **Story**: matches N-N-* pattern (default) → type{sep}story
+  - **Story**: everything else (e.g., `1-2-login-form`, `2-11-e2e-test-coverage`) → type{sep}story
 
 <action>Extract epic number from each entry key:</action>
-  - `epic-N` → N | `epic-N-retrospective` → N | `qa-*` → first `epic-N` occurrence | `N-N-*` → first N
+  - `epic-N` → N | `epic-N-retrospective` → N | `N-N-*` → first N
 
 <action>For each entry, determine the title:</action>
   - **Epic**: Read `{planning_artifacts}/epics.md` and extract the section starting with `## Epic N:` up to the next `## Epic` heading (or end of file). Format: `"Epic N: {first heading after ## Epic N:}"`
   - **Story**: Read `{story_location}/{entry_key}.md`. Format: `"EPIC.STORY {title}"`. If file missing, derive from key.
-  - **QA**: Derive from key. Format: `"QA: {title}"`
   - **Retrospective**: Read `{story_location}/epic-N-retrospective.md`. Format: `"Retrospective: Epic N"`
 
 <action>Match against the in-memory issue index:</action>
