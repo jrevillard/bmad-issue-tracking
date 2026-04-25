@@ -37,15 +37,9 @@ This registers three skills as slash commands:
 
 This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/custom/`, and configures the platform.
 
-### 3. Configure PRD key
+### 3. PRD key
 
-If you run `/bmad-create-prd` with the TOML override deployed, `prd_key` is captured automatically during activation. For existing PRDs created before installing this module, add `prd_key` manually to the PRD frontmatter:
-
-```markdown
----
-prd_key: my-initiative
----
-```
+`prd_key` is captured automatically when running `/bmad-create-prd` (via `activation_steps_append`). For any other workflow, if `prd_key` is missing from the PRD frontmatter, the task asks the user and offers to persist it. No manual configuration needed.
 
 ## What gets installed
 
