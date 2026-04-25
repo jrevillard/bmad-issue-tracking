@@ -8,7 +8,7 @@
 # Array (append): runs after greet but before the workflow begins.
 # Captures prd_key early so it's available throughout the PRD workflow.
 activation_steps_append = [
-  "Ask the user: \"What is the initiative key for this project? (e.g. genie-ai, auth-refactor, mobile-oidc). It will be used as the identifier for issue tracking.\" Store the answer as PRD_KEY.",
+  "Ask the user: \"What is the initiative key for this project? (e.g. auth-refactor, mobile-oidc, api-gateway). It will be used as the identifier for issue tracking.\" Store the answer as PRD_KEY.",
   "Prepend `prd_key: {PRD_KEY}` to the PRD frontmatter file at `{planning_artifacts}/prd.md`. If the file doesn't exist yet, create it with only the frontmatter block: `---\\nprd_key: {PRD_KEY}\\n---`.",
 ]
 
