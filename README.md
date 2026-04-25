@@ -18,7 +18,7 @@ Uses BMAD's native TOML customization for all workflow integrations.
 npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking
 ```
 
-> **Known issue:** BMAD 6.4.0 may show a warning about not finding `module.yaml` for this module. This is a [bug in the BMAD installer](https://github.com/bmad-code-org/BMAD-METHOD/issues/2312) — custom modules are cached in `~/.bmad/cache/custom-modules/` but the manifest generator only searches `~/.bmad/cache/external-modules/`. Fix it with a symlink:
+> **Known issue (temporary):** BMAD 6.4.0 may show a warning about not finding `module.yaml` for this module. This is a [bug in the BMAD installer](https://github.com/bmad-code-org/BMAD-METHOD/issues/2312) — custom modules are cached in `~/.bmad/cache/custom-modules/` but the manifest generator only searches `~/.bmad/cache/external-modules/`. This workaround will not be needed once the upstream bug is fixed. In the meantime:
 >
 > ```bash
 > ln -s ~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking ~/.bmad/cache/external-modules/bmad-issue-tracking
