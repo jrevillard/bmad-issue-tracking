@@ -9,7 +9,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.3.1+ installed
+- BMAD Method module (BMM) 6.4.0+ installed
 - This module installed via `npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking`
 
 ## Instructions
@@ -17,9 +17,9 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <task>
 
 <step n="1" goal="Verify BMM installation">
-<action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.3.1+.</action>
-<check if="version < 6.3.1 or not found">
-  <output>ERROR: BMM 6.3.1+ required. TOML overrides need customize.toml support for all 6 workflows.</output>
+<action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.4.0+.</action>
+<check if="version < 6.4.0 or not found">
+  <output>ERROR: BMM 6.4.0+ required. TOML overrides need customize.toml support for all 6 workflows.</output>
   <action>Stop here</action>
 </check>
 </step>
@@ -46,15 +46,15 @@ cp <path>/custom/*.toml _bmad/custom/
 ```
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
-- `bmad-check-implementation-readiness.toml` (requires BMM 6.3.1+)
-- `bmad-code-review.toml` (requires BMM 6.3.1+)
-- `bmad-correct-course.toml` (requires BMM 6.3.1+)
-- `bmad-create-story.toml` (requires BMM 6.3.1+)
-- `bmad-dev-story.toml` (requires BMM 6.3.1+)
-- `bmad-edit-prd.toml` (requires BMM 6.3.1+)
-- `bmad-retrospective.toml` (requires BMM 6.3.1+)
-- `bmad-sprint-planning.toml` (requires BMM 6.3.1+)
-- `bmad-sprint-status.toml` (requires BMM 6.3.1+)
+- `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
+- `bmad-code-review.toml` (requires BMM 6.4.0+)
+- `bmad-correct-course.toml` (requires BMM 6.4.0+)
+- `bmad-create-story.toml` (requires BMM 6.4.0+)
+- `bmad-dev-story.toml` (requires BMM 6.4.0+)
+- `bmad-edit-prd.toml` (requires BMM 6.4.0+)
+- `bmad-retrospective.toml` (requires BMM 6.4.0+)
+- `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
+- `bmad-sprint-status.toml` (requires BMM 6.4.0+)
 
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and an `on_complete` key.</action>
 </step>

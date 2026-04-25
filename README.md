@@ -6,7 +6,7 @@ Uses BMAD's native TOML customization for all workflow integrations.
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.3.1+ installed in your project
+- BMAD Method module (BMM) 6.4.0+ installed in your project
 - `glab` CLI (GitLab) or `gh` CLI (GitHub) installed and authenticated
 - Repository with Issues enabled
 
@@ -69,7 +69,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-sprint-planning.toml` | `sprint-planning` | `on_complete` | Triggers full issue sync |
 | `bmad-sprint-status.toml` | `sprint-status` | `on_complete` | Triggers full issue sync |
 
-> **Note:** All overrides require BMM 6.3.1+ (customize.toml support). `create-story` and `retrospective` have had support since BMM 6.3.0; the remaining 7 workflows gain support in BMM 6.3.1.
+> **Note:** All overrides require BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
 
 ### Shared custom tasks (via setup)
 

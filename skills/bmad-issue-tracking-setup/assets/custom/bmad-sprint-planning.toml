@@ -1,7 +1,7 @@
 # Issue Tracking override for bmad-sprint-planning
 # Triggers a full issue sync after sprint planning completes.
 # Overrides merge: scalars win, arrays append.
-# Requires BMM 6.3.1+ (customize.toml support for this skill).
+# Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
 
