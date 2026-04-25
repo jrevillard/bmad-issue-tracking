@@ -87,15 +87,4 @@ issue_tracking:
 </check>
 </step>
 
-<step n="7" goal="Remind about PRD key">
-<action>Remind the user to add `prd_key` to their PRD frontmatter if not already present:</action>
-
-```markdown
----
-prd_key: my-initiative
----
-```
-
-</step>
-
 </task>
