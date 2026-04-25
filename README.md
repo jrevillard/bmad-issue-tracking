@@ -39,7 +39,7 @@ This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/c
 
 ### 3. Configure PRD key
 
-Add `prd_key` to your PRD frontmatter:
+If you run `/bmad-create-prd` with the TOML override deployed, `prd_key` is captured automatically during activation. For existing PRDs created before installing this module, add `prd_key` manually to the PRD frontmatter:
 
 ```markdown
 ---
@@ -68,7 +68,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
 | `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
 | `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
-| `bmad-create-prd.toml` | `create-prd` | `on_complete` | Creates PRD issue, ensures `prd_key` is set |
+| `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue on completion |
 | `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue with full story file content |
 | `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
 | `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |

@@ -57,7 +57,7 @@ cp <path>/custom/*.toml _bmad/custom/
 - `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
 - `bmad-sprint-status.toml` (requires BMM 6.4.0+)
 
-<action>Verify each TOML file is valid by checking it contains a `[workflow]` section and an `on_complete` key.</action>
+<action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
 </step>
 
 <step n="4" goal="Configure issue_tracking in BMM config">

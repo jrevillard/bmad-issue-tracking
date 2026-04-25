@@ -32,7 +32,7 @@ After creating the PRD, create a PRD issue. Follow the shared sync task at `{pro
 {full PRD file content}
 ```
 
-6. Create the issue with title "PRD: {prd_key}" and labels `type::prd`:
+6. Create the issue with title "PRD: {prd_key}" and label `type{sep}prd` (use `::` for GitLab, `:` for GitHub — see separator convention in sync task):
    - **GitLab:** `glab issue create --title "PRD: {prd_key}" --description "@/tmp/prd-desc.md" --label "type::prd" --hostname $HOST`
    - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$OWNER/$REPO" [--hostname $HOST]`
 7. Clean up temp files.
