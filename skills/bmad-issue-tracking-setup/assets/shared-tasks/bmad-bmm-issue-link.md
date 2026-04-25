@@ -44,8 +44,8 @@ All commands may fail. Log a warning and continue.
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Read `issue_tracking.platform` from `_bmad/bmm/config.yaml`. If absent or unrecognized, print a warning and stop.</action>
-<action>Detect project from git remote (same detection logic as sync task Step 1)</action>
+<action>Read the `issue_tracking` block from `_bmad/bmm/config.yaml`. If absent or unrecognized, print a warning and stop.</action>
+<action>Resolve connection details — read `host` and `project` from config; if either is missing, detect from `git remote get-url origin` (same detection logic as sync task Step 1)</action>
 <action>Verify CLI connectivity</action>
 <check if="connectivity fails">
   <output>WARN: Issue tracker unavailable — skipping link.</output>

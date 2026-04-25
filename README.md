@@ -124,3 +124,21 @@ Two-tier matching: pattern, manual. Posts "Related to #N" comments on matched MR
 ## Disabling
 
 Set `issue_tracking.enabled: false` in `_bmad/bmm/config.yaml`.
+
+## Configuration
+
+The `issue_tracking` block in `_bmad/bmm/config.yaml` controls the integration:
+
+```yaml
+issue_tracking:
+  enabled: true
+  platform: gitlab  # or github
+  # host: gitlab.com        # optional — default: auto-detected from git remote
+  # project: group/project  # optional — default: auto-detected from git remote
+```
+
+- **`platform`** — required. `gitlab` or `github`. Determines which CLI to use (`glab` / `gh`).
+- **`host`** — optional. Override the issue tracker host (e.g. a self-hosted GitLab instance or GitHub Enterprise). Defaults to auto-detection from `git remote get-url origin`.
+- **`project`** — optional. Override the project path (e.g. `my-org/my-repo`). Defaults to auto-detection from the git remote.
+
+**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), set `host` and `project` explicitly. The setup skill will detect the mismatch and prompt you.

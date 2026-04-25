@@ -56,18 +56,20 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Read `issue_tracking.platform` from `_bmad/bmm/config.yaml`. Valid values: `gitlab`, `github`. If absent or unrecognized, print a warning and stop.</action>
+<action>Read the `issue_tracking` block from `_bmad/bmm/config.yaml`. Valid values for `platform`: `gitlab`, `github`. If absent or unrecognized, print a warning and stop.</action>
 <action>Set `{sep}` to `::` for GitLab, `:` for GitHub.</action>
 
-<action>Detect project from git remote:</action>
-  1. Run `git remote get-url origin`
-  2. **GitLab** (SSH `git@HOST:GROUP/PROJECT.git` or HTTPS `https://HOST/GROUP/PROJECT.git`):
-     - Set HOST and PROJECT_PATH
-     - Run `glab api "projects/$(printf '%s' "$PROJECT_PATH" | sed 's/\//%2F/g')" --hostname $HOST`
-     - Extract `.id` as PROJECT_ID
-  3. **GitHub** (SSH `git@github.com:OWNER/REPO.git` or HTTPS `https://github.com/OWNER/REPO.git` or GHE variants):
-     - Set HOST (github.com or GHE host), OWNER, REPO
-     - Run `gh api "repos/$OWNER/$REPO" [--hostname $HOST]` to verify connectivity
+<action>Resolve connection details — config first, git remote as fallback:</action>
+  1. Check if `host` and `project` are set in the `issue_tracking` block.
+  2. **If both are set** — use them directly. Skip git remote detection.
+  3. **If either is missing** — detect from `git remote get-url origin`:
+     - **GitLab** (SSH `git@HOST:GROUP/PROJECT.git` or HTTPS `https://HOST/GROUP/PROJECT.git`):
+       - Set HOST and PROJECT_PATH
+       - Run `glab api "projects/$(printf '%s' "$PROJECT_PATH" | sed 's/\//%2F/g')" --hostname $HOST`
+       - Extract `.id` as PROJECT_ID
+     - **GitHub** (SSH `git@github.com:OWNER/REPO.git` or HTTPS `https://github.com/OWNER/REPO.git` or GHE variants):
+       - Set HOST (github.com or GHE host), OWNER, REPO
+       - Run `gh api "repos/$OWNER/$REPO" [--hostname $HOST]` to verify connectivity
 
 <action>Verify CLI connectivity using the auth check command for the platform</action>
 <check if="any step fails">

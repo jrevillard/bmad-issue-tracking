@@ -69,13 +69,21 @@ cp <path>/custom/*.toml _bmad/custom/
 issue_tracking:
   enabled: true
   platform: gitlab  # or github — configure in next step
+  # host: gitlab.com    # optional — default: detected from git remote
+  # project: group/project  # optional — default: detected from git remote
 ```
 </check>
 </step>
 
-<step n="5" goal="Configure platform">
-<action>Ask the user which platform they use: GitLab or GitHub.</action>
-<action>Edit `_bmad/bmm/config.yaml` and set `issue_tracking.platform` to the chosen value.</action>
+<step n="5" goal="Configure platform and connection">
+<action>Detect the git remote by running `git remote get-url origin`.</action>
+<action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
+<action>Set `issue_tracking.platform` to the chosen value.</action>
+<action>If the chosen platform matches the git remote host, no additional configuration is needed — `host` and `project` will be auto-detected at runtime.</action>
+<check if="platform differs from git remote host">
+  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_host}). This is valid — e.g. code on GitLab but issues on GitHub.</output>
+  <action>Ask the user for the issue tracker host and project path, then set `issue_tracking.host` and `issue_tracking.project` in `_bmad/bmm/config.yaml`.</action>
+</check>
 </step>
 
 <step n="6" goal="Verify CLI connectivity">
