@@ -1,0 +1,35 @@
+# Issue Tracking override for bmad-create-prd
+# Creates a PRD issue after the PRD is created and ensures prd_key is set.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.4.0+ (customize.toml support for this skill).
+
+[workflow]
+
+# Scalar: runs after the create-prd workflow completes (Step 12).
+on_complete = """
+First, check if issue tracking is enabled by reading `issue_tracking.enabled` from `_bmad/bmm/config.yaml`. If the key is `false` or the section does not exist, stop here.
+
+After creating the PRD, create a PRD issue and ensure prd_key is persisted. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+
+1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
+2. Read prd_key from the PRD file frontmatter (`{planning_artifacts}/prd.md`). If not found:
+   - Ask the user for the initiative key (e.g. "genie-ai", "auth-refactor").
+   - Offer to persist it by prepending `prd_key: <value>` to the PRD frontmatter.
+   - If the user declines or no key is provided, stop here.
+3. Check if a PRD issue already exists (title starts with "PRD:"). If found, skip creation.
+4. Read the full PRD file content from `{planning_artifacts}/prd.md`.
+5. Write the description to `/tmp/prd-desc.md` using this format:
+
+```
+**PRD:** {prd_key}
+
+---
+
+{full PRD file content}
+```
+
+6. Create the issue with title "PRD: {prd_key}" and labels `type::prd`:
+   - **GitLab:** `glab issue create --title "PRD: {prd_key}" --description "@/tmp/prd-desc.md" --label "type::prd" --hostname $HOST`
+   - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$OWNER/$REPO" [--hostname $HOST]`
+7. Clean up temp files.
+"""

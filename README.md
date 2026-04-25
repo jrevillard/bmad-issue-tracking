@@ -68,6 +68,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
 | `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
 | `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
+| `bmad-create-prd.toml` | `create-prd` | `on_complete` | Creates PRD issue, ensures `prd_key` is set |
 | `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue with full story file content |
 | `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
 | `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
