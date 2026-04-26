@@ -56,7 +56,10 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Read the `issue_tracking` block from `_bmad/bmm/config.yaml`. Valid values for `platform`: `gitlab`, `github`. If absent or unrecognized, print a warning and stop.</action>
+<action>Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+- If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
+</action>
+<action>Read `issue_tracking.platform` from config. Valid values: `gitlab`, `github`.</action>
 <action>Set `{sep}` to `::` for GitLab, `:` for GitHub.</action>
 
 <action>Resolve connection details — config first, git remote as fallback:</action>
@@ -193,18 +196,68 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <note>yaml is the fallback authority during outage — auto-push to issue tracker</note>
 </step>
 
-<step n="5" goal="Report sync summary">
+<step n="5" goal="Create story branches and MRs">
+<critical>Requires `branch_patterns` configured in `issue_tracking` block. Skip entirely if absent.</critical>
+
+<action>Read `issue_tracking.branch_patterns.prd` and `issue_tracking.branch_patterns.story` from `_bmad/bmm/config.yaml`.</action>
+<check if="branch_patterns not configured">
+  <output>Branch strategy not configured — skipping story branch creation. Run /bmad-issue-tracking-setup to configure.</output>
+  <action>Skip to step 6.</action>
+</check>
+
+<action>Resolve the PRD branch pattern with `{prd_key}`.</action>
+<action>Check current branch: `git branch --show-current`.</action>
+<check if="current branch is not the PRD branch">
+  <output>WARN: Not on PRD branch ({prd_branch}). Story branches must be created from the PRD branch. Skipping.</output>
+  <action>Skip to step 6.</action>
+</check>
+
+<action>For each story entry in sprint-status.yaml with status `in-progress` or `review`:</action>
+
+  1. Resolve the story branch pattern with `{prd_key}` and `{story_key}`.
+  2. Check if the story branch already exists: `git show-ref --verify --quiet refs/heads/{story_branch}`
+     - If it exists: skip creation.
+     - If it does not exist: `git checkout -b {story_branch} {prd_branch}`
+  3. Switch back to the PRD branch: `git checkout {prd_branch}`
+  4. Check if a MR/PR already exists for this story branch (story branch → PRD branch):
+     - **GitLab:** `glab mr list --source-branch {story_branch} --target-branch {prd_branch} --hostname $HOST`
+     - **GitHub:** `gh pr list --head {story_branch} --base {prd_branch} --json number`
+     - If found: skip creation.
+  5. If no MR/PR exists, find the matching issue number (from the in-memory index built in step 4).
+  6. Create the MR/PR referencing the issue:
+     - **GitLab:** `glab mr create --title "{story_title}" --description "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --target-branch {prd_branch} --source-branch {story_branch} --hostname $HOST`
+     - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} [--hostname $HOST]`
+
+<action>Check if all epics in sprint-status.yaml have status `done`:</action>
+<check if="all epics are done">
+  <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch):</action>
+  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} --hostname $HOST`
+  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number`
+  <check if="draft PR/MR found">
+    <action>Mark it as ready:</action>
+    - **GitLab:** `glab mr update {mr_iid} --ready --hostname $HOST`
+    - **GitHub:** `gh pr ready {pr_number}`
+    <output>All epics are done — draft PR/MR marked as ready for review.</output>
+  </check>
+</check>
+</step>
+
+<step n="6" goal="Report sync summary">
 <action>Display:</action>
 
 ```
 Issue Tracker Sync Summary
 ==========================
-Platform:       {platform}
-PRD:            {prd_key}
-Labels synced:  {n} created/verified
-Issues created: {n}
-Status updated: {n}
-Skipped:        {n} (already in sync)
+Platform:         {platform}
+Host:             {resolved host}
+Project:          {resolved project}
+PRD:              {prd_key}
+Labels synced:    {n} created/verified
+Issues created:   {n}
+Status updated:   {n}
+Skipped:          {n} (already in sync)
+Branches created: {n}
+MRs/PRs created:  {n}
 ```
 
 </step>

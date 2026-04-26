@@ -44,7 +44,10 @@ All commands may fail. Log a warning and continue.
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Read the `issue_tracking` block from `_bmad/bmm/config.yaml`. If absent or unrecognized, print a warning and stop.</action>
+<action>Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+- If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
+</action>
+<action>Read `issue_tracking.platform` from config. Valid values: `gitlab`, `github`.</action>
 <action>Resolve connection details — read `host` and `project` from config; if either is missing, detect from `git remote get-url origin` (same detection logic as sync task Step 1)</action>
 <action>Verify CLI connectivity</action>
 <check if="connectivity fails">
