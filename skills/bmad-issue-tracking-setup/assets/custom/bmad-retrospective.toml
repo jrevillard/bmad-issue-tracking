@@ -1,6 +1,7 @@
 # Issue Tracking override for bmad-retrospective
 # Creates an issue (GitLab or GitHub) when a retrospective is saved.
 # Overrides merge: scalars win, arrays append.
+# Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
 

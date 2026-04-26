@@ -10,5 +10,5 @@ on_complete = """
 Check `issue_tracking` in `_bmad/bmm/config.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
 
-After completing sprint planning and updating sprint-status.yaml, sync all entries to the issue tracker by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Run the full sync (Steps 1 through 5).
+After completing sprint planning and updating sprint-status.yaml, sync all entries to the issue tracker by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Run the full sync (Steps 1 through 6).
 """

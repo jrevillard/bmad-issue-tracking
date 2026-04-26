@@ -36,7 +36,7 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
 ```
 
 6. Create the issue with title "PRD: {prd_key}" and label `type{sep}prd` (use `::` for GitLab, `:` for GitHub — see separator convention in sync task):
-   - **GitLab:** `glab issue create --title "PRD: {prd_key}" --description "@/tmp/prd-desc.md" --label "type::prd" --hostname $HOST`
+   - **GitLab:** `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=PRD: {prd_key}" -F "description=@/tmp/prd-desc.md" -f "labels=type::prd"`
    - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$OWNER/$REPO" [--hostname $HOST]
 7. Create the PRD branch:
    - Read `branch_patterns.prd` from `issue_tracking` in `_bmad/bmm/config.yaml`.
@@ -45,7 +45,7 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
    - If it does not exist: `git checkout -b {prd_branch}`.
    - If it already exists: `git checkout {prd_branch}`.
 8. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
-   - Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`.
+   - Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.
    - Check if a draft PR/MR already exists for this branch (PRD branch → default branch):
      - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} --hostname $HOST`
      - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number`
