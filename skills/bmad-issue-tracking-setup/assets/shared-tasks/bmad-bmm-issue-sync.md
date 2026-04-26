@@ -41,7 +41,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 | Operation | GitLab | GitHub |
 |---|---|---|
 | Auth check | `glab auth status --hostname $HOST` | `gh auth status [--hostname $HOST]` |
-| Create label | `glab api --method POST "projects/$PROJECT_ID/labels" --hostname $HOST --raw-field "name=..." --raw-field "color=..." --raw-field "description=..."` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Create label | `glab api --method POST "projects/$PROJECT_ID/labels" --hostname $HOST -f "name=..." -f "color=..." -f "description=..."` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." [--hostname $HOST]` |
 | Create issue | `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=..." -F "description=@/tmp/desc.md" -f "labels=..."` | `gh issue create --title "..." --body-file "/tmp/desc.md" --label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
