@@ -35,7 +35,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 cp <path>/shared-tasks/*.md _bmad/_config/custom/
 ```
 
-<action>Verify that `bmad-bmm-issue-sync.md` and `bmad-bmm-issue-link.md` exist in `_bmad/_config/custom/`.</action>
+<action>Verify that `bmad-bmm-issue-sync.md` exists in `_bmad/_config/custom/`.</action>
 </step>
 
 <step n="3" goal="Deploy TOML overrides">

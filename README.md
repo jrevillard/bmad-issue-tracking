@@ -24,9 +24,8 @@ npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue
 > ln -s ~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking ~/.bmad/cache/external-modules/bmad-issue-tracking
 > ```
 
-This registers three skills as slash commands:
+This registers two skills as slash commands:
 - `/bmad-bmm-issue-sync` — Sync sprint status to issues
-- `/bmad-bmm-issue-link` — Cross-reference merged MRs/PRs to issues
 - `/bmad-issue-tracking-setup` — Deploy TOML overrides and shared tasks (run once)
 
 ### 2. Run the setup skill
@@ -35,11 +34,14 @@ This registers three skills as slash commands:
 /bmad-issue-tracking-setup
 ```
 
-This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/custom/`, and configures the platform.
+This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/custom/`, and configures:
+- **Platform** (GitLab or GitHub) — detected from git remote, with mismatch handling
+- **Connection** (host and project) — always configured explicitly
+- **Branch patterns** (PRD branch, story branches) — controls automatic branch and MR/PR creation
 
 ### 3. PRD key
 
-`prd_key` is captured automatically when running `/bmad-create-prd` (via `activation_steps_append`). For any other workflow, if `prd_key` is missing from the PRD frontmatter, the task asks the user and offers to persist it. No manual configuration needed.
+`prd_key` is captured automatically when running `/bmad-create-prd` (via `activation_steps_append`). No manual configuration needed.
 
 ## What gets installed
 
@@ -49,8 +51,7 @@ Registered as slash commands in your IDE.
 
 | Skill | Command | Purpose |
 |---|---|---|
-| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues |
-| Link MRs/PRs | `/bmad-bmm-issue-link` | Cross-reference merged MRs/PRs to issues via comments |
+| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues, create branches and MRs |
 | Setup | `/bmad-issue-tracking-setup` | One-time integration setup |
 
 ### TOML overrides (via setup)
@@ -59,16 +60,16 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 
 | Override file | Target workflow | Hook | Behavior |
 |---|---|---|---|
-| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
-| `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
-| `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
-| `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue on completion |
+| `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue + PRD branch + draft PR/MR on completion |
 | `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue with full story file content |
 | `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
-| `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
-| `bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue with retrospective content |
+| `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
 | `bmad-sprint-planning.toml` | `sprint-planning` | `on_complete` | Triggers full issue sync |
 | `bmad-sprint-status.toml` | `sprint-status` | `on_complete` | Triggers full issue sync |
+| `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
+| `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
+| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
+| `bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue with retrospective content |
 
 > **Note:** All overrides require BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
 
@@ -76,8 +77,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 
 Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 
-- `bmad-bmm-issue-sync.md` — Sync `sprint-status.yaml` to issues (GitLab or GitHub)
-- `bmad-bmm-issue-link.md` — Cross-reference merged MRs/PRs to issues via comments
+- `bmad-bmm-issue-sync.md` — Sync `sprint-status.yaml` to issues, manage labels, create branches and MRs
 
 ## Usage
 
@@ -87,15 +87,17 @@ Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 /bmad-bmm-issue-sync
 ```
 
-Creates/updates issues for all sprint entries, manages labels, reconciles statuses.
+Creates/updates issues for all sprint entries, manages labels, reconciles statuses, creates story branches and MRs, marks draft PR ready when all epics are done.
 
-### Cross-reference merged MRs/PRs to issues
+## Branch strategy
 
-```
-/bmad-bmm-issue-link
-```
+When `branch_patterns` is configured in the setup:
 
-Two-tier matching: pattern, manual. Posts "Related to #N" comments on matched MRs/PRs.
+| Event | Action |
+|---|---|
+| PRD created | PRD branch created + draft PR/MR (PRD branch → default branch) |
+| Story in-progress/review | Story branch created from PRD branch + MR/PR referencing the issue |
+| All epics done | Draft PR/MR marked as ready for review |
 
 ## Platform differences
 
@@ -127,12 +129,17 @@ The `issue_tracking` block in `_bmad/bmm/config.yaml` controls the integration:
 issue_tracking:
   enabled: true
   platform: gitlab  # or github
-  # host: gitlab.com        # optional — default: auto-detected from git remote
-  # project: group/project  # optional — default: auto-detected from git remote
+  host: gitlab.com  # always configured by setup
+  project: group/project  # always configured by setup
+  branch_patterns:
+    prd: "feat/{prd_key}"
+    story: "feat/{prd_key}/{story_key}"
 ```
 
 - **`platform`** — required. `gitlab` or `github`. Determines which CLI to use (`glab` / `gh`).
-- **`host`** — optional. Override the issue tracker host (e.g. a self-hosted GitLab instance or GitHub Enterprise). Defaults to auto-detection from `git remote get-url origin`.
-- **`project`** — optional. Override the project path (e.g. `my-org/my-repo`). Defaults to auto-detection from the git remote.
+- **`host`** — required. The issue tracker host (e.g. `gitlab.com`, `github.com`, or a self-hosted instance).
+- **`project`** — required. The project path (e.g. `my-org/my-repo`).
+- **`branch_patterns.prd`** — required. Pattern for the PRD branch. Must contain `{prd_key}`.
+- **`branch_patterns.story`** — required. Pattern for story branches. Must contain `{prd_key}` and `{story_key}`.
 
-**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), set `host` and `project` explicitly. The setup skill will detect the mismatch and prompt you.
+**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), the setup skill detects the mismatch and asks for the issue tracker host and project explicitly.
