@@ -23,6 +23,6 @@ After saving the retrospective document and updating sprint-status, create an is
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub).
    Since the initial status label is `done`, close the issue immediately after creation:
    - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` (do NOT send `labels` parameter)
-   - **GitHub:** `gh issue close {number} -R "$OWNER/$REPO" [--hostname $HOST]`
+   - **GitHub:** `gh issue close {number} -R "$HOST/$OWNER/$REPO"`
    Clean up temp files.
 """

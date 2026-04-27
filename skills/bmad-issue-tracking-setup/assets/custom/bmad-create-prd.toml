@@ -39,7 +39,7 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
 
 6. Create the issue with title "PRD: {prd_key}" and label `type{sep}prd` (use `::` for GitLab, `:` for GitHub — see separator convention in sync task):
    - **GitLab:** `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=PRD: {prd_key}" -F "description=@/tmp/prd-desc.md" -f "labels=type::prd"`
-   - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$OWNER/$REPO" [--hostname $HOST]
+   - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$HOST/$OWNER/$REPO"
 7. Commit all changes in the current worktree.
 8. Push the PRD branch to the remote: `git push -u origin {prd_branch}` (where `{prd_branch}` is the branch name resolved in the activation step from `branch_patterns.prd` with `{prd_key}`).
 9. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
@@ -51,7 +51,7 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
    - If not found, find the PRD issue number from the issue created in step 6.
    - Create the draft PR/MR referencing the issue:
      - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "Closes #{issue_number}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "$HOST/$PROJECT_PATH"`
-     - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "Closes #{issue_number}" --base {default_branch} --head {prd_branch} --draft -R "$OWNER/$REPO" [--hostname $HOST]`
+     - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "Closes #{issue_number}" --base {default_branch} --head {prd_branch} --draft -R "$HOST/$OWNER/$REPO"`
 10. Exit the worktree and keep it.
 11. Clean up temp files.
 """

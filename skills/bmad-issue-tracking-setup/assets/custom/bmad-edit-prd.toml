@@ -28,7 +28,7 @@ After editing the PRD, update the PRD issue description. Follow the shared sync 
 ```
 
 6. Update the issue description using the platform-appropriate command:
-   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "description=@/tmp/prd-desc.md"` — do NOT send the `labels` parameter, it would replace all labels
-   - **GitHub:** `gh issue edit {number} --body-file "/tmp/prd-desc.md" -R "$OWNER/$REPO" [--hostname $HOST]`
+   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -F "description=@/tmp/prd-desc.md"` — do NOT send the `labels` parameter, it would replace all labels
+   - **GitHub:** `gh issue edit {number} --body-file "/tmp/prd-desc.md" -R "$HOST/$OWNER/$REPO"`
 7. Clean up temp files.
 """

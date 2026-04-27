@@ -35,8 +35,8 @@ After completing the implementation readiness check, determine if any tracked ar
    - Write description using the same format with epic number
 
 4. Update the issue description using the platform-appropriate command:
-   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "description=@/tmp/desc.md"` — do NOT send the `labels` parameter, it would replace all labels
-   - **GitHub:** `gh issue edit {number} --body-file "/tmp/desc.md" -R "$OWNER/$REPO" [--hostname $HOST]`
+   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -F "description=@/tmp/desc.md"` — do NOT send the `labels` parameter, it would replace all labels
+   - **GitHub:** `gh issue edit {number} --body-file "/tmp/desc.md" -R "$HOST/$OWNER/$REPO"`
 5. If no tracked artifacts were modified, skip all updates.
 6. Clean up temp files.
 """

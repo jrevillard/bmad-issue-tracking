@@ -41,13 +41,13 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 | Operation | GitLab | GitHub |
 |---|---|---|
 | Auth check | `glab auth status --hostname $HOST` | `gh auth status [--hostname $HOST]` |
-| Create label | `glab label create -n "..." -c "..." -d "..." -R "$HOST/$PROJECT_PATH"` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Create label | `glab label create -n "..." -c "..." -d "..." -R "$HOST/$PROJECT_PATH"` | `gh label create "..." --color "..." --description "..." -R "$HOST/$OWNER/$REPO"` |
 | Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." [--hostname $HOST]` |
-| Create issue | `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=..." -F "description=@/tmp/desc.md" -f "labels=..."` | `gh issue create --title "..." --body-file "/tmp/desc.md" --label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Close issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` | `gh issue close {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Reopen issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=reopen"` | `gh issue reopen {number} -R "$OWNER/$REPO" [--hostname $HOST]` |
-| Add comment | `glab api --method POST "projects/$PROJECT_ID/issues/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh issue comment {number} --body-file "/tmp/comment.md" -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Create issue | `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=..." -F "description=@/tmp/desc.md" -f "labels=..."` | `gh issue create --title "..." --body-file "/tmp/desc.md" --label "..." -R "$HOST/$OWNER/$REPO"` |
+| Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$HOST/$OWNER/$REPO"` |
+| Close issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` | `gh issue close {number} -R "$HOST/$OWNER/$REPO"` |
+| Reopen issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=reopen"` | `gh issue reopen {number} -R "$HOST/$OWNER/$REPO"` |
+| Add comment | `glab api --method POST "projects/$PROJECT_ID/issues/$IID/notes" --hostname $HOST -F "body=@/tmp/comment.md"` | `gh issue comment {number} --body-file "/tmp/comment.md" -R "$HOST/$OWNER/$REPO"` |
 
 **Description file:** GitLab uses `-F "description=@/tmp/file.md"` (with `@` prefix). GitHub uses `--body-file "/tmp/file.md"` (no `@` prefix).
 
@@ -85,7 +85,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
   <ask>Ask the user for the PRD key (e.g., "mobile-oidc"). Then offer to add it to the PRD frontmatter for next time.</ask>
 </check>
 <action>Read `planning_artifacts` and `story_location` paths from `bmm/config.yaml` (fields: `planning_artifacts` and `implementation_artifacts`)</action>
-<note>Store all detected values for use in subsequent steps. For GitLab, use `-R "$HOST/$PROJECT_PATH"` on subcommands (mr, label). For GHE, use `--hostname $HOST` on `gh` commands.</note>
+<note>Store all detected values for use in subsequent steps. For GitLab, use `-R "$HOST/$PROJECT_PATH"` on subcommands (mr, label). For GitHub/GHE, use `-R "$HOST/$OWNER/$REPO"` on all `gh` subcommands.</note>
 </step>
 
 <step n="2" goal="Ensure labels exist">

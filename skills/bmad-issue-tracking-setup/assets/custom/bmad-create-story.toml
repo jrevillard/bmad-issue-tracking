@@ -43,6 +43,6 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
 7. Push the story branch to the remote: `git push -u origin {story_branch}` (where `{story_branch}` is the resolved branch name from step 4, and `{prd_branch}` is the resolved PRD branch name from the activation step).
 8. Create a MR/PR (story branch → PRD branch) referencing the issue:
    - **GitLab:** `glab mr create --title "{story_title}" --description "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --target-branch {prd_branch} --source-branch {story_branch} -R "$HOST/$PROJECT_PATH"`
-   - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} [--hostname $HOST]`
+   - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} -R "$HOST/$OWNER/$REPO"`
 9. Exit the worktree and keep it.
 """
