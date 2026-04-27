@@ -39,10 +39,14 @@ cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
 </step>
 
 <step n="3" goal="Deploy TOML overrides">
-<action>Copy all TOML files from the same module's `assets/custom/` directory to `_bmad/custom/`:</action>
+<action>Locate the TOML overrides. Check these locations in order:</action>
+1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/custom/`
+2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+
+<action>Copy all TOML files to `_bmad/custom/`:</action>
 
 ```bash
-cp <path>/custom/*.toml _bmad/custom/
+cp <path>/*.toml _bmad/custom/
 ```
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
