@@ -41,6 +41,7 @@ After completing the dev story, sync the story's status and post an implementati
 
 6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row). Skip if the final status is not `review`.
 7. Commit all changes in the current worktree.
-8. Exit the worktree and keep it.
-9. Clean up temp files.
+8. Push the story branch to the remote.
+9. Exit the worktree and keep it.
+10. Clean up temp files.
 """

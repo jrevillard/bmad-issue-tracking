@@ -70,6 +70,11 @@ No issues found.
 ```
 
 6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row).
-7. Exit the worktree and keep it.
-8. Clean up temp files.
+7. Commit all changes in the current worktree.
+8. Push the story branch to the remote.
+9. If the review passed, ask the user if they want to merge the MR now. If yes, merge it:
+   - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch --hostname $HOST`
+   - **GitHub:** `gh pr merge {pr_number} --delete-branch`
+10. Exit the worktree. Remove it if the MR was merged, otherwise keep it.
+11. Clean up temp files.
 """
