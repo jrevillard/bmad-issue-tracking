@@ -6,7 +6,7 @@ description: 'Sync sprint-status.yaml entries to GitLab/GitHub Issues. Use when 
 # Sync Sprint Status to Issues (GitLab or GitHub)
 
 > Shared custom BMAD task — syncs `sprint-status.yaml` to GitLab Issues or GitHub Issues.
-> Reads `issue_tracking.platform` from `_bmad/bmm/config.yaml` to pick the CLI.
+> Reads `issue_tracking.platform from `_bmad/custom/issue-tracking.yaml` to pick the CLI.
 > Issue-tracker-first with automatic file-system fallback when unavailable.
 
 ## Prerequisites
@@ -29,7 +29,7 @@ The AI parses JSON responses natively — no `jq` dependency.
 
 ## Platform Detection
 
-At the start of every step that runs CLI commands, determine the platform by reading `issue_tracking.platform` from `_bmad/bmm/config.yaml`. Valid values: `gitlab`, `github`.
+At the start of every step that runs CLI commands, determine the platform by reading `issue_tracking.platform from `_bmad/custom/issue-tracking.yaml`. Valid values: `gitlab`, `github`.
 
 **Label separator convention:**
 - GitLab: double colon (`status::done`, `type::story`)
@@ -56,7 +56,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+<action>Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 - If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 </action>

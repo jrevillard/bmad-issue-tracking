@@ -7,14 +7,14 @@
 
 # Array (append): runs after greet but before the workflow begins.
 activation_steps_append = [
-  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/bmm/config.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/bmm/config.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern. If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
+  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
+  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern. If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
   "Resolve the PRD branch pattern with `{prd_key}`. Create or switch to the PRD worktree.",
 ]
 
 # Scalar: runs after Step 6 (Update sprint status and finalize).
 on_complete = """
-Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 - If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 
@@ -25,7 +25,7 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
 3. Commit all changes on the current (PRD) branch and push it to the remote.
-4. Create the story branch in a git worktree (from the PRD branch) and switch to it. Use the `branch_patterns.story` pattern from `issue_tracking` in `_bmad/bmm/config.yaml`, resolved with `{prd_key}` and `{story_key}`. Store the resolved branch name as `{story_branch}`.
+4. Create the story branch in a git worktree (from the PRD branch) and switch to it. Use the `branch_patterns.story` pattern from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`, resolved with `{prd_key}` and `{story_key}`. Store the resolved branch name as `{story_branch}`.
 5. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". Extract `{epic_num}` and `{story_num}` from `{story_key}` (e.g., from `1-3-login-form` → epic `1`, story `3`). If found, skip creation.
 6. If no issue exists, create it with:
    - Title: "{epic_num}.{story_num} {story_title}"

@@ -9,15 +9,15 @@
 # Array (append): runs after greet but before the workflow begins.
 # Captures prd_key early so it's available throughout the PRD workflow.
 activation_steps_append = [
-  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/bmm/config.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
+  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
   "Ask the user: \"What is the initiative key for this project? (e.g. auth-refactor, mobile-oidc, api-gateway). It will be used as the identifier for issue tracking.\" Store the answer as PRD_KEY.",
   "Prepend `prd_key: {PRD_KEY}` to the PRD frontmatter file at `{planning_artifacts}/prd.md`. If the file doesn't exist yet, create it with only the frontmatter block: `---\\nprd_key: {PRD_KEY}\\n---`.",
-  "Create or switch to the PRD worktree. Use the `branch_patterns.prd` pattern from `issue_tracking` in `_bmad/bmm/config.yaml`, resolved with `{PRD_KEY}`.",
+  "Create or switch to the PRD worktree. Use the `branch_patterns.prd` pattern from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`, resolved with `{PRD_KEY}`.",
 ]
 
 # Scalar: runs after the create-prd workflow completes (Step 12).
 on_complete = """
-Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 - If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 

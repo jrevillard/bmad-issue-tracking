@@ -7,7 +7,7 @@
 
 # Scalar: runs after Step 12 (Final Summary and Handoff).
 on_complete = """
-Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 - If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 
