@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-27
+
+### Fixed
+
+- `glab api` PUT requests for issue description now use `-F` (file upload) instead of `-f` (raw field) — descriptions were sent as literal file paths
+- Replaced `--hostname` with `-R` on all `glab mr` subcommands (merge, create, list, update) — flag not supported outside `glab api`
+- Replaced `[--hostname $HOST]` with `-R "$HOST/$OWNER/$REPO"` on all `gh` subcommands — flag only valid on `gh api` and `gh auth`
+- Added missing `-R` flag on `gh pr merge`, `gh pr list`, and `gh pr ready` in sync task and code-review
+- Specified exact cache path for TOML overrides in setup step 3 (was ambiguous)
+- Defined `{default_branch}` resolution in sync task step 5 (was used without definition)
+- Fixed misleading `--hostname` description in CLAUDE.md
+
 ## [1.1.0] - 2026-04-27
 
 ### Changed
@@ -66,5 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-bmm-issue-link` skill (obsolete, sync task handles MR creation)
 - Known issue workaround for git branch naming conflict (fixed by PRD pattern change)
 
+[1.1.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.0...v1.0.1
