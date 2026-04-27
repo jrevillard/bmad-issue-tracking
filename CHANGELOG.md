@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-27
+
+### Changed
+
+- Story branch setup moved to activation steps (before BMM workflow) — the BMM workflow now creates story files directly in the story worktree, never on the PRD branch
+- All workflows stay in their worktree after completion (instead of exiting) — the agent continues working from there; only code-review exits after MR merge
+
+### Added
+
+- Variable re-derivation fallback in on_complete blocks — if context is compacted between activation and on_complete, `{story_key}`, `{prd_branch}`, `{story_branch}` are re-derived from config and files
+- create-story activation now asks for story key and creates/switches to story worktree before the BMM workflow runs
+
+### Fixed
+
+- create-story no longer commits on PRD branch — story files live only on story branches
+- README override table: create-story now listed with `activation_steps_append` hook
+- README branch strategy table updated to reflect new flow
+
 ## [1.2.0] - 2026-04-27
 
 ### Changed
@@ -97,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-bmm-issue-link` skill (obsolete, sync task handles MR creation)
 - Known issue workaround for git branch naming conflict (fixed by PRD pattern change)
 
+[1.3.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.1...v1.1.0

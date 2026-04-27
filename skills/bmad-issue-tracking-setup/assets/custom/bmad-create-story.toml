@@ -6,10 +6,13 @@
 [workflow]
 
 # Array (append): runs after greet but before the workflow begins.
+# Sets up the story worktree BEFORE the BMM workflow runs, so the story file
+# is created directly in the story branch — never on the PRD branch.
 activation_steps_append = [
   "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern (replace `{prd_key}` with `*` in the configured pattern, e.g. if the pattern is `feat/{prd_key}/prd` then use `git branch --list 'feat/*/prd'`). If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
-  "Resolve the PRD branch pattern with `{prd_key}`. Create or switch to the PRD worktree.",
+  "Read `branch_patterns.prd` and `branch_patterns.story` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern (replace `{prd_key}` with `*` in the configured pattern, e.g. if the pattern is `feat/{prd_key}/prd` then use `git branch --list 'feat/*/prd'`). If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
+  "Ask the user for the story key (e.g. `1-3-login-form`). Store it as `{story_key}`.",
+  "Resolve the story branch name using `branch_patterns.story`, resolved with `{prd_key}` and `{story_key}`. Check if a local branch matching this name already exists. If it does, switch to its worktree. If not, create the story branch as a git worktree from the PRD branch: `git worktree add <path> -b {story_branch} {prd_branch}`. Switch to the story worktree. The BMM workflow will create the story file here.",
 ]
 
 # Scalar: runs after Step 6 (Update sprint status and finalize).
@@ -18,14 +21,17 @@ Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 - If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 
-After saving the story file and updating sprint-status.yaml, create an issue for the story by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
+The story file and sprint-status.yaml were created by the BMM workflow directly in the story worktree (set up during activation). Commit, push, create the issue and MR — all from the story worktree. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
 Note: The BMM workflow may set the story status to `drafted` in sprint-status.yaml, but the issue is created with label `ready-for-dev` (the sync task maps `drafted` → `ready-for-dev`). This is intentional — the next full sync will reconcile if needed.
 
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Commit all changes on the current (PRD) branch and push it to the remote.
-4. Create the story branch in a git worktree (from the PRD branch) and switch to it. Use the `branch_patterns.story` pattern from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`, resolved with `{prd_key}` and `{story_key}`. Store the resolved branch name as `{story_branch}`.
+3. Re-derive variables if not carried from activation (e.g. context was compacted):
+   - `{story_key}`: list files in `{implementation_artifacts}/` matching `*-*.md` and pick the one just created by the BMM workflow, or read the latest entry from sprint-status.yaml.
+   - `{prd_branch}`: resolve `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml` with `{prd_key}`.
+   - `{story_branch}`: resolve `branch_patterns.story` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml` with `{prd_key}` and `{story_key}`.
+4. Commit all changes on the story branch and push: `git push -u origin {story_branch}`.
 5. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". Extract `{epic_num}` and `{story_num}` from `{story_key}` (e.g., from `1-3-login-form` → epic `1`, story `3`). If found, skip creation.
 6. If no issue exists, create it with:
    - Title: "{epic_num}.{story_num} {story_title}"
@@ -41,9 +47,8 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
      {full content of the story file}
      ```
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub) with the description file. Clean up temp files.
-7. Push the story branch to the remote: `git push -u origin {story_branch}` (where `{story_branch}` is the resolved branch name from step 4, and `{prd_branch}` is the resolved PRD branch name from the activation step).
-8. Create a MR/PR (story branch → PRD branch) referencing the issue:
+7. Create a MR/PR (story branch → PRD branch) referencing the issue:
    - **GitLab:** `glab mr create --title "{story_title}" --description "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --target-branch {prd_branch} --source-branch {story_branch} -R "$HOST/$PROJECT_PATH"`
    - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} -R "$HOST/$OWNER/$REPO"`
-9. Exit the worktree and keep it.
+8. Stay in the story worktree. Do NOT exit — the next workflow (dev-story or code-review) will switch to this worktree.
 """

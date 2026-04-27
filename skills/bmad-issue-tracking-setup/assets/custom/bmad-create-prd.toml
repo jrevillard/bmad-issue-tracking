@@ -24,7 +24,7 @@ Check `issue_tracking` in `_bmad/custom/issue-tracking.yaml`:
 After creating the PRD, create a PRD issue and set up the branch strategy. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter (`{planning_artifacts}/prd.md`). If not found, stop here — prd_key should have been captured during activation.
+2. Read prd_key from the PRD file frontmatter (`{planning_artifacts}/prd.md`). If not found, stop here — prd_key should have been captured during activation. If `{prd_branch}` was not carried from activation (e.g. context was compacted), re-derive it by resolving `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml` with `{prd_key}`.
 3. Check if a PRD issue already exists (title starts with "PRD:"). If found, skip creation.
 4. Read the full PRD file content from `{planning_artifacts}/prd.md`.
 5. Write the description to `/tmp/prd-desc.md` using this format:
@@ -52,6 +52,6 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
    - Create the draft PR/MR referencing the issue:
      - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "Closes #{issue_number}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "$HOST/$PROJECT_PATH"`
      - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "Closes #{issue_number}" --base {default_branch} --head {prd_branch} --draft -R "$HOST/$OWNER/$REPO"`
-10. Exit the worktree and keep it.
+10. Stay in the PRD worktree. Do NOT exit — the agent continues working from here.
 11. Clean up temp files.
 """

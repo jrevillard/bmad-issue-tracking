@@ -37,12 +37,14 @@ TOML instructions reference these placeholders — they are NOT config variables
 
 ## Branch/MR flow
 
-| Workflow | Branch action | MR direction |
-|----------|--------------|--------------|
-| create-prd | Create PRD worktree + push | PRD branch → default branch (draft) |
-| create-story | Commit on PRD + create story worktree + push | story branch → PRD branch |
-| dev-story | Switch to story worktree + commit + push | (MR exists from create-story) |
-| code-review | Switch to story worktree + commit + push + optional merge | story branch → PRD branch |
+Branch setup happens in activation (before BMM workflow runs). The BMM workflow creates files directly in the worktree. on_complete handles commit/push/issue/MR. Never commit on PRD for story work.
+
+| Workflow | Activation | on_complete | MR direction |
+|----------|-----------|-------------|--------------|
+| create-prd | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD → default (draft) |
+| create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
+| dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
+| code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
 
 ## Platform differences
 

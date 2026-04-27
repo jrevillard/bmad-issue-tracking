@@ -1,6 +1,6 @@
 code: bmad-issue-tracking
 name: Issue Tracking
-version: 1.2.0
+version: 1.3.0
 description: >-
   BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Issues
   via their respective CLIs (glab / gh). Supports both cloud and self-hosted instances.

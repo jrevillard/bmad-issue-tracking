@@ -59,7 +59,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | Override file | Target workflow | Hook | Behavior |
 |---|---|---|---|
 | `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue + PRD branch + draft PR/MR on completion |
-| `bmad-create-story.toml` | `create-story` | `on_complete` | Creates issue with full story file content |
+| `bmad-create-story.toml` | `create-story` | `activation_steps_append`, `on_complete` | Sets up story worktree at activation, creates issue + MR on completion |
 | `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
 | `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
 | `bmad-sprint-planning.toml` | `sprint-planning` | `on_complete` | Triggers full issue sync |
@@ -93,10 +93,10 @@ When `branch_patterns` is configured in the setup:
 
 | Event | Action |
 |---|---|
-| PRD created | PRD worktree created + draft PR/MR (PRD branch → default branch) |
-| Story created | Story worktree created (from PRD branch) + issue + MR (story → PRD) |
+| PRD created | PRD worktree created in activation + draft PR/MR (PRD → default branch) |
+| Story created | Story worktree created in activation (from PRD) + issue + MR (story → PRD) |
 | Story developed | Story worktree entered, changes committed |
-| Story reviewed | Issue status updated, worktree exited |
+| Story reviewed | Issue status updated, worktree exited (only if MR merged) |
 | All epics done | Draft PR/MR marked as ready for review |
 
 ## Platform differences

@@ -22,7 +22,8 @@ After completing the code review, sync the story's status and post a review summ
 
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Find the issue whose description contains the story key. If not found, skip.
+3. If `{story_key}` was not carried from activation (e.g. context was compacted), re-derive it: list files in `{implementation_artifacts}/` matching `*-*.md` and pick the one matching the current branch, or read the story key from sprint-status.yaml for the story with status `review`.
+4. Find the issue whose description contains the story key. If not found, skip.
 4. Update the issue status:
    - If review passed (no critical or important open issues): set status label to `done`, close the issue.
    - If review found issues requiring fixes: set status label to `in-progress`, reopen if closed.
@@ -76,6 +77,6 @@ No issues found.
 9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes, merge it:
    - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch -R "$HOST/$PROJECT_PATH"`
    - **GitHub:** `gh pr merge {pr_number} --delete-branch -R "$HOST/$OWNER/$REPO"`
-10. Exit the worktree. Remove it if the MR was merged, otherwise keep it.
+10. If the MR was merged, exit the worktree and remove it. Otherwise, stay in the story worktree — the agent continues working from here.
 11. Clean up temp files.
 """
