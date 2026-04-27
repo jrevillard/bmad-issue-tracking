@@ -193,15 +193,16 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 </step>
 
 <step n="5" goal="Mark draft PR ready when all epics are done">
+<action>Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.</action>
 <action>Check if all epics in sprint-status.yaml have status `done`:</action>
 <check if="all epics are done">
   <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch):</action>
   - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$HOST/$PROJECT_PATH"`
-  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number`
+  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$HOST/$OWNER/$REPO"`
   <check if="draft PR/MR found">
     <action>Mark it as ready:</action>
     - **GitLab:** `glab mr update {mr_iid} --ready -R "$HOST/$PROJECT_PATH"`
-    - **GitHub:** `gh pr ready {pr_number}`
+    - **GitHub:** `gh pr ready {pr_number} -R "$HOST/$OWNER/$REPO"`
     <output>All epics are done — draft PR/MR marked as ready for review.</output>
   </check>
 </check>

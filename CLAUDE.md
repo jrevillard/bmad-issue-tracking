@@ -48,7 +48,7 @@ TOML instructions reference these placeholders — they are NOT config variables
 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels
 - GitHub: `gh` CLI, labels use `:` separator, `gh issue edit` with `--add-label`/`--remove-label` (targeted)
-- Both: support `--hostname` for self-hosted instances
+- `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`
 
 ## Files to update when adding a new BMM workflow override
 

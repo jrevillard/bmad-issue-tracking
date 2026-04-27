@@ -5,7 +5,7 @@ description: 'One-time setup for issue tracking integration. Use after installin
 
 # Issue Tracking Setup
 
-One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_bmad/custom/` and shared tasks to `_bmad/_config/custom/`.
+One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_bmad/custom/` and a shared task to `_bmad/_config/custom/`.
 
 ## Prerequisites
 
