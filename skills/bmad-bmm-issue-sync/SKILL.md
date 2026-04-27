@@ -85,7 +85,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
   <ask>Ask the user for the PRD key (e.g., "mobile-oidc"). Then offer to add it to the PRD frontmatter for next time.</ask>
 </check>
 <action>Read `planning_artifacts` and `story_location` paths from `bmm/config.yaml` (fields: `planning_artifacts` and `implementation_artifacts`)</action>
-<note>Store all detected values for use in subsequent steps. For GHE, all subsequent CLI commands must include `--hostname $HOST`.</note>
+<note>Store all detected values for use in subsequent steps. For GitLab, use `-R "$HOST/$PROJECT_PATH"` on subcommands (mr, label). For GHE, use `--hostname $HOST` on `gh` commands.</note>
 </step>
 
 <step n="2" goal="Ensure labels exist">
@@ -196,11 +196,11 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <action>Check if all epics in sprint-status.yaml have status `done`:</action>
 <check if="all epics are done">
   <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch):</action>
-  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} --hostname $HOST`
+  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$HOST/$PROJECT_PATH"`
   - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number`
   <check if="draft PR/MR found">
     <action>Mark it as ready:</action>
-    - **GitLab:** `glab mr update {mr_iid} --ready --hostname $HOST`
+    - **GitLab:** `glab mr update {mr_iid} --ready -R "$HOST/$PROJECT_PATH"`
     - **GitHub:** `gh pr ready {pr_number}`
     <output>All epics are done — draft PR/MR marked as ready for review.</output>
   </check>

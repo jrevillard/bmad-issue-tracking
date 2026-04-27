@@ -73,7 +73,7 @@ No issues found.
 7. Commit all changes in the current worktree.
 8. Push the story branch to the remote.
 9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes, merge it:
-   - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch --hostname $HOST`
+   - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch -R "$HOST/$PROJECT_PATH"`
    - **GitHub:** `gh pr merge {pr_number} --delete-branch`
 10. Exit the worktree. Remove it if the MR was merged, otherwise keep it.
 11. Clean up temp files.
