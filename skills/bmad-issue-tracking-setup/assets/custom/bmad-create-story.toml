@@ -8,7 +8,7 @@
 # Array (append): runs after greet but before the workflow begins.
 activation_steps_append = [
   "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern. If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
+  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. Read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If not found on the current branch, list all local branches matching the PRD branch pattern (replace `{prd_key}` with `*` in the configured pattern, e.g. if the pattern is `feat/{prd_key}/prd` then use `git branch --list 'feat/*/prd'`). If a match is found, switch to its worktree and read `prd_key` from there. If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
   "Resolve the PRD branch pattern with `{prd_key}`. Create or switch to the PRD worktree.",
 ]
 

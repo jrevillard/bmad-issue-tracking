@@ -109,7 +109,7 @@ When `branch_patterns` is configured in the setup:
 | State changes | Single `glab api` call with `state_event` | Separate `gh issue close` / `gh issue reopen` |
 | Label updates | `-f "labels=..."` (replaces all) | `--add-label` / `--remove-label` (targeted) |
 | Boards | Created automatically | Skipped in v1 |
-| Enterprise | `--hostname` on every command | `--hostname` on every command |
+| Enterprise | `-R` on subcommands, `--hostname` on `glab api` only | `-R` on subcommands, `--hostname` on `gh api` only |
 
 ## After BMM updates
 
@@ -119,11 +119,11 @@ When `branch_patterns` is configured in the setup:
 
 ## Disabling
 
-Set `issue_tracking.enabled: false` in `_bmad/bmm/config.yaml`.
+Set `issue_tracking.enabled: false` in `_bmad/custom/issue-tracking.yaml`.
 
 ## Configuration
 
-The `issue_tracking` block in `_bmad/bmm/config.yaml` controls the integration:
+The `issue_tracking` block in `_bmad/custom/issue-tracking.yaml` controls the integration:
 
 ```yaml
 issue_tracking:

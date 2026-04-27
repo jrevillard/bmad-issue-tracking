@@ -86,9 +86,9 @@ issue_tracking:
 </step>
 
 <step n="6" goal="Verify CLI connectivity">
-<action>Run the platform auth check:</action>
-- GitLab: `glab auth status`
-- GitHub: `gh auth status`
+<action>Run the platform auth check (use `--hostname $HOST` for self-hosted instances):</action>
+- GitLab: `glab auth status --hostname $HOST`
+- GitHub: `gh auth status --hostname $HOST`
 
 <check if="auth fails">
   <output>WARN: CLI not authenticated. Issue tracking will fall back to file-system until authenticated.</output>

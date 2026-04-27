@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-27
+
+### Changed
+
+- Config relocated from `_bmad/bmm/config.yaml` to `_bmad/custom/issue-tracking.yaml` — survives BMM updates that regenerate the BMM config
+- Activation steps in create-story, dev-story, code-review now search for PRD branch via pattern matching when prd_key is not on the current branch (e.g. `git branch --list 'feat/*/prd'`)
+- Setup auth check uses `--hostname $HOST` for self-hosted instances
+
+### Fixed
+
+- Missing `-R "$HOST/$OWNER/$REPO"` on `gh pr list` in create-prd.toml
+- Missing closing backtick in sync skill config path references (2 occurrences)
+- Stale `_bmad/bmm/config.yaml` reference in module-help.csv, README.md, and CLAUDE.md
+
+### Improved
+
+- Activation PRD branch search instruction now explicitly tells the agent to use `*` in place of `{prd_key}` when prd_key is unknown
+- README Enterprise row updated to reflect actual CLI flag behavior (`-R` on subcommands, `--hostname` on api only)
+
 ## [1.1.1] - 2026-04-27
 
 ### Fixed
@@ -78,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-bmm-issue-link` skill (obsolete, sync task handles MR creation)
 - Known issue workaround for git branch naming conflict (fixed by PRD pattern change)
 
+[1.2.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.0...v1.0.1

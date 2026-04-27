@@ -23,7 +23,7 @@ Files in `skills/bmad-issue-tracking-setup/assets/custom/` are TOML overrides fo
 - `[workflow] activation_steps_append` — array, appends to BMM's activation steps
 - `[workflow] on_complete` — scalar, replaces BMM's completion block entirely
 
-All overrides use the same config guard pattern: check `issue_tracking.platform` and `issue_tracking.branch_patterns` in `_bmad/bmm/config.yaml` before proceeding.
+All overrides use the same config guard pattern: check `issue_tracking.platform` and `issue_tracking.branch_patterns` in `_bmad/custom/issue-tracking.yaml` before proceeding.
 
 ## Key variable conventions in instructions
 
