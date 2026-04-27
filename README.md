@@ -15,14 +15,12 @@ Uses BMAD's native TOML customization for all workflow integrations.
 ### 1. Install the module via BMAD installer
 
 ```bash
+# Latest version (main branch)
 npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking
-```
 
-> **Known issue (temporary):** BMAD 6.4.0 may show a warning about not finding `module.yaml` for this module. This is a [bug in the BMAD installer](https://github.com/bmad-code-org/BMAD-METHOD/issues/2312) — custom modules are cached in `~/.bmad/cache/custom-modules/` but the manifest generator only searches `~/.bmad/cache/external-modules/`. This workaround will not be needed once the upstream bug is fixed. In the meantime:
->
-> ```bash
-> ln -s ~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking ~/.bmad/cache/external-modules/bmad-issue-tracking
-> ```
+# Specific version (e.g. 1.0.1)
+npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking@1.0.1
+```
 
 This registers two skills as slash commands:
 - `/bmad-bmm-issue-sync` — Sync sprint status to issues
