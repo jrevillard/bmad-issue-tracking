@@ -14,8 +14,8 @@ activation_steps_append = [
 # Scalar: runs after the code review workflow completes.
 on_complete = """
 Check `issue_tracking` in `_bmad/bmm/config.yaml`:
-- If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
-- If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
+- If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
+- If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
 
 After completing the code review, sync the story's status and post a review summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
@@ -72,7 +72,7 @@ No issues found.
 6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row).
 7. Commit all changes in the current worktree.
 8. Push the story branch to the remote.
-9. If the review passed, ask the user if they want to merge the MR now. If yes, merge it:
+9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes, merge it:
    - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch --hostname $HOST`
    - **GitHub:** `gh pr merge {pr_number} --delete-branch`
 10. Exit the worktree. Remove it if the MR was merged, otherwise keep it.

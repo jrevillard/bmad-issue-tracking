@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-27
+
+### Changed
+
+- Standalone sync skill (`bmad-bmm-issue-sync`) is now the single source of truth — removed duplicate `shared-tasks/` directory
+- Setup copies the sync skill directly to `_bmad/_config/custom/` instead of from a separate shared-tasks directory
+
+### Fixed
+
+- `create-story` now pushes the PRD branch after committing story file and sprint-status update
+- `bmad-bmm-issue-link` removed from marketplace.json (skill was deleted in 1.0.1)
+- Marketplace.json version aligned with module.yaml
+
+### Improved
+
+- Branch variable placeholders (`{prd_branch}`, `{story_branch}`) explicitly defined at first use in CLI commands
+- MR direction (story → PRD) repeated in code-review merge step
+- `story_key` to `epic_num`/`story_num` extraction clarified in create-story
+- Guard messages reworded: "the workflow will resume" → "then continue these instructions"
+- Removed dead `prd_parent_issue` config option from sync task (was never set or documented)
+- Added CLAUDE.md with architectural guidance for future development
+
 ## [1.0.1] - 2026-04-26
 
 ### Added
@@ -44,4 +66,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-bmm-issue-link` skill (obsolete, sync task handles MR creation)
 - Known issue workaround for git branch naming conflict (fixed by PRD pattern change)
 
+[1.1.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.0.0...v1.0.1

@@ -41,7 +41,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 | Operation | GitLab | GitHub |
 |---|---|---|
 | Auth check | `glab auth status --hostname $HOST` | `gh auth status [--hostname $HOST]` |
-| Create label | `glab api --method POST "projects/$PROJECT_ID/labels" --hostname $HOST -f "name=..." -f "color=..." -f "description=..."` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
+| Create label | `glab label create -n "..." -c "..." -d "..." -R "$HOST/$PROJECT_PATH"` | `gh label create "..." --color "..." --description "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Search issues | `glab api --paginate "projects/$PROJECT_ID/issues?search=...&labels=...&state=all&per_page=100" --hostname $HOST` | `gh api --paginate "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=..." [--hostname $HOST]` |
 | Create issue | `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=..." -F "description=@/tmp/desc.md" -f "labels=..."` | `gh issue create --title "..." --body-file "/tmp/desc.md" --label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
 | Update issue | `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "title=..." -f "labels=..." -f "state_event=reopen"` | `gh issue edit {number} --title "..." --add-label "..." --remove-label "..." -R "$OWNER/$REPO" [--hostname $HOST]` |
@@ -56,18 +56,24 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <task>
 
 <step n="1" goal="Detect platform and project">
-<action>Read `issue_tracking.platform` from `_bmad/bmm/config.yaml`. Valid values: `gitlab`, `github`. If absent or unrecognized, print a warning and stop.</action>
+<action>Check `issue_tracking` in `_bmad/bmm/config.yaml`:
+- If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
+- If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and then continue these instructions." and stop.
+</action>
+<action>Read `issue_tracking.platform` from config. Valid values: `gitlab`, `github`.</action>
 <action>Set `{sep}` to `::` for GitLab, `:` for GitHub.</action>
 
-<action>Detect project from git remote:</action>
-  1. Run `git remote get-url origin`
-  2. **GitLab** (SSH `git@HOST:GROUP/PROJECT.git` or HTTPS `https://HOST/GROUP/PROJECT.git`):
-     - Set HOST and PROJECT_PATH
-     - Run `glab api "projects/$(printf '%s' "$PROJECT_PATH" | sed 's/\//%2F/g')" --hostname $HOST`
-     - Extract `.id` as PROJECT_ID
-  3. **GitHub** (SSH `git@github.com:OWNER/REPO.git` or HTTPS `https://github.com/OWNER/REPO.git` or GHE variants):
-     - Set HOST (github.com or GHE host), OWNER, REPO
-     - Run `gh api "repos/$OWNER/$REPO" [--hostname $HOST]` to verify connectivity
+<action>Resolve connection details — config first, git remote as fallback:</action>
+  1. Check if `host` and `project` are set in the `issue_tracking` block.
+  2. **If both are set** — use them directly. Skip git remote detection.
+  3. **If either is missing** — detect from `git remote get-url origin`:
+     - **GitLab** (SSH `git@HOST:GROUP/PROJECT.git` or HTTPS `https://HOST/GROUP/PROJECT.git`):
+       - Set HOST and PROJECT_PATH
+       - Run `glab api "projects/$(printf '%s' "$PROJECT_PATH" | sed 's/\//%2F/g')" --hostname $HOST`
+       - Extract `.id` as PROJECT_ID
+     - **GitHub** (SSH `git@github.com:OWNER/REPO.git` or HTTPS `https://github.com/OWNER/REPO.git` or GHE variants):
+       - Set HOST (github.com or GHE host), OWNER, REPO
+       - Run `gh api "repos/$OWNER/$REPO" [--hostname $HOST]` to verify connectivity
 
 <action>Verify CLI connectivity using the auth check command for the platform</action>
 <check if="any step fails">
@@ -124,16 +130,11 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 </step>
 
 <step n="3" goal="Create PRD issue (if not exists)">
-<check if="prd_parent_issue is set in config">
-  <note>PRD linked to existing issue #{prd_parent_issue} — skip creation</note>
-</check>
-<check if="prd_parent_issue is NOT set">
-  <action>Search for existing PRD issue using the search command with labels `type{sep}prd` and `prd{sep}{prd_key}`</action>
-  <check if="no match found">
-    <action>Create PRD issue. Read `{planning_artifacts}/prd.md` to extract title (first `#` heading) and brief description (first paragraph). Format title as `"PRD: {heading text}"`</action>
-    <action>Labels: `type{sep}prd,prd{sep}{prd_key}`</action>
-    <action>Use the create-issue command for the platform</action>
-  </check>
+<action>Search for existing PRD issue using the search command with labels `type{sep}prd` and `prd{sep}{prd_key}`</action>
+<check if="no match found">
+  <action>Create PRD issue. Read `{planning_artifacts}/prd.md` to extract title (first `#` heading) and brief description (first paragraph). Format title as `"PRD: {heading text}"`</action>
+  <action>Labels: `type{sep}prd,prd{sep}{prd_key}`</action>
+  <action>Use the create-issue command for the platform</action>
 </check>
 </step>
 
@@ -191,13 +192,30 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 <note>yaml is the fallback authority during outage — auto-push to issue tracker</note>
 </step>
 
-<step n="5" goal="Report sync summary">
+<step n="5" goal="Mark draft PR ready when all epics are done">
+<action>Check if all epics in sprint-status.yaml have status `done`:</action>
+<check if="all epics are done">
+  <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch):</action>
+  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} --hostname $HOST`
+  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number`
+  <check if="draft PR/MR found">
+    <action>Mark it as ready:</action>
+    - **GitLab:** `glab mr update {mr_iid} --ready --hostname $HOST`
+    - **GitHub:** `gh pr ready {pr_number}`
+    <output>All epics are done — draft PR/MR marked as ready for review.</output>
+  </check>
+</check>
+</step>
+
+<step n="6" goal="Report sync summary">
 <action>Display:</action>
 
 ```
 Issue Tracker Sync Summary
 ==========================
 Platform:       {platform}
+Host:           {resolved host}
+Project:        {resolved project}
 PRD:            {prd_key}
 Labels synced:  {n} created/verified
 Issues created: {n}

@@ -24,15 +24,15 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 </check>
 </step>
 
-<step n="2" goal="Deploy shared tasks">
-<action>Locate the module's shared tasks. Check these locations in order:</action>
-1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/shared-tasks/`
+<step n="2" goal="Deploy shared task">
+<action>Locate the sync skill. Check these locations in order:</action>
+1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-bmm-issue-sync/SKILL.md`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
 
-<action>Copy all files to `_bmad/_config/custom/`:</action>
+<action>Copy the skill file to `_bmad/_config/custom/`:</action>
 
 ```bash
-cp <path>/shared-tasks/*.md _bmad/_config/custom/
+cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
 ```
 
 <action>Verify that `bmad-bmm-issue-sync.md` exists in `_bmad/_config/custom/`.</action>
