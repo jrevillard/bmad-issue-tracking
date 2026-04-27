@@ -5,10 +5,17 @@
 
 [workflow]
 
+# Array (append): runs after greet but before the workflow begins.
+activation_steps_append = [
+  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/bmm/config.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
+  "Read `branch_patterns.prd` and `branch_patterns.story` from `issue_tracking` in `_bmad/bmm/config.yaml`, and `prd_key` from the PRD frontmatter. Resolve both patterns with `{prd_key}`. List all local branches matching the story branch pattern. For each matching branch, read `sprint-status.yaml` and find stories with status `ready-for-dev`. If there are several, ask the user which story to work on. Create or switch to the selected story worktree.",
+]
+
 # Scalar: runs after the dev-story workflow completes.
 on_complete = """
 Check `issue_tracking` in `_bmad/bmm/config.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
+- If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
 
 After completing the dev story, sync the story's status and post an implementation summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
@@ -33,5 +40,7 @@ After completing the dev story, sync the story's status and post an implementati
 ```
 
 6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row). Skip if the final status is not `review`.
-7. Clean up temp files.
+7. Commit all changes in the current worktree.
+8. Exit the worktree and keep it.
+9. Clean up temp files.
 """

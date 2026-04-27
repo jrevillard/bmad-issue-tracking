@@ -5,10 +5,17 @@
 
 [workflow]
 
+# Array (append): runs after greet but before the workflow begins.
+activation_steps_append = [
+  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/bmm/config.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
+  "Read `branch_patterns.prd` from `issue_tracking` in `_bmad/bmm/config.yaml`, and `prd_key` from the PRD frontmatter. Resolve the pattern with `{prd_key}`. Create or switch to the PRD worktree.",
+]
+
 # Scalar: runs after Step 6 (Update sprint status and finalize).
 on_complete = """
 Check `issue_tracking` in `_bmad/bmm/config.yaml`:
 - If the section does not exist, or `platform` is not set: output "Issue tracking not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 5) to configure the platform. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
+- If `branch_patterns` is not set: output "Branch strategy not configured. Open a new session and run `/bmad-issue-tracking-setup` (step 6b) to configure branch patterns. When done, come back here and say 'done' — the configuration will be re-verified and the workflow will resume." and stop.
 
 After saving the story file and updating sprint-status.yaml, create an issue for the story by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
 
@@ -16,8 +23,10 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
 
 1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
 2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". If found, skip creation.
-4. If no issue exists, create it with:
+3. Commit all changes on the current branch.
+4. Create the story branch in a git worktree (from the PRD branch) and switch to it. Use the `branch_patterns.story` pattern from `issue_tracking` in `_bmad/bmm/config.yaml`, resolved with `{prd_key}` and `{story_key}`.
+5. Search for an existing issue whose title starts with "{epic_num}.{story_num} ". If found, skip creation.
+6. If no issue exists, create it with:
    - Title: "{epic_num}.{story_num} {story_title}"
    - Labels: type{sep}story, status{sep}ready-for-dev, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_num} (use :: for GitLab, : for GitHub)
    - Description: write to `/tmp/issue-desc.md` the full story file content, prefixed with a header:
@@ -31,4 +40,9 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
      {full content of the story file}
      ```
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub) with the description file. Clean up temp files.
+7. Push the story branch to the remote: `git push -u origin {story_branch}`.
+8. Create a MR/PR (story branch → PRD branch) referencing the issue:
+   - **GitLab:** `glab mr create --title "{story_title}" --description "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --target-branch {prd_branch} --source-branch {story_branch} --hostname $HOST`
+   - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} [--hostname $HOST]`
+9. Exit the worktree and keep it.
 """

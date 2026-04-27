@@ -9,8 +9,10 @@
 # Array (append): runs after greet but before the workflow begins.
 # Captures prd_key early so it's available throughout the PRD workflow.
 activation_steps_append = [
+  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/bmm/config.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
   "Ask the user: \"What is the initiative key for this project? (e.g. auth-refactor, mobile-oidc, api-gateway). It will be used as the identifier for issue tracking.\" Store the answer as PRD_KEY.",
   "Prepend `prd_key: {PRD_KEY}` to the PRD frontmatter file at `{planning_artifacts}/prd.md`. If the file doesn't exist yet, create it with only the frontmatter block: `---\\nprd_key: {PRD_KEY}\\n---`.",
+  "Create or switch to the PRD worktree. Use the `branch_patterns.prd` pattern from `issue_tracking` in `_bmad/bmm/config.yaml`, resolved with `{PRD_KEY}`.",
 ]
 
 # Scalar: runs after the create-prd workflow completes (Step 12).
@@ -38,13 +40,9 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
 6. Create the issue with title "PRD: {prd_key}" and label `type{sep}prd` (use `::` for GitLab, `:` for GitHub — see separator convention in sync task):
    - **GitLab:** `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=PRD: {prd_key}" -F "description=@/tmp/prd-desc.md" -f "labels=type::prd"`
    - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$OWNER/$REPO" [--hostname $HOST]
-7. Create the PRD branch:
-   - Read `branch_patterns.prd` from `issue_tracking` in `_bmad/bmm/config.yaml`.
-   - Resolve the pattern with `{prd_key}` (e.g., `feat/{prd_key}` → `feat/auth-refactor`).
-   - Check if the branch already exists: `git show-ref --verify --quiet refs/heads/{prd_branch}`.
-   - If it does not exist: `git checkout -b {prd_branch}`.
-   - If it already exists: `git checkout {prd_branch}`.
-8. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
+7. Commit all changes in the current worktree.
+8. Push the PRD branch to the remote: `git push -u origin {prd_branch}`.
+9. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
    - Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.
    - Check if a draft PR/MR already exists for this branch (PRD branch → default branch):
      - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} --hostname $HOST`
@@ -54,5 +52,6 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
    - Create the draft PR/MR referencing the issue:
      - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "Closes #{issue_number}" --target-branch {default_branch} --source-branch {prd_branch} --draft --hostname $HOST`
      - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "Closes #{issue_number}" --base {default_branch} --head {prd_branch} --draft -R "$OWNER/$REPO" [--hostname $HOST]`
-9. Clean up temp files.
+10. Exit the worktree and keep it.
+11. Clean up temp files.
 """
