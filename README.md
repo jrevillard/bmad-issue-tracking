@@ -51,7 +51,7 @@ Registered as slash commands in your IDE.
 
 | Skill | Command | Purpose |
 |---|---|---|
-| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues, create branches and MRs |
+| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues, mark draft PR ready |
 | Setup | `/bmad-issue-tracking-setup` | One-time integration setup |
 
 ### TOML overrides (via setup)
@@ -87,7 +87,7 @@ Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 /bmad-bmm-issue-sync
 ```
 
-Creates/updates issues for all sprint entries, manages labels, reconciles statuses, creates story branches and MRs, marks draft PR ready when all epics are done.
+Creates/updates issues for all sprint entries, manages labels, reconciles statuses, marks draft PR ready when all epics are done.
 
 ## Branch strategy
 
@@ -95,8 +95,10 @@ When `branch_patterns` is configured in the setup:
 
 | Event | Action |
 |---|---|
-| PRD created | PRD branch created + draft PR/MR (PRD branch → default branch) |
-| Story in-progress/review | Story branch created from PRD branch + MR/PR referencing the issue |
+| PRD created | PRD worktree created + draft PR/MR (PRD branch → default branch) |
+| Story created | Story worktree created (from PRD branch) + issue + MR (story → PRD) |
+| Story developed | Story worktree entered, changes committed |
+| Story reviewed | Issue status updated, worktree exited |
 | All epics done | Draft PR/MR marked as ready for review |
 
 ## Platform differences
@@ -132,7 +134,7 @@ issue_tracking:
   host: gitlab.com  # always configured by setup
   project: group/project  # always configured by setup
   branch_patterns:
-    prd: "feat/{prd_key}"
+    prd: "feat/{prd_key}/prd"
     story: "feat/{prd_key}/{story_key}"
 ```
 
