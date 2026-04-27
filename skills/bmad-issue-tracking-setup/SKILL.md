@@ -97,12 +97,12 @@ issue_tracking:
 <step n="6b" goal="Configure branch patterns">
 <action>Explain: "Branch patterns control automatic branch and MR/PR creation when developing PRD stories. Placeholders: `{prd_key}` (e.g. `auth-refactor`), `{story_key}` (e.g. `3-4-automatic-department-routing`)."</action>
 
-<action>Ask the user for their PRD branch pattern. Default: `feat/{prd_key}`</action>
+<action>Ask the user for their PRD branch pattern. Default: `feat/{prd_key}/prd`</action>
 <action>Ask the user for their story branch pattern. Default: `feat/{prd_key}/{story_key}`</action>
 
 <check if="PRD pattern does not contain `{prd_key}`">
   <output>WARN: PRD branch pattern must contain `{prd_key}` placeholder. Using default.</output>
-  <action>Set PRD pattern to `feat/{prd_key}`</action>
+  <action>Set PRD pattern to `feat/{prd_key}/prd`</action>
 </check>
 
 <check if="story pattern does not contain `{prd_key}` or does not contain `{story_key}`">
