@@ -46,7 +46,11 @@ Note: The BMM workflow may set the story status to `drafted` in sprint-status.ya
      ```
    Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub) with the description file. Clean up temp files.
 7. Create a MR/PR (story branch → PRD branch) referencing the issue:
-   - **GitLab:** `glab mr create --title "{story_title}" --description "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --target-branch {prd_branch} --source-branch {story_branch} -R "$HOST/$PROJECT_PATH"`
-   - **GitHub:** `gh pr create --title "{story_title}" --body "Sprint key: {story_key}\\n\\nRelated to #{issue_number}" --base {prd_branch} --head {story_branch} -R "$HOST/$OWNER/$REPO"`
+   - Determine the git platform for MR/PR operations: read `issue_tracking.git_platform` from `_bmad/custom/issue-tracking.yaml`. If not set, it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, use `git_host`/`git_project` from config (parse as GROUP/PROJECT for GitLab, OWNER/REPO for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables from Step 1.
+   - Build the MR/PR description referencing the issue (note: issue URLs use the tracker variables $HOST/$PROJECT_PATH or $HOST/$OWNER/$REPO, NOT the MR_* variables):
+     - If git_platform equals platform (same platform): use `"Sprint key: {story_key}\\n\\nRelated to #{issue_number}"` — the reference resolves natively.
+     - If git_platform differs from platform (cross-platform): build a full URL to the issue. For GitLab tracker: `"Sprint key: {story_key}\\n\\nRelated to https://$HOST/$PROJECT_PATH/-/issues/{issue_number}"`. For GitHub tracker: `"Sprint key: {story_key}\\n\\nRelated to https://$HOST/$OWNER/$REPO/issues/{issue_number}"`.
+   - **GitLab:** `glab mr create --title "{story_title}" --description "{issue_reference}" --target-branch {prd_branch} --source-branch {story_branch} -R "$MR_HOST/$MR_PROJECT"`
+   - **GitHub:** `gh pr create --title "{story_title}" --body "{issue_reference}" --base {prd_branch} --head {story_branch} -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
 8. Stay in the story worktree. Do NOT exit — the next workflow (dev-story or code-review) will switch to this worktree.
 """

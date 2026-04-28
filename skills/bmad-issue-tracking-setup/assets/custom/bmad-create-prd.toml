@@ -41,15 +41,19 @@ After creating the PRD, create a PRD issue and set up the branch strategy. Follo
 7. Commit all changes in the current worktree.
 8. Push the PRD branch to the remote: `git push -u origin {prd_branch}` (where `{prd_branch}` is the branch name resolved in the activation step from `branch_patterns.prd` with `{prd_key}`).
 9. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
+   - Determine the git platform for MR/PR operations: read `issue_tracking.git_platform` from `_bmad/custom/issue-tracking.yaml`. If not set, it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, use `git_host`/`git_project` from config (parse as GROUP/PROJECT for GitLab, OWNER/REPO for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables from Step 1.
    - Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.
    - Check if a draft PR/MR already exists for this branch (PRD branch → default branch):
-     - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$HOST/$PROJECT_PATH"`
-     - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$HOST/$OWNER/$REPO"`
+     - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$MR_HOST/$MR_PROJECT"`
+     - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
    - If found: skip creation.
    - If not found, find the PRD issue number from the issue created in step 6.
-   - Create the draft PR/MR referencing the issue:
-     - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "Closes #{issue_number}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "$HOST/$PROJECT_PATH"`
-     - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "Closes #{issue_number}" --base {default_branch} --head {prd_branch} --draft -R "$HOST/$OWNER/$REPO"`
+   - Build the MR/PR description referencing the issue (note: issue URLs use the tracker variables $HOST/$PROJECT_PATH or $HOST/$OWNER/$REPO, NOT the MR_* variables):
+     - If git_platform equals platform (same platform): use `"Closes #{issue_number}"` — auto-close works natively.
+     - If git_platform differs from platform (cross-platform): build a full URL to the issue. For GitLab tracker: `"Related to https://$HOST/$PROJECT_PATH/-/issues/{issue_number}"`. For GitHub tracker: `"Related to https://$HOST/$OWNER/$REPO/issues/{issue_number}"`.
+   - Create the draft PR/MR:
+     - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "{issue_reference}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "$MR_HOST/$MR_PROJECT"`
+     - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "{issue_reference}" --base {default_branch} --head {prd_branch} --draft -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
 10. Stay in the PRD worktree. Do NOT exit — the agent continues working from here.
 11. Clean up temp files.
 """

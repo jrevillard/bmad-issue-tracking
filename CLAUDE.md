@@ -34,6 +34,8 @@ TOML instructions reference these placeholders — they are NOT config variables
 - `{prd_branch}` — `branch_patterns.prd` resolved with `{prd_key}`, e.g. `feat/mobile-oidc/prd`
 - `{story_branch}` — `branch_patterns.story` resolved with `{prd_key}` and `{story_key}`
 - `{sep}` — `::` for GitLab, `:` for GitHub (label separator)
+- `$MR_HOST`, `$MR_PROJECT` — git remote host/project for MR operations (GitLab); same as `$HOST`/`$PROJECT_PATH` when platforms match
+- `$MR_OWNER`, `$MR_REPO` — git remote owner/repo for PR operations (GitHub); same as `$OWNER`/`$REPO` when platforms match
 
 ## Branch/MR flow
 
@@ -51,6 +53,8 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels
 - GitHub: `gh` CLI, labels use `:` separator, `gh issue edit` with `--add-label`/`--remove-label` (targeted)
 - `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`
+
+**Git remote vs issue tracker:** The git remote (origin) and issue tracker can be on different platforms (e.g., code on GitLab, issues on GitHub). `issue_tracking.platform` is the issue tracker; `issue_tracking.git_platform` (set during setup) is the git remote. Issue operations (create/update/close issues, labels, comments) use `platform`. MR/PR operations (list, create, merge, mark ready) use `git_platform`. When they differ, `host`/`project` apply to the issue tracker and `git_host`/`git_project` apply to the git remote. Issue references in MR descriptions use `Closes #X` for same-platform, full URL for cross-platform.
 
 ## Files to update when adding a new BMM workflow override
 

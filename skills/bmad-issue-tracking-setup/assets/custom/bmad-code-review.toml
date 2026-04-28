@@ -72,9 +72,11 @@ No issues found.
 6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row).
 7. Commit all changes in the current worktree.
 8. Push the story branch to the remote.
-9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes, merge it:
-   - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch -R "$HOST/$PROJECT_PATH"`
-   - **GitHub:** `gh pr merge {pr_number} --delete-branch -R "$HOST/$OWNER/$REPO"`
+9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes (the MR description was already set during story creation with the correct issue reference — no update needed):
+   - Determine the git platform for MR/PR operations: read `issue_tracking.git_platform` from `_bmad/custom/issue-tracking.yaml`. If not set, it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, use `git_host`/`git_project` from config (parse as GROUP/PROJECT for GitLab, OWNER/REPO for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables from Step 1.
+   - Merge it:
+     - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch -R "$MR_HOST/$MR_PROJECT"`
+     - **GitHub:** `gh pr merge {pr_number} --delete-branch -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
 10. If the MR was merged, exit the worktree and remove it. Otherwise, stay in the story worktree — the agent continues working from here.
 11. Clean up temp files.
 """

@@ -69,6 +69,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
   1. Check if `host` and `project` are set in the `issue_tracking` block.
   2. **If both are set** — use them directly. Skip git remote detection.
   3. **If either is missing** — detect from `git remote get-url origin`:
+     - **If `git_platform` is set and differs from `platform`:** output "Issue tracker host/project must be configured explicitly in `_bmad/custom/issue-tracking.yaml` when git remote and issue tracker are on different platforms. Run `/bmad-issue-tracking-setup` (step 5) to configure." and stop. Do NOT use the git remote as fallback — it points to the wrong platform.
      - **GitLab** (SSH `git@HOST:GROUP/PROJECT.git` or HTTPS `https://HOST/GROUP/PROJECT.git`):
        - Set HOST and PROJECT_PATH
        - Run `glab api "projects/$(printf '%s' "$PROJECT_PATH" | sed 's/\//%2F/g')" --hostname $HOST`
@@ -87,7 +88,7 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
   <ask>Ask the user for the PRD key (e.g., "mobile-oidc"). Then offer to add it to the PRD frontmatter for next time.</ask>
 </check>
 <action>Read `planning_artifacts` and `story_location` paths from `bmm/config.yaml` (fields: `planning_artifacts` and `implementation_artifacts`)</action>
-<note>Store all detected values for use in subsequent steps. For GitLab, use `-R "$HOST/$PROJECT_PATH"` on subcommands (mr, label). For GitHub/GHE, use `-R "$HOST/$OWNER/$REPO"` on all `gh` subcommands.</note>
+<note>Store all detected values for use in subsequent steps. For issue-tracker operations (labels, issues, comments), use the tracker variables: `-R "$HOST/$PROJECT_PATH"` for GitLab, `-R "$HOST/$OWNER/$REPO"` for GitHub. For MR/PR operations, use the git platform variables: if `git_platform` differs from `platform`, resolve `MR_HOST`/`MR_PROJECT` (GitLab) or `MR_HOST`/`MR_OWNER`/`MR_REPO` (GitHub) from `issue_tracking.git_host`/`git_project`. If same platform, reuse the tracker variables.</note>
 </step>
 
 <step n="2" goal="Ensure labels exist">
@@ -195,16 +196,17 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 </step>
 
 <step n="5" goal="Mark draft PR ready when all epics are done">
+<note>MR/PR operations use the **git platform** (where the code lives), not the issue tracker platform. Read `git_platform` from `issue_tracking` config. If not set, assume it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, set `MR_HOST` and `MR_PROJECT` from `issue_tracking.git_host`/`git_project` (for GitLab), or `MR_HOST`, `MR_OWNER`, `MR_REPO` by parsing `git_project` as OWNER/REPO (for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables already resolved in Step 1.</note>
 <action>Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.</action>
 <action>Check if all epics in sprint-status.yaml have status `done`:</action>
 <check if="all epics are done">
-  <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch):</action>
-  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$HOST/$PROJECT_PATH"`
-  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$HOST/$OWNER/$REPO"`
+  <action>Find the draft PR/MR for the PRD branch (PRD branch → default branch). Use the git platform and repository variables resolved above:</action>
+  - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$MR_HOST/$MR_PROJECT"`
+  - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
   <check if="draft PR/MR found">
     <action>Mark it as ready:</action>
-    - **GitLab:** `glab mr update {mr_iid} --ready -R "$HOST/$PROJECT_PATH"`
-    - **GitHub:** `gh pr ready {pr_number} -R "$HOST/$OWNER/$REPO"`
+    - **GitLab:** `glab mr update {mr_iid} --ready -R "$MR_HOST/$MR_PROJECT"`
+    - **GitHub:** `gh pr ready {pr_number} -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
     <output>All epics are done — draft PR/MR marked as ready for review.</output>
   </check>
 </check>
