@@ -7,7 +7,5 @@
 
 # Scalar: runs after sprint planning completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After completing sprint planning and updating sprint-status.yaml, sync all entries to the issue tracker by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Run the full sync (Steps 1 through 6).
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`.
 """

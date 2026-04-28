@@ -1,0 +1,11 @@
+# sprint-planning/complete.yaml
+#
+# Purpose: Triggers a full issue sync after sprint planning completes.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: runs the full sync task (Steps 1 through 6)
+
+- INCLUDE: common/check-config
+- OUTPUT:
+    message: "Syncing all entries to the issue tracker..."
+- INCLUDE: _bmad/_config/custom/bmad-bmm-issue-sync.md

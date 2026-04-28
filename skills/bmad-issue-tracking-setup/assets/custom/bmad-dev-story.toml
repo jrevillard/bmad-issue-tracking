@@ -7,41 +7,10 @@
 
 # Array (append): runs after greet but before the workflow begins.
 activation_steps_append = [
-  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Read `branch_patterns.prd` and `branch_patterns.story` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not found on the current branch, list all local branches matching the PRD branch pattern (replace `{prd_key}` with `*` in the configured pattern, e.g. if the pattern is `feat/{prd_key}/prd` then use `git branch --list 'feat/*/prd'`). If a match is found, switch to its worktree, run `git pull --ff-only` to ensure it is up to date, then read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
-  "Resolve both patterns with `{prd_key}`. List all local branches matching the story branch pattern. For each matching branch, switch to its worktree, run `git pull --ff-only` to ensure it is up to date, then read `sprint-status.yaml` and find stories with status `ready-for-dev`. If no matching branches are found, output 'No story branches found. Run `/bmad-create-story` first to create a story branch.' and stop. If there are several, ask the user which story to work on. Switch to the selected story worktree.",
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/dev-story/activation.yaml`.",
 ]
 
 # Scalar: runs after the dev-story workflow completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After completing the dev story, sync the story's status and post an implementation summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. If `{story_key}` was not carried from activation (e.g. context was compacted), re-derive it: list files in `{implementation_artifacts}/` matching `*-*.md` and pick the one matching the current branch, or read the story key from sprint-status.yaml for the story with status `ready-for-dev` or `in-progress`.
-4. Find the issue whose description contains the story key. If not found, skip.
-4. Update the issue status label based on the workflow outcome:
-   - If the story is ready for review: set status label to `review`, reopen if closed.
-   - If the story was completed (all acceptance criteria met): set status label to `done`, close the issue.
-   - Otherwise: set status label to `in-progress`, reopen if closed.
-5. If the final status is `review`, post an implementation summary comment. Write the comment to `/tmp/dev-story-comment.md`. Summarize the key changes in 2-5 bullet points. For "Notes", include any known limitations, areas that need special attention, or deviations from the original story. Use this template:
-
-```
-## Ready for Review
-
-### Implemented
-- {key change 1}
-- {key change 2}
-
-### Notes
-- {point of attention for the reviewer}
-```
-
-6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row). Skip if the final status is not `review`.
-7. Commit all changes in the current worktree.
-8. Push the story branch to the remote.
-9. Stay in the story worktree. Do NOT exit — the agent continues working from here.
-10. Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/dev-story/complete.yaml`.
 """

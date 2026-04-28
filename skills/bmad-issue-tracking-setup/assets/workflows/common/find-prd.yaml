@@ -1,0 +1,54 @@
+# common/find-prd.yaml
+#
+# Purpose: Finds the PRD branch, switches to its worktree, pulls, and extracts prd_key.
+#           If prd_key is not in the PRD frontmatter, asks the user and persists it.
+# Input variables: (none)
+# Output variables:
+#   - prd_key: the PRD key from frontmatter or user input
+#   - prd_worktree_path: the filesystem path to the PRD worktree
+#   - prd_pattern: the resolved PRD branch pattern (from config)
+# Side effects: runs git pull on the PRD worktree; writes prd_key to PRD frontmatter if not present
+
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: git branch --list '{prd_pattern}'
+  STORE: prd_branches
+- CHECK: empty prd_branches
+  TRUE:
+    - OUTPUT:
+        message: "No PRD found. Run /bmad-create-prd first."
+        stop: true
+- RUN: git worktree list
+  STORE: worktree_list
+- FILTER:
+    source: worktree_list
+    select: path
+    where: branch matches "{prd_pattern}"
+    store: prd_worktree_path
+- RUN: cd {prd_worktree_path} && git pull --ff-only
+  EXPECT_EXIT: 0
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+- CHECK: exists prd_key
+  TRUE:
+    - STOP
+  FALSE:
+    - OUTPUT:
+        message: "prd_key not found in PRD frontmatter. What is the PRD key? (e.g. mobile-oidc)"
+        store: prd_key
+    - RUN: python3 -c "
+import sys
+path, key = sys.argv[1], sys.argv[2]
+with open(path, 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+for i in range(1, len(lines)):
+    if lines[i].strip() == '---':
+        lines.insert(i, f'prd_key: {key}\n')
+        break
+with open(path, 'w', encoding='utf-8') as f:
+    f.writelines(lines)
+" {planning_artifacts}/prd.md {prd_key}
+      EXPECT_EXIT: 0
+

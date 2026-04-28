@@ -61,7 +61,35 @@ cp <path>/*.toml _bmad/custom/
 - `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
 - `bmad-sprint-status.toml` (requires BMM 6.4.0+)
 
+<action>Note: The TOML files that were simplified to pointer format (bmad-dev-story, bmad-edit-prd, bmad-sprint-planning, bmad-sprint-status) reference workflow YAML files. These are deployed separately in step 3b.</action>
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
+</step>
+
+<step n="3b" goal="Deploy workflow language files">
+<action>The TOML overrides reference workflow language YAML files. These are deployed separately to keep the TOML files as simple pointers.</action>
+
+<action>Locate the workflow language files. They are siblings of the `custom/` directory (in the same `assets/` parent):</action>
+1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/`
+2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+
+<action>Copy the workflow language specification and workflow YAML files:</action>
+
+```bash
+cp <path>/bmad-workflow-lang.md _bmad/_config/custom/
+mkdir -p _bmad/_config/custom/workflows
+cp -r <path>/workflows/* _bmad/_config/custom/workflows/
+```
+
+<action>Verify the following files exist:</action>
+- `_bmad/_config/custom/bmad-workflow-lang.md`
+- `_bmad/_config/custom/workflows/common/check-config.yaml`
+- `_bmad/_config/custom/workflows/common/find-prd.yaml`
+- `_bmad/_config/custom/workflows/common/find-stories.yaml`
+- `_bmad/_config/custom/workflows/dev-story/activation.yaml`
+- `_bmad/_config/custom/workflows/dev-story/complete.yaml`
+- `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
 <step n="4" goal="Configure issue_tracking">

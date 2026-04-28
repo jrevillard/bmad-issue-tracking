@@ -1,0 +1,41 @@
+# dev-story/activation.yaml
+#
+# Purpose: Finds a story with status "ready-for-dev" and switches to its worktree.
+# Input variables: (none)
+# Output variables:
+#   - target_status: the status filter value ("ready-for-dev")
+#   - matched_stories: newline-separated list of branch names matching the target status
+#   - selected_story: the branch name chosen by the user (or auto-selected if only one match)
+#   - selected_worktree_path: the filesystem path to the selected story worktree
+# Side effects: runs git pull on each story worktree; switches context to selected worktree
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- SET: { variable: target_status, value: "ready-for-dev" }
+- INCLUDE: common/find-stories
+- CHECK: empty matched_stories
+  TRUE:
+    - OUTPUT:
+        message: "No stories with status 'ready-for-dev' found."
+        stop: true
+- CHECK: matched_stories gt 1
+  TRUE:
+    - OUTPUT:
+        message: "Multiple stories found. Please choose (enter the number):"
+        store: selected_story_index
+- FILTER:
+    source: matched_stories
+    select: value
+    where: index eq "{selected_story_index}"
+    store: selected_story
+- RUN: git worktree list
+  STORE: worktree_list
+- FILTER:
+    source: worktree_list
+    select: path
+    where: branch eq "{selected_story}"
+    store: selected_worktree_path
+- RUN: cd {selected_worktree_path}
+  EXPECT_EXIT: 0
+- OUTPUT:
+    message: "Switched to story {selected_story}."

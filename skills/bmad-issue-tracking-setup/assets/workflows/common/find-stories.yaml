@@ -1,0 +1,80 @@
+# common/find-stories.yaml
+#
+# Purpose: Scans story branches, pulls each worktree, reads sprint-status,
+#          and filters by a target status. Asks the user to choose if multiple match.
+# Input variables:
+#   - target_status: the sprint status to match (e.g. "ready-for-dev", "review")
+#                    Must be set by the caller via SET step before INCLUDE.
+# Output variables:
+#   - matched_stories: newline-separated list of branch names matching the target status
+#   - selected_story: the branch name chosen by the user (or auto-selected if only one match)
+#   - selected_worktree_path: the filesystem path to the selected story worktree
+# Side effects: runs git pull on each story worktree; switches context to selected worktree
+
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    story_pattern: issue_tracking.branch_patterns.story
+- RUN: git branch --list '{story_pattern}'
+  STORE: story_branches
+- CHECK: empty story_branches
+  TRUE:
+    - OUTPUT:
+        message: "No story branches found. Run /bmad-create-story first."
+        stop: true
+- LOOP:
+    items: story_branches
+    as: branch
+    do:
+      - RUN: git worktree list
+        STORE: worktrees
+      - FILTER:
+          source: worktrees
+          select: path
+          where: branch eq "{branch}"
+          store: worktree_path
+      - RUN: cd {worktree_path} && git pull --ff-only
+        EXPECT_EXIT: 0
+      - RUN: python3 -c "
+import sys
+parts = sys.argv[1].rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(sys.argv[1])
+" {branch}
+        STORE: story_key
+      - READ: {implementation_artifacts}/sprint-status.yaml
+        EXTRACT:
+          entries: development_status
+      - FILTER:
+          source: entries
+          select: value
+          where: key eq "{story_key}"
+          store: story_status
+    FILTER:
+      where: story_status eq "{target_status}"
+      store: matched_stories
+- CHECK: empty matched_stories
+  TRUE:
+    - OUTPUT:
+        message: "No stories with status '{target_status}' found."
+        stop: true
+- CHECK: matched_stories gt 1
+  TRUE:
+    - OUTPUT:
+        message: "Multiple stories found with status '{target_status}'. Please choose (enter the number):"
+        store: selected_story_index
+    - FILTER:
+        source: matched_stories
+        select: value
+        where: index eq "{selected_story_index}"
+        store: selected_story
+  FALSE:
+    - SET: { variable: selected_story, value: "{matched_stories}" }
+- RUN: git worktree list
+  STORE: worktree_list
+- FILTER:
+    source: worktree_list
+    select: path
+    where: branch eq "{selected_story}"
+    store: selected_worktree_path

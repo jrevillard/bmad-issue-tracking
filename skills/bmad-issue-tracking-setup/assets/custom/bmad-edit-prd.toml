@@ -7,26 +7,5 @@
 
 # Scalar: runs after the edit-prd workflow completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After editing the PRD, update the PRD issue description. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Find the PRD issue whose title starts with "PRD:". If not found, skip.
-4. Read the full PRD file content from `{planning_artifacts}/prd.md`.
-5. Write the new description to `/tmp/prd-desc.md` using this format:
-
-```
-**PRD:** {prd_key}
-
----
-
-{full PRD file content}
-```
-
-6. Update the issue description using the platform-appropriate command:
-   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -F "description=@/tmp/prd-desc.md"` — do NOT send the `labels` parameter, it would replace all labels
-   - **GitHub:** `gh issue edit {number} --body-file "/tmp/prd-desc.md" -R "$HOST/$OWNER/$REPO"`
-7. Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/edit-prd/complete.yaml`.
 """
