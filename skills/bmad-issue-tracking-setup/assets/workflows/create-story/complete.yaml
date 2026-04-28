@@ -1,0 +1,175 @@
+# create-story/complete.yaml
+#
+# Purpose: Creates a story issue, commits, pushes, and creates an MR to PRD.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: creates issue on tracker, pushes branch, creates MR
+
+- INCLUDE: common/check-config
+# Re-derive variables (context may have been compacted)
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+- CHECK: empty prd_key
+  TRUE:
+    - OUTPUT:
+        message: "prd_key not found in frontmatter. Run /bmad-create-story again."
+        stop: true
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+- RUN: git branch --show-current
+  STORE: current_branch
+- RUN: python3 -c "
+import sys
+parts = sys.argv[1].rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(sys.argv[1])
+" {current_branch}
+  STORE: story_key
+- RUN: python3 -c "
+parts = sys.argv[1].split('-')
+print(parts[0])
+" {story_key}
+  STORE: epic_num
+- RUN: python3 -c "
+parts = sys.argv[1].split('-')
+print(parts[1])
+" {story_key}
+  STORE: story_num
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    story_pattern: issue_tracking.branch_patterns.story
+- RUN: python3 -c "
+import sys
+pattern = sys.argv[1]
+key = sys.argv[2]
+prd_key = sys.argv[3]
+print(pattern.replace('{prd_key}', prd_key).replace('{story_key}', key))
+" {story_pattern} {story_key} {prd_key}
+  STORE: story_branch
+# Extract story title (needed for both issue creation and MR)
+- RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    for line in f:
+        if line.startswith('# '):
+            print(line[2:].strip())
+            break
+" {implementation_artifacts}/{story_key}.md
+  STORE: story_title
+# Find the story file content (just created by BMM workflow)
+- RUN: ls {implementation_artifacts}/{story_key}.md 2>/dev/null
+  STORE: story_file_check
+- CHECK: empty story_file_check
+  TRUE:
+    - OUTPUT:
+        message: "Story file not found at {implementation_artifacts}/{story_key}.md"
+        stop: true
+- RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    print(f.read())
+" {implementation_artifacts}/{story_key}.md
+  STORE: story_body
+# Write description file
+- WRITE:
+    file: /tmp/issue-desc.md
+    content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
+    mode: overwrite
+# Search for existing issue
+- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={epic_num}.{story_num}" --hostname $HOST
+  STORE: search_result
+  PLATFORM: gitlab
+- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+  STORE: search_result
+  PLATFORM: github
+- CHECK: empty search_result
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - FILTER:
+            source: search_result
+            select: iid
+            where: title matches "{epic_num}.{story_num}"
+            store: story_issue_id
+      FALSE:
+        - FILTER:
+            source: search_result
+            select: number
+            where: title matches "{epic_num}.{story_num}"
+            store: story_issue_id
+    - CHECK: empty story_issue_id
+      TRUE:
+        - STOP
+      FALSE:
+        - SET: { variable: issue_id, value: "{story_issue_id}" }
+        - OUTPUT:
+            message: "Story issue already exists (#{issue_id}). Skipping creation."
+- CHECK: empty search_result
+  TRUE:
+    # Create the issue
+    - SET: { variable: title, value: "{epic_num}.{story_num} {story_title}" }
+    - SET: { variable: labels, value: "type{sep}story\nstatus{sep}ready-for-dev\nprd{sep}{prd_key}\n{prd_key}{sep}epic-{epic_num}" }
+    - SET: { variable: description_file, value: "/tmp/issue-desc.md" }
+    - INCLUDE: common/create-issue
+# Commit and push
+- RUN: git add .
+- RUN: git commit -m "create story {story_key}"
+- RUN: git push -u origin {story_branch}
+# Create MR (story branch -> PRD branch) — inline for cross-platform
+- CHECK: exists git_platform
+  FALSE:
+    - SET: { variable: git_platform, value: "{platform}" }
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to #{issue_id}" }
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://$HOST/$PROJECT_PATH/-/issues/{issue_id}" }
+      FALSE:
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://$HOST/$OWNER/$REPO/issues/{issue_id}" }
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: mr_repo, value: "$HOST/$PROJECT_PATH" }
+  FALSE:
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - SET: { variable: mr_repo, value: "$git_host/$git_project" }
+      FALSE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+          STORE: git_owner
+        - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+          STORE: git_repo
+        - SET: { variable: mr_repo, value: "$git_host/$git_owner/$git_repo" }
+- CHECK: git_platform eq "gitlab"
+  TRUE:
+    - RUN: glab mr create --title "{epic_num}.{story_num} {story_title}" --description "{issue_ref}" --target-branch {prd_branch} --source-branch {story_branch} -R "{mr_repo}"
+      EXPECT_EXIT: 0
+  FALSE:
+    - RUN: gh pr create --title "{epic_num}.{story_num} {story_title}" --body "{issue_ref}" --base {prd_branch} --head {story_branch} -R "{mr_repo}"
+      EXPECT_EXIT: 0
+- RUN: rm -f /tmp/issue-desc.md
+- OUTPUT:
+    message: "Story {story_key} issue created and MR ready."

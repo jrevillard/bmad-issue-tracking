@@ -1,0 +1,55 @@
+# create-story/activation.yaml
+#
+# Purpose: Captures story_key and creates/switches to the story worktree.
+# Input variables: (none)
+# Output variables:
+#   - story_key: the story key (e.g. 1-3-login-form)
+# Side effects: creates/switches to story worktree from PRD branch
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+# Resolve prd_branch (find-prd sets prd_pattern but not prd_branch)
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+- OUTPUT:
+    message: "What is the story key? (e.g. 1-3-login-form)"
+    store: story_key
+# Resolve story branch
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    story_pattern: issue_tracking.branch_patterns.story
+- RUN: python3 -c "
+import sys
+pattern = sys.argv[1]
+key = sys.argv[2]
+prd_key = sys.argv[3]
+print(pattern.replace('{prd_key}', prd_key).replace('{story_key}', key))
+" {story_pattern} {story_key} {prd_key}
+  STORE: story_branch
+# Check if branch already exists, create worktree if not
+- RUN: git branch --list '{story_branch}'
+  STORE: existing_branches
+- CHECK: empty existing_branches
+  TRUE:
+    - RUN: git worktree add _bmad/worktrees/story -b {story_branch} {prd_branch}
+  FALSE:
+    - OUTPUT:
+        message: "Story branch already exists."
+- RUN: git worktree list
+  STORE: worktrees
+- FILTER:
+    source: worktrees
+    select: path
+    where: branch eq "{story_branch}"
+    store: story_worktree_path
+- RUN: cd {story_worktree_path}
+  EXPECT_EXIT: 0
+- RUN: git pull --ff-only
+  EXPECT_EXIT: 0
+- OUTPUT:
+    message: "Switched to story worktree."

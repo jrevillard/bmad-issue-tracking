@@ -61,7 +61,7 @@ cp <path>/*.toml _bmad/custom/
 - `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
 - `bmad-sprint-status.toml` (requires BMM 6.4.0+)
 
-<action>Note: The TOML files that were simplified to pointer format (bmad-dev-story, bmad-edit-prd, bmad-sprint-planning, bmad-sprint-status) reference workflow YAML files. These are deployed separately in step 3b.</action>
+<action>Note: All TOML files are in pointer format — they reference workflow YAML files deployed in step 3b.</action>
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
 </step>
 
@@ -83,11 +83,23 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
 <action>Verify the following files exist:</action>
 - `_bmad/_config/custom/bmad-workflow-lang.md`
 - `_bmad/_config/custom/workflows/common/check-config.yaml`
+- `_bmad/_config/custom/workflows/common/create-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
+- `_bmad/_config/custom/workflows/common/update-issue-description.yaml`
+- `_bmad/_config/custom/workflows/common/update-issue-status.yaml`
+- `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`
+- `_bmad/_config/custom/workflows/code-review/activation.yaml`
+- `_bmad/_config/custom/workflows/code-review/complete.yaml`
+- `_bmad/_config/custom/workflows/correct-course/complete.yaml`
+- `_bmad/_config/custom/workflows/create-prd/activation.yaml`
+- `_bmad/_config/custom/workflows/create-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/create-story/activation.yaml`
+- `_bmad/_config/custom/workflows/create-story/complete.yaml`
 - `_bmad/_config/custom/workflows/dev-story/activation.yaml`
 - `_bmad/_config/custom/workflows/dev-story/complete.yaml`
 - `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/retrospective/complete.yaml`
 - `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>

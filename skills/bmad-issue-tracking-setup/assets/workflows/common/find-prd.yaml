@@ -12,7 +12,12 @@
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
     prd_pattern: issue_tracking.branch_patterns.prd
-- RUN: git branch --list '{prd_pattern}'
+- RUN: python3 -c "
+import sys
+print(sys.argv[1].replace('{prd_key}', '*'))
+" {prd_pattern}
+  STORE: prd_branch_glob
+- RUN: git branch --list '{prd_branch_glob}'
   STORE: prd_branches
 - CHECK: empty prd_branches
   TRUE:

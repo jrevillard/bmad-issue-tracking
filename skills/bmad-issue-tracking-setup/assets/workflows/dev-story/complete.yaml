@@ -56,29 +56,27 @@ else:
         select: iid
         store: story_issue_id
   FALSE:
+    - RUN: python3 -c "
+parts = sys.argv[1].split('-')
+print(parts[0] + '.' + parts[1])
+" {story_key}
+      STORE: story_title_prefix
     - FILTER:
         source: issue_result
         select: number
+        where: title matches "{story_title_prefix}"
         store: story_issue_id
-# Determine workflow outcome and update issue status
+# Update issue status using common sub-workflow
 - CHECK: story_status eq "review"
   TRUE:
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "labels[]=status{sep}review"
-      PLATFORM: gitlab
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - SET: { variable: new_status, value: "review" }
+    - SET: { variable: close, value: "false" }
+    - INCLUDE: common/update-issue-status
+    - OUTPUT:
+        message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
+    - RUN: test -f /tmp/dev-story-comment.md
       EXPECT_EXIT: 0
-    - RUN: gh issue edit {story_issue_id} --add-label "status:review" -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "state_event=reopen"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue reopen {story_issue_id} -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
-    - WRITE:
-        file: /tmp/dev-story-comment.md
-        content: "## Ready for Review\n\n### Implemented\n- {key change 1}\n- {key change 2}\n\n### Notes\n- {point of attention for the reviewer}"
-        mode: overwrite
     - RUN: glab api --method POST "projects/$PROJECT_ID/issues/{story_issue_id}/notes" --hostname $HOST -F "body=@/tmp/dev-story-comment.md"
       PLATFORM: gitlab
       EXPECT_EXIT: 0
@@ -88,36 +86,28 @@ else:
     - RUN: rm -f /tmp/dev-story-comment.md
 - CHECK: story_status eq "done"
   TRUE:
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "labels[]=status{sep}done"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue edit {story_issue_id} --add-label "status:done" --remove-label "status:review" -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "state_event=close"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue close {story_issue_id} -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
-# Default: set label to in-progress, reopen if closed
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - SET: { variable: new_status, value: "done" }
+    - SET: { variable: close, value: "true" }
+    - INCLUDE: common/update-issue-status
+# Default: set label to in-progress, reopen if closed (catch-all for any other status)
 - CHECK: story_status eq "in-progress"
   TRUE:
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "labels[]=status{sep}in-progress"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue edit {story_issue_id} --add-label "status:in-progress" -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{story_issue_id}" --hostname $HOST -F "state_event=reopen"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue reopen {story_issue_id} -R "$HOST/$OWNER/$REPO"
-      PLATFORM: github
-      EXPECT_EXIT: 0
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - SET: { variable: new_status, value: "in-progress" }
+    - SET: { variable: close, value: "false" }
+    - INCLUDE: common/update-issue-status
+- CHECK: story_status ne "review"
+  TRUE:
+    - CHECK: story_status ne "done"
+      TRUE:
+        - SET: { variable: issue_id, value: "{story_issue_id}" }
+        - SET: { variable: new_status, value: "in-progress" }
+        - SET: { variable: close, value: "false" }
+        - INCLUDE: common/update-issue-status
 # Commit and push
 - RUN: git add .
-- RUN: git commit -m "update story {story_key}"
+- RUN: git commit --allow-empty -m "update story {story_key}"
 - RUN: git push
 - OUTPUT:
     message: "Story {story_key} updated. Staying in worktree."

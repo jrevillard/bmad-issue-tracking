@@ -1,0 +1,121 @@
+# create-prd/complete.yaml
+#
+# Purpose: Creates a PRD issue, commits, pushes, and creates a draft MR.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: creates issue on tracker, pushes branch, creates draft MR
+
+- INCLUDE: common/check-config
+# Read prd_key (should have been set during activation, re-derive if lost)
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+- CHECK: empty prd_key
+  TRUE:
+    - OUTPUT:
+        message: "prd_key not found in frontmatter. Run /bmad-create-prd again."
+        stop: true
+# Resolve prd_branch
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+# Create the PRD issue
+- RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+count = 0
+start = 0
+for i, line in enumerate(lines):
+    if line.strip() == '---':
+        count += 1
+        if count == 2:
+            start = i + 1
+            break
+print(''.join(lines[start:]).strip())
+" {planning_artifacts}/prd.md
+  STORE: prd_body
+- WRITE:
+    file: /tmp/prd-desc.md
+    content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
+    mode: overwrite
+- SET: { variable: title, value: "PRD: {prd_key}" }
+- SET: { variable: labels, value: "type{sep}prd" }
+- SET: { variable: description_file, value: "/tmp/prd-desc.md" }
+- INCLUDE: common/create-issue
+# Commit and push
+- RUN: git add .
+- RUN: git commit -m "update PRD {prd_key}"
+- RUN: git push -u origin {prd_branch}
+# Create draft MR (inline — cross-platform complexity)
+- RUN: git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'
+  STORE: default_branch
+# Resolve git platform variables for MR operations
+- CHECK: exists git_platform
+  FALSE:
+    - SET: { variable: git_platform, value: "{platform}" }
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: issue_ref, value: "Closes #{issue_id}" }
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - SET: { variable: issue_ref, value: "Related to https://$HOST/$PROJECT_PATH/-/issues/{issue_id}" }
+      FALSE:
+        - SET: { variable: issue_ref, value: "Related to https://$HOST/$OWNER/$REPO/issues/{issue_id}" }
+- CHECK: git_platform eq "gitlab"
+  TRUE:
+    - CHECK: git_platform eq platform
+      TRUE:
+        - SET: { variable: mr_repo, value: "$HOST/$PROJECT_PATH" }
+      FALSE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - SET: { variable: mr_repo, value: "$git_host/$git_project" }
+    - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}"
+      STORE: mr_list
+    - CHECK: empty mr_list
+      FALSE:
+        - OUTPUT:
+            message: "Draft MR already exists for PRD branch. Skipping creation."
+      TRUE:
+        - RUN: glab mr create --title "PRD: {prd_key}" --description "{issue_ref}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "{mr_repo}"
+          EXPECT_EXIT: 0
+  FALSE:
+    - CHECK: git_platform eq platform
+      TRUE:
+        - SET: { variable: mr_repo, value: "$HOST/$OWNER/$REPO" }
+      FALSE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+          STORE: git_owner
+        - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+          STORE: git_repo
+        - SET: { variable: mr_repo, value: "$git_host/$git_owner/$git_repo" }
+    - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
+      STORE: pr_list
+    - CHECK: empty pr_list
+      FALSE:
+        - OUTPUT:
+            message: "Draft PR already exists for PRD branch. Skipping creation."
+      TRUE:
+        - RUN: gh pr create --title "PRD: {prd_key}" --body "{issue_ref}" --base {default_branch} --head {prd_branch} --draft -R "{mr_repo}"
+          EXPECT_EXIT: 0
+- RUN: rm -f /tmp/prd-desc.md
+- OUTPUT:
+    message: "PRD {prd_key} issue created and draft MR ready."

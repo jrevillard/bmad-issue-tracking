@@ -1,0 +1,54 @@
+# retrospective/complete.yaml
+#
+# Purpose: Creates a retrospective issue (with status "done") and immediately closes it.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: creates and closes an issue on the issue tracker
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+# Derive epic_number from sprint-status (find the epic-N-retrospective entry)
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    entries: development_status
+- FILTER:
+    source: entries
+    select: key
+    where: key matches "epic-\\d+-retrospective"
+    store: retro_key
+- CHECK: empty retro_key
+  TRUE:
+    - OUTPUT:
+        message: "No retrospective entry found in sprint-status.yaml."
+        stop: true
+- RUN: python3 -c "
+import sys
+key = sys.argv[1].rstrip()
+parts = key.split('-')
+print(parts[1])
+" {retro_key}
+  STORE: epic_number
+# Write description file (retrospective document content)
+- RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    print(f.read())
+" {implementation_artifacts}/retrospectives/{retro_key}.md
+  STORE: retrospective_content
+- WRITE:
+    file: /tmp/retro-desc.md
+    content: "**Epic:** {epic_number}\n\n---\n\n{retrospective_content}"
+    mode: overwrite
+# Create the issue
+- SET: { variable: title, value: "Retrospective: Epic {epic_number}" }
+- SET: { variable: labels, value: "type{sep}retrospective\nstatus{sep}done\nprd{sep}{prd_key}\n{prd_key}{sep}epic-{epic_number}" }
+- SET: { variable: description_file, value: "/tmp/retro-desc.md" }
+- INCLUDE: common/create-issue
+# Close the issue immediately (status is "done")
+- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "state_event=close"
+  PLATFORM: gitlab
+  EXPECT_EXIT: 0
+- RUN: gh issue close {issue_id} -R "$HOST/$OWNER/$REPO"
+  PLATFORM: github
+  EXPECT_EXIT: 0
+- RUN: rm -f /tmp/retro-desc.md

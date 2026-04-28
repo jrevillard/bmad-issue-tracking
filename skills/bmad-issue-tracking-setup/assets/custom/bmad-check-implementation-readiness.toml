@@ -5,36 +5,6 @@
 
 [workflow]
 
-# Scalar: runs after the check-implementation-readiness workflow completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After completing the implementation readiness check, determine if any tracked artifacts were modified (PRD, epics, architecture, UX design). If files were modified, update the corresponding issue descriptions. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. For each tracked artifact that was modified during the readiness check, update its issue description:
-
-   **PRD** (`{planning_artifacts}/prd.md`):
-   - Find the PRD issue whose title starts with "PRD:". If not found, skip.
-   - Write description to `/tmp/desc.md`:
-
-     ```
-     **PRD:** {prd_key}
-
-     ---
-
-     {full PRD file content}
-     ```
-
-   **Epics** (`{planning_artifacts}/epics.md`):
-   - For each modified epic section, find the epic issue whose title starts with "Epic {N}:"
-   - Extract the epic section from epics.md (from `## Epic N:` to the next `## Epic` or end of file)
-   - Write description using the same format with epic number
-
-4. Update the issue description using the platform-appropriate command:
-   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -F "description=@/tmp/desc.md"` — do NOT send the `labels` parameter, it would replace all labels
-   - **GitHub:** `gh issue edit {number} --body-file "/tmp/desc.md" -R "$HOST/$OWNER/$REPO"`
-5. If no tracked artifacts were modified, skip all updates.
-6. Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`.
 """

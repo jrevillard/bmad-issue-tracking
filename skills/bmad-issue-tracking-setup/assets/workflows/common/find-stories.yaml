@@ -14,7 +14,12 @@
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
     story_pattern: issue_tracking.branch_patterns.story
-- RUN: git branch --list '{story_pattern}'
+- RUN: python3 -c "
+import sys
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]).replace('{story_key}', '*'))
+" {story_pattern} {prd_key}
+  STORE: story_branch_glob
+- RUN: git branch --list '{story_branch_glob}'
   STORE: story_branches
 - CHECK: empty story_branches
   TRUE:

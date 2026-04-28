@@ -1,0 +1,187 @@
+# correct-course/complete.yaml
+#
+# Purpose: Updates issue descriptions for any artifacts modified during a course correction.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: updates issue descriptions on the issue tracker; creates/removes /tmp/desc.md
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+# Detect which artifacts were modified
+- RUN: git diff --name-only HEAD
+  STORE: modified_files
+# Story files: update issue description for each modified story
+- RUN: python3 -c "
+import sys, os, re
+base = sys.argv[1]
+for line in sys.stdin:
+    path = line.rstrip()
+    if path.startswith(base + '/') or path.startswith(base + os.sep):
+        fname = os.path.basename(path)
+        if re.match(r'^\d+-\d+-.+\.md$', fname):
+            print(fname)
+" {implementation_artifacts}
+  STORE: modified_stories
+- CHECK: empty modified_stories
+  FALSE:
+    - LOOP:
+        items: modified_stories
+        as: story_file
+        do:
+          - RUN: python3 -c "print(sys.argv[1].replace('.md', ''))" {story_file}
+            STORE: story_key
+          - RUN: python3 -c "
+parts = sys.argv[1].replace('.md', '').split('-')
+print(parts[0])
+" {story_file}
+            STORE: epic_num
+          - RUN: python3 -c "
+parts = sys.argv[1].replace('.md', '').split('-')
+print(parts[1])
+" {story_file}
+            STORE: story_num
+          - RUN: python3 -c "
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    print(f.read())
+" {implementation_artifacts}/{story_file}
+            STORE: story_body
+          - WRITE:
+              file: /tmp/desc.md
+              content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
+              mode: overwrite
+          - RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}" --hostname $HOST --paginate
+            STORE: story_issues
+            PLATFORM: gitlab
+          - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+            STORE: story_issues
+            PLATFORM: github
+          - CHECK: empty story_issues
+            TRUE:
+              - OUTPUT:
+                  message: "Story issue not found for '{story_file}'. Skipping."
+            FALSE:
+              - CHECK: platform eq "gitlab"
+                TRUE:
+                  - FILTER:
+                      source: story_issues
+                      select: iid
+                      store: story_issue_id
+                FALSE:
+                  - FILTER:
+                      source: story_issues
+                      select: number
+                      where: title matches "{epic_num}.{story_num}"
+                      store: story_issue_id
+              - SET: { variable: issue_id, value: "{story_issue_id}" }
+              - SET: { variable: description_file, value: "/tmp/desc.md" }
+              - INCLUDE: common/update-issue-description
+# PRD: if modified, update issue description
+- CHECK: modified_files contains "{planning_artifacts}/prd.md"
+  TRUE:
+    - RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+count = 0
+start = 0
+for i, line in enumerate(lines):
+    if line.strip() == '---':
+        count += 1
+        if count == 2:
+            start = i + 1
+            break
+print(''.join(lines[start:]).strip())
+" {planning_artifacts}/prd.md
+      STORE: prd_body
+    - WRITE:
+        file: /tmp/desc.md
+        content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
+        mode: overwrite
+    - RUN: glab api "projects/$PROJECT_ID/issues?search=PRD:%20{prd_key}" --hostname $HOST --paginate
+      STORE: prd_issues
+      PLATFORM: gitlab
+    - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+      STORE: prd_issues
+      PLATFORM: github
+    - CHECK: empty prd_issues
+      TRUE:
+        - OUTPUT:
+            message: "PRD issue not found. Skipping PRD description update."
+      FALSE:
+        - CHECK: platform eq "gitlab"
+          TRUE:
+            - FILTER:
+                source: prd_issues
+                select: iid
+                store: prd_issue_id
+          FALSE:
+            - FILTER:
+                source: prd_issues
+                select: number
+                where: title matches "PRD:"
+                store: prd_issue_id
+        - SET: { variable: issue_id, value: "{prd_issue_id}" }
+        - SET: { variable: description_file, value: "/tmp/desc.md" }
+        - INCLUDE: common/update-issue-description
+# Epics: if modified, update each epic issue description
+- CHECK: modified_files contains "{planning_artifacts}/epics.md"
+  TRUE:
+    - READ: {planning_artifacts}/epics.md
+      STORE: epics_content
+    - RUN: python3 -c "
+import sys, re
+content = sys.argv[1]
+matches = list(re.finditer(r'^## Epic (\d+):', content, re.MULTILINE))
+for i, m in enumerate(matches):
+    start = m.start()
+    end = matches[i+1].start() if i + 1 < len(matches) else len(content)
+    epic_num = m.group(1)
+    print(f'{epic_num},{start},{end}')
+" {epics_content}
+      STORE: epic_sections
+    - LOOP:
+        items: epic_sections
+        as: section_info
+        do:
+          - RUN: python3 -c "
+parts = sys.argv[1].rstrip().split(',')
+print(parts[0])
+" {section_info}
+            STORE: epic_num
+          - RUN: python3 -c "
+parts = sys.argv[1].rstrip().split(',')
+start, end = int(parts[1]), int(parts[2])
+content = open('{planning_artifacts}/epics.md', 'r', encoding='utf-8').read()
+print(content[start:end].strip())
+" {section_info}
+            STORE: epic_body
+          - WRITE:
+              file: /tmp/desc.md
+              content: "**Epic:** {epic_num}\n\n---\n\n{epic_body}"
+              mode: overwrite
+          - RUN: glab api "projects/$PROJECT_ID/issues?search=Epic%20{epic_num}:" --hostname $HOST --paginate
+            STORE: epic_issues
+            PLATFORM: gitlab
+          - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+            STORE: epic_issues
+            PLATFORM: github
+          - CHECK: empty epic_issues
+            TRUE:
+              - OUTPUT:
+                  message: "Epic {epic_num} issue not found. Skipping."
+            FALSE:
+              - CHECK: platform eq "gitlab"
+                TRUE:
+                  - FILTER:
+                      source: epic_issues
+                      select: iid
+                      store: epic_issue_id
+                FALSE:
+                  - FILTER:
+                      source: epic_issues
+                      select: number
+                      where: title matches "Epic {epic_num}:"
+                      store: epic_issue_id
+              - SET: { variable: issue_id, value: "{epic_issue_id}" }
+              - SET: { variable: description_file, value: "/tmp/desc.md" }
+              - INCLUDE: common/update-issue-description

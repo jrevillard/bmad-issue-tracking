@@ -4,12 +4,14 @@
 # Input variables: (none)
 # Output variables:
 #   - platform: the configured platform ("gitlab" or "github")
+#   - git_platform: the git remote platform (defaults to platform if not set)
 #   - branch_patterns: the configured branch patterns object
 # Side effects: none
 
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
     platform: issue_tracking.platform
+    git_platform: issue_tracking.git_platform
     branch_patterns: issue_tracking.branch_patterns
 - CHECK: exists platform
   FALSE:
@@ -21,3 +23,6 @@
     - OUTPUT:
         message: "Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns."
         stop: true
+- CHECK: exists git_platform
+  FALSE:
+    - SET: { variable: git_platform, value: "{platform}" }

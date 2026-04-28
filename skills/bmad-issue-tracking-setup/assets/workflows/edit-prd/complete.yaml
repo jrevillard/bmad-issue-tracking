@@ -8,6 +8,7 @@
 
 - INCLUDE: common/check-config
 - INCLUDE: common/find-prd
+# Find the PRD issue
 - RUN: glab api "projects/$PROJECT_ID/issues?search=PRD:%20{prd_key}&labels=type{sep}prd" --hostname $HOST --paginate
   STORE: prd_issues
   PLATFORM: gitlab
@@ -29,7 +30,9 @@
     - FILTER:
         source: prd_issues
         select: number
+        where: title matches "PRD:"
         store: prd_issue_id
+# Strip frontmatter and write description file
 - RUN: python3 -c "
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
@@ -49,10 +52,7 @@ print(''.join(lines[start:]).strip())
     file: /tmp/prd-desc.md
     content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
     mode: overwrite
-- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{prd_issue_id}" --hostname $HOST -F "description=@/tmp/prd-desc.md"
-  PLATFORM: gitlab
-  EXPECT_EXIT: 0
-- RUN: gh issue edit {prd_issue_id} --body-file "/tmp/prd-desc.md" -R "$HOST/$OWNER/$REPO"
-  PLATFORM: github
-  EXPECT_EXIT: 0
-- RUN: rm -f /tmp/prd-desc.md
+# Update issue description via common sub-workflow
+- SET: { variable: issue_id, value: "{prd_issue_id}" }
+- SET: { variable: description_file, value: "/tmp/prd-desc.md" }
+- INCLUDE: common/update-issue-description

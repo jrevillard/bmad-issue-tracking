@@ -1,0 +1,170 @@
+# code-review/complete.yaml
+#
+# Purpose: Updates the story issue status after code review and optionally merges the MR.
+# Input variables: (none)
+# Output variables:
+#   - story_key: the story key derived from the current branch name
+# Side effects: updates issue status, posts review comment, commits, pushes;
+#               optionally merges the story MR
+
+- INCLUDE: common/check-config
+# Re-derive story_key from current branch name
+- RUN: git branch --show-current
+  STORE: current_branch
+- RUN: python3 -c "
+import sys
+branch = sys.argv[1]
+parts = branch.rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(branch)
+" {current_branch}
+  STORE: story_key
+- CHECK: empty story_key
+  TRUE:
+    - OUTPUT:
+        message: "Could not determine story_key from branch '{current_branch}'."
+        stop: true
+# Find the issue
+- RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}" --hostname $HOST --paginate
+  STORE: issue_result
+  PLATFORM: gitlab
+- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+  STORE: issue_result
+  PLATFORM: github
+- CHECK: empty issue_result
+  TRUE:
+    - OUTPUT:
+        message: "Issue not found. Skipping."
+        stop: true
+- CHECK: platform eq "gitlab"
+  TRUE:
+    - FILTER:
+        source: issue_result
+        select: iid
+        store: story_issue_id
+  FALSE:
+    - RUN: python3 -c "
+parts = sys.argv[1].split('-')
+print(parts[0] + '.' + parts[1])
+" {story_key}
+      STORE: story_title_prefix
+    - FILTER:
+        source: issue_result
+        select: number
+        where: title matches "{story_title_prefix}"
+        store: story_issue_id
+# Update issue status based on review verdict
+- OUTPUT:
+    message: "What was the review verdict? (passed/changes-requested)"
+    store: review_verdict
+- CHECK: review_verdict eq "passed"
+  TRUE:
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - SET: { variable: new_status, value: "done" }
+    - SET: { variable: close, value: "true" }
+    - INCLUDE: common/update-issue-status
+- CHECK: review_verdict eq "changes-requested"
+  TRUE:
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - SET: { variable: new_status, value: "in-progress" }
+    - SET: { variable: close, value: "false" }
+    - INCLUDE: common/update-issue-status
+# Post review comment
+- OUTPUT:
+    message: "Was a review comment written to /tmp/code-review-comment.md? (yes/no)"
+    store: has_comment
+- CHECK: has_comment eq "yes"
+  TRUE:
+    - RUN: glab api --method POST "projects/$PROJECT_ID/issues/{story_issue_id}/notes" --hostname $HOST -F "body=@/tmp/code-review-comment.md"
+      PLATFORM: gitlab
+      EXPECT_EXIT: 0
+    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/code-review-comment.md" -R "$HOST/$OWNER/$REPO"
+      PLATFORM: github
+      EXPECT_EXIT: 0
+    - RUN: rm -f /tmp/code-review-comment.md
+# Commit and push
+- RUN: git add .
+- RUN: git commit --allow-empty -m "code review {story_key}"
+- RUN: git push
+# Optional merge
+- OUTPUT:
+    message: "Merge the story MR now? (yes/no)"
+    store: do_merge
+- CHECK: do_merge eq "yes"
+  TRUE:
+    - READ: _bmad/custom/issue-tracking.yaml
+      EXTRACT:
+        prd_pattern: issue_tracking.branch_patterns.prd
+    - RUN: python3 -c "
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+      STORE: prd_branch
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - RUN: git remote get-url origin
+          STORE: remote_url
+        - RUN: python3 -c "
+import sys
+from urllib.parse import urlparse
+parsed = urlparse(sys.argv[1])
+print(parsed.hostname)
+" {remote_url}
+          STORE: git_host
+        - RUN: python3 -c "
+import sys
+from urllib.parse import urlparse
+parsed = urlparse(sys.argv[1])
+print(parsed.path.strip('/.git'))
+" {remote_url}
+          STORE: git_project
+        - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "$git_host/$git_project"
+          EXPECT_EXIT: 0
+      FALSE:
+        - CHECK: git_platform eq platform
+          TRUE:
+            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "$HOST/$OWNER/$REPO"
+              STORE: pr_list
+            - CHECK: empty pr_list
+              FALSE:
+                - FILTER:
+                    source: pr_list
+                    select: number
+                    store: pr_number
+                - RUN: gh pr merge {pr_number} --delete-branch -R "$HOST/$OWNER/$REPO"
+                  EXPECT_EXIT: 0
+              TRUE:
+                - OUTPUT:
+                    message: "No PR found for this story branch. Cannot merge."
+          FALSE:
+            - READ: _bmad/custom/issue-tracking.yaml
+              EXTRACT:
+                git_host: issue_tracking.git_host
+                git_project: issue_tracking.git_project
+            - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+              STORE: git_owner
+            - RUN: python3 -c "
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+              STORE: git_repo
+            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "$git_host/$git_owner/$git_repo"
+              STORE: pr_list
+            - CHECK: empty pr_list
+              FALSE:
+                - FILTER:
+                    source: pr_list
+                    select: number
+                    store: pr_number
+                - RUN: gh pr merge {pr_number} --delete-branch -R "$git_host/$git_owner/$git_repo"
+                  EXPECT_EXIT: 0
+              TRUE:
+                - OUTPUT:
+                    message: "No PR found for this story branch. Cannot merge."
+    - RUN: git worktree remove .
+- OUTPUT:
+    message: "Story {story_key} code review complete."

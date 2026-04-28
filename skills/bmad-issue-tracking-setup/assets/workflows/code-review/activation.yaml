@@ -1,15 +1,15 @@
-# dev-story/activation.yaml
+# code-review/activation.yaml
 #
-# Purpose: Finds a story with status "ready-for-dev" and switches to its worktree.
+# Purpose: Finds a story with status "review" and switches to its worktree.
 # Input variables: (none)
 # Output variables: (set by common/find-stories)
-#   - selected_story: the branch name chosen by the user (or auto-selected if only one match)
+#   - selected_story: the branch name chosen by the user (or auto-selected)
 #   - selected_worktree_path: the filesystem path to the selected story worktree
 # Side effects: runs git pull on each story worktree; switches context to selected worktree
 
 - INCLUDE: common/check-config
 - INCLUDE: common/find-prd
-- SET: { variable: target_status, value: "ready-for-dev" }
+- SET: { variable: target_status, value: "review" }
 - INCLUDE: common/find-stories
 - RUN: cd {selected_worktree_path}
   EXPECT_EXIT: 0

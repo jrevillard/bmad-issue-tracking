@@ -1,0 +1,66 @@
+# common/create-issue.yaml
+#
+# Purpose: Searches for an existing issue by title, creates one if not found.
+#           Extracts and returns the issue ID.
+# Input variables:
+#   - title: the exact issue title to search for (prefix match)
+#   - labels: newline-separated list of labels to assign (e.g. "type::prd\nstatus::done")
+#   - description_file: path to the file containing the issue description
+# Output variables:
+#   - issue_id: the IID (GitLab) or number (GitHub) of the created/found issue
+# Side effects: creates an issue on the issue tracker if it does not already exist
+
+# Search for existing issue
+- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={title}" --hostname $HOST
+  STORE: search_result
+  PLATFORM: gitlab
+- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+  STORE: search_result
+  PLATFORM: github
+# If found, extract issue_id and stop
+- CHECK: empty search_result
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - FILTER:
+            source: search_result
+            select: iid
+            store: issue_id
+      FALSE:
+        - FILTER:
+            source: search_result
+            select: number
+            where: title matches "{title}"
+            store: issue_id
+    - CHECK: empty issue_id
+      TRUE:
+        - STOP
+      FALSE:
+        - OUTPUT:
+            message: "Issue already exists (#{issue_id}). Skipping creation."
+        - STOP
+# Create the issue
+- RUN: python3 -c "
+import sys
+labels = sys.argv[1].strip().split('\n')
+print(','.join(labels))
+" "{labels}"
+  STORE: label_arg
+- RUN: glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
+  STORE: create_result
+  PLATFORM: gitlab
+- RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "$HOST/$OWNER/$REPO"
+  STORE: create_result
+  PLATFORM: github
+# Extract issue_id from creation result
+- CHECK: platform eq "gitlab"
+  TRUE:
+    - FILTER:
+        source: create_result
+        select: iid
+        store: issue_id
+  FALSE:
+    - FILTER:
+        source: create_result
+        select: number
+        store: issue_id
