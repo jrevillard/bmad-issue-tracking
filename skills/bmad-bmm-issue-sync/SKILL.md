@@ -51,6 +51,8 @@ The task below uses `{sep}` as a placeholder. Replace with `::` for GitLab, `:` 
 
 **Description file:** GitLab uses `-F "description=@/tmp/file.md"` (with `@` prefix). GitHub uses `--body-file "/tmp/file.md"` (no `@` prefix).
 
+**IMPORTANT:** Only use the exact commands from the table above. Do NOT improvise variations — check the CLI help (`glab <cmd> --help`, `gh <cmd> --help`) if you need a command not listed here.
+
 ## Task Instructions
 
 <task>
