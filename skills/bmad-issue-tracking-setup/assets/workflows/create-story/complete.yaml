@@ -87,7 +87,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
 - RUN: glab api --paginate "projects/{project}/issues?search={epic_num}.{story_num}&labels=prd{sep}{prd_key}" --hostname {host}
   STORE: search_result
   PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
   STORE: search_result
   PLATFORM: github
 - CHECK: empty search_result

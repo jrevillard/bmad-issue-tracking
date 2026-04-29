@@ -44,7 +44,7 @@ else:
 - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result

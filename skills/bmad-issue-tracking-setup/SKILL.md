@@ -201,9 +201,9 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
 </step>
 
 <step n="6" goal="Verify CLI connectivity">
-<action>Run the platform auth check (use `--hostname $HOST` for self-hosted instances):</action>
-- GitLab: `glab auth status --hostname $HOST`
-- GitHub: `gh auth status --hostname $HOST`
+<action>Run the platform auth check (use `--hostname {host}` for self-hosted instances):</action>
+- GitLab: `glab auth status --hostname {host}`
+- GitHub: `gh auth status --hostname {host}`
 
 <check if="auth fails">
   <output>WARN: CLI not authenticated. Issue tracking will fall back to file-system until authenticated.</output>

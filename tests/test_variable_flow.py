@@ -6,7 +6,7 @@ common/ sub-workflows document their contracts.
 
 import re
 import pytest
-from conftest import PREDEFINED_VARS, SHELL_VARS, load_all_workflows, parse_contract_header
+from conftest import PREDEFINED_VARS, load_all_workflows, parse_contract_header
 
 
 class TestIncludePaths:

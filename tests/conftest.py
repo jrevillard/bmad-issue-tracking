@@ -17,8 +17,6 @@ ALL_VALID_FIELDS = {
     "EXTRACT", "STORE", "EXPECT_EXIT", "CAPTURE", "PLATFORM",
 }
 
-SHELL_VARS = {"HOST", "PROJECT_ID", "PROJECT_PATH", "OWNER", "REPO"}
-
 PREDEFINED_VARS = {
     "planning_artifacts",
     "implementation_artifacts",

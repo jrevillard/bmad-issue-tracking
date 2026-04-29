@@ -177,10 +177,10 @@ Executes a CLI command in the shell.
 **Example (from edit-prd complete.yaml):**
 
 ```yaml
-- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{prd_issue_id}" --hostname $HOST -F "description=@/tmp/prd-desc.md"
+- RUN: glab api --method PUT "projects/{project}/issues/{prd_issue_id}" --hostname {host} -F "description=@/tmp/prd-desc.md"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
-- RUN: gh issue edit {prd_issue_id} --body-file "/tmp/prd-desc.md" -R "$HOST/$OWNER/$REPO"
+- RUN: gh issue edit {prd_issue_id} --body-file "/tmp/prd-desc.md" -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
 ```

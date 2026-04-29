@@ -12,7 +12,7 @@
 - RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}&labels=type{sep}prd" --hostname {host} --paginate
   STORE: prd_issues
   PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=type:prd,prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=type:prd,prd:{prd_key}" --hostname {host} --paginate
   STORE: prd_issues
   PLATFORM: github
 - CHECK: empty prd_issues
