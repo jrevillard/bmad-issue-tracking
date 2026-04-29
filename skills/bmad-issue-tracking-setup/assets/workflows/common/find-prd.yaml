@@ -7,7 +7,7 @@
 #   - prd_key: the PRD key from frontmatter or user input
 #   - prd_worktree_path: the filesystem path to the PRD worktree
 #   - prd_pattern: the resolved PRD branch pattern (from config)
-# Side effects: runs git pull on the PRD worktree; writes prd_key to PRD frontmatter if not present
+# Side effects: writes prd_key to PRD frontmatter if not present
 
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
@@ -31,8 +31,6 @@ print(sys.argv[1].replace('{prd_key}', '*'))
     select: path
     where: branch matches "{prd_pattern}"
     store: prd_worktree_path
-- RUN: cd {prd_worktree_path} && git pull --ff-only
-  EXPECT_EXIT: 0
 - READ: {planning_artifacts}/prd.md
   EXTRACT:
     prd_key: frontmatter.prd_key

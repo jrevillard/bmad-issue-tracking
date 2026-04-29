@@ -9,7 +9,7 @@
 #   - matched_stories: newline-separated list of branch names matching the target status
 #   - selected_story: the branch name chosen by the user (or auto-selected if only one match)
 #   - selected_worktree_path: the filesystem path to the selected story worktree
-# Side effects: runs git pull on each story worktree; switches context to selected worktree
+# Side effects: none
 
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
@@ -37,8 +37,6 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]).replace('{story_key}', '*'))
           select: path
           where: branch eq "{branch}"
           store: worktree_path
-      - RUN: cd {worktree_path} && git pull --ff-only
-        EXPECT_EXIT: 0
       - RUN: python3 -c "
 import sys
 parts = sys.argv[1].rstrip().split('/')

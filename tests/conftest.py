@@ -81,7 +81,7 @@ def _parse_steps_from_lines(lines, base_indent=0):
                 next_m = _is_top_level_step(line, base_indent)
                 if next_m and next_m.group(2) in {
                     "INCLUDE", "READ", "FILTER", "RUN", "OUTPUT", "WRITE",
-                    "CHECK", "LOOP", "SET", "STOP",
+                    "CHECK", "LOOP", "SET", "STOP", "CD",
                 }:
                     break
                 if not line.strip() or line.strip().startswith("#"):
