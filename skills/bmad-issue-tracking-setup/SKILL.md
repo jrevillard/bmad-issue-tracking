@@ -15,6 +15,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 ## Instructions
 
 <task>
+<action>IMPORTANT: When a step asks you to configure a value with a default, you MUST present the default as a suggestion and wait for the user's answer before writing anything. Never silently apply a default.</action>
 
 <step n="1" goal="Verify BMM installation">
 <action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.4.0+.</action>
@@ -107,9 +108,6 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
 <step n="4" goal="Configure issue_tracking">
 <action>Check if `_bmad/custom/issue-tracking.yaml` already exists.</action>
 <check if="config file exists">
-  <true>
-    <action>Read the existing config and skip any fields that are already set. Only prompt for missing values.</action>
-  </true>
   <false>
     <action>Create `_bmad/custom/issue-tracking.yaml` with the following content (this file is independent from BMM and survives BMM updates):</action>
 
@@ -117,12 +115,19 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
     issue_tracking:
       enabled: true
       platform: gitlab  # or github — configure in next step
-      worktree_base: _bmad/worktrees
-      # host and project configured in step 5
+      # worktree_base, host, project configured in steps 4-5
     ```
   </false>
-<action>Ask the user for the worktree base directory. Default: `_bmad/worktrees`</action>
-<action>Set `issue_tracking.worktree_base` to the chosen value in `_bmad/custom/issue-tracking.yaml`.</action>
+</check>
+<check if="worktree_base is already set">
+  <true>
+    <output>worktree_base already configured: {worktree_base}.</output>
+  </true>
+  <false>
+    <action>Ask the user for their worktree base directory. Default: `_bmad/worktrees`</action>
+    <action>Set `issue_tracking.worktree_base` to the user's answer in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
+</check>
 <action>Ensure the worktree base directory is in `.gitignore`. Read the configured `worktree_base` value and check if it is listed. If not, append it.</action>
 </step>
 
