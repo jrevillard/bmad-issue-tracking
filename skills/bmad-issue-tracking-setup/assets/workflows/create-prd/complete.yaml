@@ -45,6 +45,8 @@ print(''.join(lines[start:]).strip())
     file: /tmp/prd-desc.md
     content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
     mode: overwrite
+# Ensure all required labels exist before creating the issue
+- INCLUDE: common/ensure-labels
 - SET: { variable: title, value: "PRD: {prd_key}" }
 - SET: { variable: labels, value: "type{sep}prd" }
 - SET: { variable: description_file, value: "/tmp/prd-desc.md" }
