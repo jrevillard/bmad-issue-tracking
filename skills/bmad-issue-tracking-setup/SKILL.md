@@ -115,7 +115,7 @@ issue_tracking:
   # host and project configured in step 5
 ```
 
-<action>Ensure the worktree base directory is in `.gitignore`. Check if `_bmad/worktrees` is listed. If not, append it.</action>
+<action>Ensure the worktree base directory is in `.gitignore`. Read the configured `worktree_base` value and check if it is listed. If not, append it.</action>
 </step>
 
 <step n="5" goal="Configure platform and connection">
