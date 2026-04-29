@@ -1,0 +1,15 @@
+# create-epics-and-stories/complete.yaml
+#
+# Purpose: Commits and pushes epic/story changes in the PRD worktree.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: commits and pushes changes
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
+- RUN: git add .
+- RUN: git commit --allow-empty -m "update epics and stories"
+- RUN: git push
+- OUTPUT:
+    message: "Epics and stories updated and pushed."
