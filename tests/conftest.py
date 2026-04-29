@@ -9,11 +9,11 @@ import yaml
 
 WORKFLOWS_DIR = Path(__file__).parent.parent / "skills" / "bmad-issue-tracking-setup" / "assets" / "workflows"
 
-VALID_STEP_TYPES = {"INCLUDE", "READ", "FILTER", "RUN", "OUTPUT", "WRITE", "CHECK", "LOOP", "SET", "STOP"}
+VALID_STEP_TYPES = {"INCLUDE", "READ", "FILTER", "RUN", "OUTPUT", "WRITE", "CHECK", "LOOP", "SET", "STOP", "CD"}
 
 ALL_VALID_FIELDS = {
     "INCLUDE", "READ", "FILTER", "RUN", "OUTPUT", "WRITE", "CHECK",
-    "LOOP", "SET", "STOP",
+    "LOOP", "SET", "STOP", "CD",
     "EXTRACT", "STORE", "EXPECT_EXIT", "CAPTURE", "PLATFORM",
 }
 

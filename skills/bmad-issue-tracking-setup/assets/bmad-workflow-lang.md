@@ -21,7 +21,7 @@ The agent reads the YAML file and executes each step in order, from top to botto
 
 ## 2. Step Types
 
-There are 10 step types:
+There are 11 step types:
 
 | Type | Purpose |
 |------|---------|
@@ -35,6 +35,7 @@ There are 10 step types:
 | `LOOP` | Iterate over a collection |
 | `SET` | Assign a literal value to a variable |
 | `STOP` | Halt workflow execution |
+| `CD` | Change agent working directory |
 
 ### 2.1 INCLUDE
 
@@ -380,6 +381,22 @@ Halts workflow execution immediately.
 
 No message is displayed. To display a message before stopping, use OUTPUT with `stop: true`.
 
+### 2.11 CD
+
+Changes the agent's working directory. Unlike `RUN: cd <path>` (which runs in a subprocess and does not persist), `CD` instructs the agent to change its own session directory. All subsequent steps (RUN, READ, WRITE, etc.) operate relative to the new directory.
+
+**Syntax:**
+
+```yaml
+- CD: {variable_or_path}
+```
+
+The value MUST be an absolute path or a variable reference resolving to an absolute path. The agent MUST resolve the path and change its working directory before processing the next step.
+
+**Trace format:** `CD /path/to/directory`
+
+The agent MUST verify that the target directory exists before changing. If it does not exist, the workflow stops with an error.
+
 ---
 
 ## 3. CHECK Operators
@@ -505,6 +522,7 @@ Rules:
 - **CHECK**: show the condition and the result. If the branch taken matters for debugging, show it: `→ TRUE (pass)` or `→ FALSE → branch taken`.
 - **SET**: show `variable = value`.
 - **RUN**: show the command (truncated if long).
+- **CD**: show the target path.
 - **FILTER**: show `source → key = value`.
 - **OUTPUT with store**: show `message → stored in variable`.
 - **STOP with stop: true**: show `STOP — reason`.

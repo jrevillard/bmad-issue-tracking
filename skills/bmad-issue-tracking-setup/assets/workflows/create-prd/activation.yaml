@@ -50,9 +50,6 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
     select: path
     where: branch matches "{prd_branch}"
     store: prd_worktree_path
-- RUN: cd {prd_worktree_path}
-  EXPECT_EXIT: 0
-- RUN: git pull --ff-only
-  EXPECT_EXIT: 0
+- CD: {prd_worktree_path}
 - OUTPUT:
-    message: "Switched to PRD worktree."
+    message: "Switched to PRD worktree ({prd_branch})."

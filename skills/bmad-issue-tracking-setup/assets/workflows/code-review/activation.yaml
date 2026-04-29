@@ -5,13 +5,12 @@
 # Output variables: (set by common/find-stories)
 #   - selected_story: the branch name chosen by the user (or auto-selected)
 #   - selected_worktree_path: the filesystem path to the selected story worktree
-# Side effects: runs git pull on each story worktree; switches context to selected worktree
+# Side effects: switches agent working directory to selected worktree
 
 - INCLUDE: common/check-config
 - INCLUDE: common/find-prd
 - SET: { variable: target_status, value: "review" }
 - INCLUDE: common/find-stories
-- RUN: cd {selected_worktree_path}
-  EXPECT_EXIT: 0
+- CD: {selected_worktree_path}
 - OUTPUT:
     message: "Switched to story {selected_story}."

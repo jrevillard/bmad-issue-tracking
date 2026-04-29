@@ -47,9 +47,6 @@ print(pattern.replace('{prd_key}', prd_key).replace('{story_key}', key))
     select: path
     where: branch eq "{story_branch}"
     store: story_worktree_path
-- RUN: cd {story_worktree_path}
-  EXPECT_EXIT: 0
-- RUN: git pull --ff-only
-  EXPECT_EXIT: 0
+- CD: {story_worktree_path}
 - OUTPUT:
-    message: "Switched to story worktree."
+    message: "Switched to story worktree ({story_branch})."

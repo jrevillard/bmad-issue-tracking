@@ -53,3 +53,12 @@ class TestYamlSyntax:
                     import re
                     m = re.search(r"variable:\s*(\w+)", step["raw_value"])
                     assert m, f"{rel}:L{step['start_line']+1}: SET has no variable"
+
+    def test_cd_has_path(self, all_workflows):
+        """CD steps must reference a variable or contain a path."""
+        for rel, wf in all_workflows.items():
+            for step in flatten_steps(wf["steps"]):
+                if step["type"] == "CD":
+                    assert step["raw_value"].strip(), (
+                        f"{rel}:L{step['start_line']+1}: CD has no path"
+                    )
