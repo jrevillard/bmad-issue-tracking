@@ -44,6 +44,10 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
 - SET: { variable: labels, value: "type{sep}retrospective\nstatus{sep}done\nprd{sep}{prd_key}\n{prd_key}{sep}epic-{epic_number}" }
 - SET: { variable: description_file, value: "/tmp/retro-desc.md" }
 - INCLUDE: common/create-issue
+# Commit and push
+- RUN: git add .
+- RUN: git commit -m "retrospective epic {epic_number}"
+- RUN: git push
 # Close the issue immediately (status is "done")
 - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "state_event=close"
   PLATFORM: gitlab
