@@ -391,7 +391,9 @@ Changes the agent's working directory. Unlike `RUN: cd <path>` (which runs in a 
 - CD: {variable_or_path}
 ```
 
-The value MUST be an absolute path or a variable reference resolving to an absolute path. The agent MUST resolve the path and change its working directory before processing the next step.
+The value MUST be an absolute path or a variable reference resolving to an absolute path.
+
+**Execution:** The agent MUST physically change its working directory to the resolved path. This is NOT a trace-only step. The agent must use whatever mechanism its runtime provides to change directory (e.g. `cd` to the path, or update its session's working directory). After executing CD, all file paths in subsequent steps (RUN, READ, WRITE, INCLUDE, etc.) resolve relative to the new directory. The agent MUST verify the change took effect (e.g. by running `pwd` or equivalent) before proceeding.
 
 **Trace format:** `CD /path/to/directory`
 
