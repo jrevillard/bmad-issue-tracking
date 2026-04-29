@@ -6,6 +6,8 @@
 # Output variables: (none)
 # Side effects: creates labels on the issue tracker
 
+# NOTE: || true suppresses ALL errors (not just "already exists"), including auth/network
+# failures. The sync task (/bmad-bmm-issue-sync) handles additional dynamic/extended labels.
 # Type labels
 - RUN: glab label create --name "type{sep}prd" -R "{host}/{project}" 2>/dev/null || true
   PLATFORM: gitlab
