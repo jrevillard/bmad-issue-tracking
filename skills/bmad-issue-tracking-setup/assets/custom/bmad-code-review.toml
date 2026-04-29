@@ -7,76 +7,10 @@
 
 # Array (append): runs after greet but before the workflow begins.
 activation_steps_append = [
-  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Read `branch_patterns.prd` and `branch_patterns.story` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not found on the current branch, list all local branches matching the PRD branch pattern (replace `{prd_key}` with `*` in the configured pattern, e.g. if the pattern is `feat/{prd_key}/prd` then use `git branch --list 'feat/*/prd'`). If a match is found, switch to its worktree, run `git pull --ff-only` to ensure it is up to date, then read `prd_key` from the PRD frontmatter (`{planning_artifacts}/prd.md`). If no match is found, output 'No PRD found. Run `/bmad-create-prd` first.' and stop.",
-  "Resolve both patterns with `{prd_key}`. List all local branches matching the story branch pattern. For each matching branch, switch to its worktree, run `git pull --ff-only` to ensure it is up to date, then read `sprint-status.yaml` and find stories with status `review`. If no matching branches are found, output 'No story branches found. Run `/bmad-create-story` first to create a story branch.' and stop. If there are several, ask the user which story to review. Switch to the selected story worktree and run `git pull --ff-only`.",
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/code-review/activation.yaml`.",
 ]
 
 # Scalar: runs after the code review workflow completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After completing the code review, sync the story's status and post a review summary to the issue tracker. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. If `{story_key}` was not carried from activation (e.g. context was compacted), re-derive it: list files in `{implementation_artifacts}/` matching `*-*.md` and pick the one matching the current branch, or read the story key from sprint-status.yaml for the story with status `review`.
-4. Find the issue whose description contains the story key. If not found, skip.
-4. Update the issue status:
-   - If review passed (no critical or important open issues): set status label to `done`, close the issue.
-   - If review found issues requiring fixes: set status label to `in-progress`, reopen if closed.
-5. Post a review summary comment on the issue. Write the comment to `/tmp/code-review-comment.md`. Fill in the template below with actual values from the review (these are illustrative placeholders, NOT config variables). For `**Reviewer:**`, use "AI Code Review" if the review was performed by the AI agent, or the user's name if invoked manually. Use this template:
-
-```
-## Code Review
-**Reviewer:** {name of reviewer}
-**Verdict:** passed | changes requested
-
-### Verifications
-- {e.g., linting: passed}
-- {e.g., tests: passed}
-- {e.g., type checking: passed}
-
-### Findings
-
-#### Critical
-1. {description} — `{file}:{line}`
-
-#### Important
-1. {description} — `{file}:{line}`
-
-#### Minor
-1. {description}
-
-### Fixed
-- {what was corrected during the review}
-
-### Remaining
-- {what still needs to be addressed, or "none" if all fixed}
-```
-
-If there are no findings at all, simplify to:
-
-```
-## Code Review
-**Reviewer:** {name of reviewer}
-**Verdict:** passed
-
-### Verifications
-- linting: passed
-- tests: passed
-
-No issues found.
-```
-
-6. Post the comment using the platform-appropriate add-comment command (see sync task command table: Add comment row).
-7. Commit all changes in the current worktree.
-8. Push the story branch to the remote.
-9. If the review passed, ask the user if they want to merge the MR now (story branch → PRD branch). If yes (the MR description was already set during story creation with the correct issue reference — no update needed):
-   - Determine the git platform for MR/PR operations: read `issue_tracking.git_platform` from `_bmad/custom/issue-tracking.yaml`. If not set, it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, use `git_host`/`git_project` from config (parse as GROUP/PROJECT for GitLab, OWNER/REPO for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables from Step 1.
-   - Merge it:
-     - **GitLab:** `glab mr merge {mr_iid} --remove-source-branch -R "$MR_HOST/$MR_PROJECT"`
-     - **GitHub:** `gh pr merge {pr_number} --delete-branch -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
-10. If the MR was merged, exit the worktree and remove it. Otherwise, stay in the story worktree — the agent continues working from here.
-11. Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/code-review/complete.yaml`.
 """
