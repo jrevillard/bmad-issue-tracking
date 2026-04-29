@@ -35,7 +35,7 @@ print(''.join(lines[start:]).strip())
     - RUN: glab api "projects/$PROJECT_ID/issues?search=PRD:%20{prd_key}" --hostname $HOST --paginate
       STORE: prd_issues
       PLATFORM: gitlab
-    - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+    - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
       STORE: prd_issues
       PLATFORM: github
     - CHECK: empty prd_issues
@@ -95,10 +95,10 @@ print(content[start:end].strip())
               file: /tmp/desc.md
               content: "**Epic:** {epic_num}\n\n---\n\n{epic_body}"
               mode: overwrite
-          - RUN: glab api "projects/$PROJECT_ID/issues?search=Epic%20{epic_num}:" --hostname $HOST --paginate
+          - RUN: glab api "projects/$PROJECT_ID/issues?search=Epic%20{epic_num}:&labels=prd{sep}{prd_key}" --hostname $HOST --paginate
             STORE: epic_issues
             PLATFORM: gitlab
-          - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+          - RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
             STORE: epic_issues
             PLATFORM: github
           - CHECK: empty epic_issues

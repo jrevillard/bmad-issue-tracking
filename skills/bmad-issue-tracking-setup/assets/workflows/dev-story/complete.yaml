@@ -9,6 +9,9 @@
 #               /tmp/dev-story-comment.md; commits and pushes changes in the worktree
 
 - INCLUDE: common/check-config
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
 # Re-derive story_key from current branch name (context may have been compacted,
 # and sprint-status.yaml may already reflect the updated status)
 - RUN: git branch --show-current
@@ -38,10 +41,10 @@ else:
     where: key eq "{story_key}"
     store: story_status
 # Find the issue whose description contains the story key
-- RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}" --hostname $HOST --paginate
+- RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname $HOST --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result

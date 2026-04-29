@@ -84,10 +84,10 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
     mode: overwrite
 # Search for existing issue
-- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={epic_num}.{story_num}" --hostname $HOST
+- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={epic_num}.{story_num}&labels=prd{sep}{prd_key}" --hostname $HOST
   STORE: search_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100" --paginate
+- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
   STORE: search_result
   PLATFORM: github
 - CHECK: empty search_result
