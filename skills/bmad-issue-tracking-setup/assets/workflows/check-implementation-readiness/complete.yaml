@@ -62,11 +62,13 @@ for i, m in enumerate(matches):
         as: section_info
         do:
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].rstrip().split(',')
 print(parts[0])
 " {section_info}
             STORE: epic_num
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].rstrip().split(',')
 start, end = int(parts[1]), int(parts[2])
 content = open('{planning_artifacts}/epics.md', 'r', encoding='utf-8').read()

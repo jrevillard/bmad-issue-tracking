@@ -29,19 +29,25 @@ for line in sys.stdin:
         items: modified_stories
         as: story_file
         do:
-          - RUN: python3 -c "print(sys.argv[1].replace('.md', ''))" {story_file}
+          - RUN: python3 -c "
+import sys
+print(sys.argv[1].replace('.md', ''))
+" {story_file}
             STORE: story_key
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].replace('.md', '').split('-')
 print(parts[0])
 " {story_file}
             STORE: epic_num
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].replace('.md', '').split('-')
 print(parts[1])
 " {story_file}
             STORE: story_num
           - RUN: python3 -c "
+import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     print(f.read())
 " {implementation_artifacts}/{story_file}
@@ -111,11 +117,13 @@ for i, m in enumerate(matches):
         as: section_info
         do:
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].rstrip().split(',')
 print(parts[0])
 " {section_info}
             STORE: epic_num
           - RUN: python3 -c "
+import sys
 parts = sys.argv[1].rstrip().split(',')
 start, end = int(parts[1]), int(parts[2])
 content = open('{planning_artifacts}/epics.md', 'r', encoding='utf-8').read()

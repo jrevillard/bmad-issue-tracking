@@ -109,3 +109,24 @@ class TestIssueSearchScoping:
                 assert not match, (
                     f"{rel}:L{step['start_line']+1}: unresolved shell variable ${'{'+var+'}' if match.group(2) else var} in {step['type']} step"
                 )
+
+
+class TestPythonImportCompliance:
+    """P1: Python one-liners using sys.argv must import sys (prevents NameError at runtime)."""
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_python_sys_argv_has_import(self, rel, wf):
+        """python3 -c blocks that reference sys.argv must have import sys."""
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            raw = step["raw_value"]
+            if "python3 -c" not in raw:
+                continue
+            has_sys_argv = "sys.argv" in raw
+            if not has_sys_argv:
+                continue
+            has_import = bool(re.search(r"(?m)^[^#]*import\s+(json,\s*)?sys", raw))
+            assert has_import, (
+                f"{rel}:L{step['start_line']+1}: python3 -c uses sys.argv without import sys"
+            )

@@ -19,6 +19,7 @@
   EXTRACT:
     prd_pattern: issue_tracking.branch_patterns.prd
 - RUN: python3 -c "
+import sys
 print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
 " {prd_pattern} {prd_key}
   STORE: prd_branch
@@ -34,11 +35,13 @@ else:
 " {current_branch}
   STORE: story_key
 - RUN: python3 -c "
+import sys
 parts = sys.argv[1].split('-')
 print(parts[0])
 " {story_key}
   STORE: epic_num
 - RUN: python3 -c "
+import sys
 parts = sys.argv[1].split('-')
 print(parts[1])
 " {story_key}
@@ -119,11 +122,13 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
             git_host: issue_tracking.git_host
             git_project: issue_tracking.git_project
         - RUN: python3 -c "
+import sys
 parts = sys.argv[1].split('/')
 print(parts[0])
 " {git_project}
           STORE: git_owner
         - RUN: python3 -c "
+import sys
 parts = sys.argv[1].split('/')
 print(parts[1])
 " {git_project}
