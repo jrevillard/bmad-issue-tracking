@@ -512,6 +512,8 @@ Rules:
 
 The trace MUST be compact — one line per step or sub-step. No prose explanations between steps.
 
+**Object display:** When a variable is an object (dict/map), display its keys and values in compact format: `{key1=val1, key2=val2}`. Do NOT use `<object>`, `…`, or omit the value.
+
 ---
 
 ## 7. CLI Anti-Improvisation Rule
