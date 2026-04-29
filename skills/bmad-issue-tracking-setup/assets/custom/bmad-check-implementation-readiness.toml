@@ -1,9 +1,14 @@
 # Issue Tracking override for bmad-check-implementation-readiness
+# Switches to the PRD worktree before running the BMM workflow.
 # Updates issue descriptions if implementation readiness checks cause modifications to tracked artifacts.
 # Overrides merge: scalars win, arrays append.
 # Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
+
+activation_steps_append = [
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/check-implementation-readiness/activation.yaml`.",
+]
 
 on_complete = """
 Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`.

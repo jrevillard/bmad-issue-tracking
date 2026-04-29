@@ -50,29 +50,12 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
               file: /tmp/desc.md
               content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
               mode: overwrite
-          - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-            STORE: story_issues
-            PLATFORM: gitlab
-          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-            STORE: story_issues
-            PLATFORM: github
-          - CHECK: empty story_issues
+          - INCLUDE: common/find-story-issue
+          - CHECK: empty story_issue_id
             TRUE:
               - OUTPUT:
                   message: "Story issue not found for '{story_file}'. Skipping."
             FALSE:
-              - CHECK: platform eq "gitlab"
-                TRUE:
-                  - FILTER:
-                      source: story_issues
-                      select: iid
-                      store: story_issue_id
-                FALSE:
-                  - FILTER:
-                      source: story_issues
-                      select: number
-                      where: title matches "{epic_num}.{story_num}"
-                      store: story_issue_id
               - SET: { variable: issue_id, value: "{story_issue_id}" }
               - SET: { variable: description_file, value: "/tmp/desc.md" }
               - INCLUDE: common/update-issue-description

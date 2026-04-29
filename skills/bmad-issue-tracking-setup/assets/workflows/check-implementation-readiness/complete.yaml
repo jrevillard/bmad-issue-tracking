@@ -6,8 +6,6 @@
 # Side effects: updates issue descriptions on the issue tracker; creates/removes /tmp/desc.md
 
 - INCLUDE: common/check-config
-- INCLUDE: common/find-prd
-- CD: {prd_worktree_path}
 # Detect which tracked artifacts were modified
 - RUN: git diff --name-only HEAD
   STORE: modified_files

@@ -40,69 +40,39 @@ else:
     select: value
     where: key eq "{story_key}"
     store: story_status
-# Find the issue whose description contains the story key
-- RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-  STORE: issue_result
-  PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-  STORE: issue_result
-  PLATFORM: github
-- CHECK: empty issue_result
-  TRUE:
-    - OUTPUT:
-        message: "Issue not found. Skipping."
-        stop: true
-- CHECK: platform eq "gitlab"
-  TRUE:
-    - FILTER:
-        source: issue_result
-        select: iid
-        store: story_issue_id
-  FALSE:
-    - RUN: python3 -c "
-parts = sys.argv[1].split('-')
-print(parts[0] + '.' + parts[1])
-" {story_key}
-      STORE: story_title_prefix
-    - FILTER:
-        source: issue_result
-        select: number
-        where: title matches "{story_title_prefix}"
-        store: story_issue_id
-# Update issue status using common sub-workflow
+# Update issue status based on sprint-status
 - CHECK: story_status eq "review"
   TRUE:
-    - SET: { variable: issue_id, value: "{story_issue_id}" }
     - SET: { variable: new_status, value: "review" }
     - SET: { variable: close, value: "false" }
-    - INCLUDE: common/update-issue-status
+    - INCLUDE: common/set-story-status
     - OUTPUT:
         message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
     - RUN: test -f /tmp/dev-story-comment.md
       EXPECT_EXIT: 0
-    - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
-      PLATFORM: gitlab
-      EXPECT_EXIT: 0
-    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
-      PLATFORM: github
-      EXPECT_EXIT: 0
+    - CHECK: empty story_issue_id
+      FALSE:
+        - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
+          PLATFORM: gitlab
+          EXPECT_EXIT: 0
+        - RUN: gh issue comment {story_issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
+          PLATFORM: github
+          EXPECT_EXIT: 0
     - RUN: rm -f /tmp/dev-story-comment.md
 - CHECK: story_status eq "done"
   TRUE:
-    - SET: { variable: issue_id, value: "{story_issue_id}" }
     - SET: { variable: new_status, value: "done" }
     - SET: { variable: close, value: "true" }
-    - INCLUDE: common/update-issue-status
-# Default: set label to in-progress, reopen if closed (catch-all for any status
+    - INCLUDE: common/set-story-status
+# Default: set label to in-progress (catch-all for any status
 # other than "review" or "done", e.g. "in-progress", "blocked", "ready-for-dev")
 - CHECK: story_status ne "review"
   TRUE:
     - CHECK: story_status ne "done"
       TRUE:
-        - SET: { variable: issue_id, value: "{story_issue_id}" }
         - SET: { variable: new_status, value: "in-progress" }
         - SET: { variable: close, value: "false" }
-        - INCLUDE: common/update-issue-status
+        - INCLUDE: common/set-story-status
 # Commit and push
 - RUN: git add .
 - RUN: git commit --allow-empty -m "update story {story_key}"

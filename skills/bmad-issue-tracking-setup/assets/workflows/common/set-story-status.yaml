@@ -1,0 +1,21 @@
+# common/set-story-status.yaml
+#
+# Purpose: Finds a story issue and updates its status label.
+#           Combines find-story-issue + update-issue-status in one call.
+# Input variables (must be set by caller before INCLUDE):
+#   - story_key: the story key (e.g. "1-3-login-form")
+#   - prd_key: the PRD key (from scope, set by find-prd)
+#   - new_status: the target status (e.g. "in-progress", "review", "done")
+#   - close: "true" to close the issue, "false" to keep it open
+# Output variables:
+#   - story_issue_id: the issue ID on the tracker (empty if not found)
+# Side effects: updates issue status labels on the tracker
+
+- INCLUDE: common/find-story-issue
+- CHECK: empty story_issue_id
+  TRUE:
+    - OUTPUT:
+        message: "Issue not found for story {story_key}. Skipping status update."
+  FALSE:
+    - SET: { variable: issue_id, value: "{story_issue_id}" }
+    - INCLUDE: common/update-issue-status

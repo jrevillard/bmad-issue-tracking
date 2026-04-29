@@ -69,7 +69,7 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-sprint-status.toml` | `sprint-status` | `on_complete` | Triggers full issue sync |
 | `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
 | `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
-| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `on_complete` | Updates issue descriptions if artifacts were modified |
+| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates issue descriptions if artifacts were modified |
 | `bmad-retrospective.toml` | `retrospective` | `on_complete` | Creates issue with retrospective content |
 
 > **Note:** All overrides require BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
