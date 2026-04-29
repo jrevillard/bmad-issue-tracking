@@ -8,6 +8,7 @@
 
 - INCLUDE: common/check-config
 - INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
 # Find the PRD issue
 - RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}&labels=type{sep}prd" --hostname {host} --paginate
   STORE: prd_issues

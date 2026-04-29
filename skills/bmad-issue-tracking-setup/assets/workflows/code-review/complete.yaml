@@ -122,7 +122,7 @@ parsed = urlparse(sys.argv[1])
 print(parsed.path.strip('/.git'))
 " {remote_url}
           STORE: git_project
-        - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "$git_host/$git_project"
+        - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{git_host}/{git_project}"
           EXPECT_EXIT: 0
       FALSE:
         - CHECK: git_platform eq platform
@@ -155,7 +155,7 @@ parts = sys.argv[1].split('/')
 print(parts[1])
 " {git_project}
               STORE: git_repo
-            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "$git_host/$git_owner/$git_repo"
+            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{git_host}/{git_owner}/{git_repo}"
               STORE: pr_list
             - CHECK: empty pr_list
               FALSE:
@@ -163,7 +163,7 @@ print(parts[1])
                     source: pr_list
                     select: number
                     store: pr_number
-                - RUN: gh pr merge {pr_number} --delete-branch -R "$git_host/$git_owner/$git_repo"
+                - RUN: gh pr merge {pr_number} --delete-branch -R "{git_host}/{git_owner}/{git_repo}"
                   EXPECT_EXIT: 0
               TRUE:
                 - OUTPUT:

@@ -7,6 +7,7 @@
 
 - INCLUDE: common/check-config
 - INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
 # Detect which artifacts were modified
 - RUN: git diff --name-only HEAD
   STORE: modified_files

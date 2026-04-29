@@ -74,7 +74,7 @@ print(''.join(lines[start:]).strip())
           EXTRACT:
             git_host: issue_tracking.git_host
             git_project: issue_tracking.git_project
-        - SET: { variable: mr_repo, value: "$git_host/$git_project" }
+        - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
     - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}"
       STORE: mr_list
     - CHECK: empty mr_list
@@ -103,7 +103,7 @@ parts = sys.argv[1].split('/')
 print(parts[1])
 " {git_project}
           STORE: git_repo
-        - SET: { variable: mr_repo, value: "$git_host/$git_owner/$git_repo" }
+        - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
     - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
       STORE: pr_list
     - CHECK: empty pr_list

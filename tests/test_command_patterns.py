@@ -83,16 +83,21 @@ class TestIssueSearchScoping:
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_no_unresolved_shell_vars(self, rel, wf):
-        """RUN steps must not contain unresolved shell variables ($ALL_CAPS)."""
-        shell_var_pattern = re.compile(r"""\$([A-Z][A-Z_0-9]+)\b""")
+        """No step must contain unresolved shell variables ($var)."""
+        shell_var_pattern = re.compile(r"""\$(?:([A-Za-z_]\w*)\b|\{([^}]+)\})""")
         allowed = {"NF"}  # awk built-in (e.g. awk '{print $NF}')
         for step in flatten_steps(wf["steps"]):
-            if step["type"] != "RUN":
-                continue
-            cmd = step["raw_value"]
-            match = shell_var_pattern.search(cmd)
-            if match and match.group(1) in allowed:
-                continue
-            assert not match, (
-                f"{rel}:L{step['start_line']+1}: unresolved shell variable ${match.group(1)} in RUN step"
-            )
+            # Scan raw_value (RUN commands, CHECK conditions, etc.)
+            text = step["raw_value"]
+            # Also scan SET values (stored in block as "value: ...")
+            for _, key, value in step.get("block", []):
+                if key == "value":
+                    text += "\n" + value
+            match = shell_var_pattern.search(text)
+            if match:
+                var = match.group(1) or match.group(2)
+                if var in allowed:
+                    continue
+                assert not match, (
+                    f"{rel}:L{step['start_line']+1}: unresolved shell variable ${'{'+var+'}' if match.group(2) else var} in {step['type']} step"
+                )

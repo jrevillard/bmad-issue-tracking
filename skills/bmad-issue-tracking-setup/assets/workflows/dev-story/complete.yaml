@@ -94,12 +94,6 @@ print(parts[0] + '.' + parts[1])
     - SET: { variable: close, value: "true" }
     - INCLUDE: common/update-issue-status
 # Default: set label to in-progress, reopen if closed (catch-all for any other status)
-- CHECK: story_status eq "in-progress"
-  TRUE:
-    - SET: { variable: issue_id, value: "{story_issue_id}" }
-    - SET: { variable: new_status, value: "in-progress" }
-    - SET: { variable: close, value: "false" }
-    - INCLUDE: common/update-issue-status
 - CHECK: story_status ne "review"
   TRUE:
     - CHECK: story_status ne "done"

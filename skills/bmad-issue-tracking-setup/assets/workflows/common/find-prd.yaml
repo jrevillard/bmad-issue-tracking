@@ -1,6 +1,6 @@
 # common/find-prd.yaml
 #
-# Purpose: Finds the PRD branch, switches to its worktree, pulls, and extracts prd_key.
+# Purpose: Finds the PRD branch, pulls its worktree, and extracts prd_key.
 #           If prd_key is not in the PRD frontmatter, asks the user and persists it.
 # Input variables: (none)
 # Output variables:
