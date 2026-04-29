@@ -105,30 +105,53 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
 </step>
 
 <step n="4" goal="Configure issue_tracking">
-<action>Create `_bmad/custom/issue-tracking.yaml` with the following content (this file is independent from BMM and survives BMM updates):</action>
+<action>Check if `_bmad/custom/issue-tracking.yaml` already exists.</action>
+<check if="config file exists">
+  <true>
+    <action>Read the existing config and skip any fields that are already set. Only prompt for missing values.</action>
+  </true>
+  <false>
+    <action>Create `_bmad/custom/issue-tracking.yaml` with the following content (this file is independent from BMM and survives BMM updates):</action>
 
-```yaml
-issue_tracking:
-  enabled: true
-  platform: gitlab  # or github — configure in next step
-  worktree_base: _bmad/worktrees
-  # host and project configured in step 5
-```
-
+    ```yaml
+    issue_tracking:
+      enabled: true
+      platform: gitlab  # or github — configure in next step
+      worktree_base: _bmad/worktrees
+      # host and project configured in step 5
+    ```
+  </false>
+<action>Ask the user for the worktree base directory. Default: `_bmad/worktrees`</action>
+<action>Set `issue_tracking.worktree_base` to the chosen value in `_bmad/custom/issue-tracking.yaml`.</action>
 <action>Ensure the worktree base directory is in `.gitignore`. Read the configured `worktree_base` value and check if it is listed. If not, append it.</action>
 </step>
 
 <step n="5" goal="Configure platform and connection">
-<action>Detect the git remote by running `git remote get-url origin`.</action>
-<action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
-<action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
-<action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
-<action>Set `issue_tracking.platform` to the chosen value.</action>
-<action>Always set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
-<check if="platform differs from git remote platform">
-  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). This is valid — e.g. code on GitLab but issues on GitHub. Writing `git_host` and `git_project` so MRs/PRs target the correct remote.</output>
-  <action>Set `issue_tracking.git_host` to the git remote hostname in `_bmad/custom/issue-tracking.yaml`.</action>
-  <action>Set `issue_tracking.git_project` to the git remote project path in `_bmad/custom/issue-tracking.yaml`.</action>
+<check if="platform is already set">
+  <true>
+    <output>Platform already configured: {platform}. Skipping.</output>
+  </true>
+  <false>
+    <action>Detect the git remote by running `git remote get-url origin`.</action>
+    <action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
+    <action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
+    <action>Always set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
+    <action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
+    <action>Set `issue_tracking.platform` to the chosen value.</action>
+    <check if="platform differs from git remote platform">
+      <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). This is valid — e.g. code on GitLab but issues on GitHub. Writing `git_host` and `git_project` so MRs/PRs target the correct remote.</output>
+      <action>Set `issue_tracking.git_host` to the git remote hostname in `_bmad/custom/issue-tracking.yaml`.</action>
+      <action>Set `issue_tracking.git_project` to the git remote project path in `_bmad/custom/issue-tracking.yaml`.</action>
+    </check>
+  </false>
+</check>
+<check if="host is already set">
+  <true>
+    <output>Connection already configured: {host}/{project}. Skipping.</output>
+  </true>
+  <false>
+    <action>Ask the user for the issue tracker host and project path. Set `issue_tracking.host` and `issue_tracking.project` in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
 </check>
 </step>
 
