@@ -1,9 +1,3 @@
-# Local BMAD config (deployed by installer, not tracked)
-_bmad/
-
-# Claude Code local state
-.claude/
-
 # Python
 __pycache__/
 *.pyc

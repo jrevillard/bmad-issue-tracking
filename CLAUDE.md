@@ -63,6 +63,13 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 3. Add a row to the override table in `README.md`
 4. Update `module-help.csv` if the workflow has a standalone skill
 
+## Python environment
+
+Tests use `pytest` and `pyyaml`. Always use the project venv — never `pip3 install --break-system-packages`:
+```bash
+python3 -m venv .venv && source .venv/bin/activate && pip install pytest pyyaml
+```
+
 ## Version alignment
 
 When bumping `module.yaml` version, also update `.claude-plugin/marketplace.json` plugin version to match.
