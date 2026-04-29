@@ -124,6 +124,45 @@ def _parse_steps_from_lines(lines, base_indent=0):
     return steps
 
 
+def _parse_branches(step, parent_base_indent):
+    """Recursively parse CHECK TRUE/FALSE and LOOP do branches into children."""
+    if step["type"] not in ("CHECK", "LOOP"):
+        return
+    children = {}
+    branch_keys = {"TRUE", "FALSE"} if step["type"] == "CHECK" else {"do"}
+    for _, key, value in step["block"]:
+        if key not in branch_keys or not value:
+            continue
+        branch_lines = value.lstrip("\n").split("\n")
+        branch_lines = [l for l in branch_lines if l.strip()]
+        if not branch_lines:
+            children[key] = []
+            continue
+        # Detect base indent from first step-like line
+        branch_base_indent = parent_base_indent + 2
+        for line in branch_lines:
+            m = STEP_RE.match(line)
+            if m:
+                branch_base_indent = len(m.group(1))
+                break
+        parsed = _parse_steps_from_lines(branch_lines, branch_base_indent)
+        for child_step in parsed:
+            _parse_branches(child_step, branch_base_indent)
+        children[key] = parsed
+    step["children"] = children
+
+
+def flatten_steps(steps):
+    """Return all steps at all nesting levels, depth-first."""
+    result = []
+    for step in steps:
+        result.append(step)
+        if "children" in step:
+            for branch_steps in step["children"].values():
+                result.extend(flatten_steps(branch_steps))
+    return result
+
+
 def _step_to_dict(step):
     """Convert a parsed step into a dict suitable for extract_step_var_defs/refs.
 
@@ -167,6 +206,8 @@ def load_all_workflows():
             content = f.read()
         lines = content.split("\n")
         steps = _parse_steps_from_lines(lines)
+        for step in steps:
+            _parse_branches(step, 0)
         workflows[str(rel)] = {
             "path": yaml_file,
             "rel": str(rel),
@@ -184,6 +225,8 @@ def load_workflow(rel_path):
         content = f.read()
     lines = content.split("\n")
     steps = _parse_steps_from_lines(lines)
+    for step in steps:
+        _parse_branches(step, 0)
     return {
         "path": full,
         "rel": rel_path,

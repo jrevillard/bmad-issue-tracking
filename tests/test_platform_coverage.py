@@ -5,7 +5,7 @@ Does NOT recurse into branches (same limitation as variable flow).
 """
 
 import pytest
-from conftest import load_all_workflows, get_step_field
+from conftest import load_all_workflows, get_step_field, flatten_steps
 
 
 class TestPlatformCoverage:
@@ -19,7 +19,7 @@ class TestPlatformCoverage:
         glab_github = 0
         gh_gitlab = 0
 
-        for step in wf["steps"]:
+        for step in flatten_steps(wf["steps"]):
             if step["type"] != "RUN":
                 continue
             platform = None

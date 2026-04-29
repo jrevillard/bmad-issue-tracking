@@ -7,7 +7,7 @@ branches. Branch-level validation requires a full YAML-aware parser.
 """
 
 import pytest
-from conftest import VALID_STEP_TYPES, ALL_VALID_FIELDS, load_all_workflows
+from conftest import VALID_STEP_TYPES, ALL_VALID_FIELDS, load_all_workflows, flatten_steps
 
 
 class TestYamlSyntax:
@@ -21,7 +21,7 @@ class TestYamlSyntax:
     def test_all_steps_have_valid_type(self, all_workflows):
         """Every step must use a recognized step type keyword."""
         for rel, wf in all_workflows.items():
-            for step in wf["steps"]:
+            for step in flatten_steps(wf["steps"]):
                 assert step["type"] in VALID_STEP_TYPES, (
                     f"{rel}:L{step['start_line']+1}: invalid step type '{step['type']}'"
                 )
@@ -29,7 +29,7 @@ class TestYamlSyntax:
     def test_platform_values(self, all_workflows):
         """PLATFORM annotation must be 'gitlab' or 'github' only."""
         for rel, wf in all_workflows.items():
-            for step in wf["steps"]:
+            for step in flatten_steps(wf["steps"]):
                 for _, key, value in step["block"]:
                     if key == "PLATFORM":
                         assert value in ("gitlab", "github"), (
@@ -39,7 +39,7 @@ class TestYamlSyntax:
     def test_check_has_condition(self, all_workflows):
         """CHECK steps must have a non-empty condition."""
         for rel, wf in all_workflows.items():
-            for step in wf["steps"]:
+            for step in flatten_steps(wf["steps"]):
                 if step["type"] == "CHECK":
                     assert step["raw_value"].strip(), (
                         f"{rel}:L{step['start_line']+1}: CHECK has empty condition"
@@ -48,7 +48,7 @@ class TestYamlSyntax:
     def test_set_has_variable(self, all_workflows):
         """SET steps must specify a variable name."""
         for rel, wf in all_workflows.items():
-            for step in wf["steps"]:
+            for step in flatten_steps(wf["steps"]):
                 if step["type"] == "SET":
                     import re
                     m = re.search(r"variable:\s*(\w+)", step["raw_value"])
