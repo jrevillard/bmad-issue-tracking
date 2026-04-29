@@ -54,7 +54,7 @@ class TestIssueSearchScoping:
             if step["type"] != "RUN":
                 continue
             cmd = step["raw_value"]
-            m = re.search(r'glab api "projects/\$PROJECT_ID/issues\?([^"]+)"', cmd)
+            m = re.search(r'glab api "projects/\{project\}/issues\?([^"]+)"', cmd)
             if not m:
                 continue
             query = m.group(1)
@@ -71,7 +71,7 @@ class TestIssueSearchScoping:
             if step["type"] != "RUN":
                 continue
             cmd = step["raw_value"]
-            m = re.search(r'gh api "repos/\$OWNER/\$REPO/issues\?([^"]+)"', cmd)
+            m = re.search(r'gh api "repos/\{project\}/issues\?([^"]+)"', cmd)
             if not m:
                 continue
             query = m.group(1)
@@ -79,4 +79,20 @@ class TestIssueSearchScoping:
                 continue
             assert "labels=" in query and ("prd:" in query or "type:prd" in query), (
                 f"{rel}:L{step['start_line']+1}: gh issue search not scoped by prd label"
+            )
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_no_unresolved_shell_vars(self, rel, wf):
+        """RUN steps must not contain unresolved shell variables ($ALL_CAPS)."""
+        shell_var_pattern = re.compile(r"""\$([A-Z][A-Z_0-9]+)\b""")
+        allowed = {"NF"}  # awk built-in (e.g. awk '{print $NF}')
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            cmd = step["raw_value"]
+            match = shell_var_pattern.search(cmd)
+            if match and match.group(1) in allowed:
+                continue
+            assert not match, (
+                f"{rel}:L{step['start_line']+1}: unresolved shell variable ${match.group(1)} in RUN step"
             )

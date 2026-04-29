@@ -61,14 +61,14 @@ print(''.join(lines[start:]).strip())
   FALSE:
     - CHECK: platform eq "gitlab"
       TRUE:
-        - SET: { variable: issue_ref, value: "Related to https://$HOST/$PROJECT_PATH/-/issues/{issue_id}" }
+        - SET: { variable: issue_ref, value: "Related to https://{host}/{project}/-/issues/{issue_id}" }
       FALSE:
-        - SET: { variable: issue_ref, value: "Related to https://$HOST/$OWNER/$REPO/issues/{issue_id}" }
+        - SET: { variable: issue_ref, value: "Related to https://{host}/{project}/issues/{issue_id}" }
 - CHECK: git_platform eq "gitlab"
   TRUE:
     - CHECK: git_platform eq platform
       TRUE:
-        - SET: { variable: mr_repo, value: "$HOST/$PROJECT_PATH" }
+        - SET: { variable: mr_repo, value: "{host}/{project}" }
       FALSE:
         - READ: _bmad/custom/issue-tracking.yaml
           EXTRACT:
@@ -87,7 +87,7 @@ print(''.join(lines[start:]).strip())
   FALSE:
     - CHECK: git_platform eq platform
       TRUE:
-        - SET: { variable: mr_repo, value: "$HOST/$OWNER/$REPO" }
+        - SET: { variable: mr_repo, value: "{host}/{project}" }
       FALSE:
         - READ: _bmad/custom/issue-tracking.yaml
           EXTRACT:

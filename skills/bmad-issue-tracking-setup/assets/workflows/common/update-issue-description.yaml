@@ -7,10 +7,10 @@
 # Output variables: (none)
 # Side effects: updates issue description on the issue tracker
 
-- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "description=@{description_file}"
+- RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "description=@{description_file}"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
-- RUN: gh issue edit {issue_id} --body-file "{description_file}" -R "$HOST/$OWNER/$REPO"
+- RUN: gh issue edit {issue_id} --body-file "{description_file}" -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
 - RUN: rm -f {description_file}

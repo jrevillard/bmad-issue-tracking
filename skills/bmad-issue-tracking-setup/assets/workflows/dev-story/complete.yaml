@@ -41,10 +41,10 @@ else:
     where: key eq "{story_key}"
     store: story_status
 # Find the issue whose description contains the story key
-- RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname $HOST --paginate
+- RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result
@@ -80,10 +80,10 @@ print(parts[0] + '.' + parts[1])
         message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
     - RUN: test -f /tmp/dev-story-comment.md
       EXPECT_EXIT: 0
-    - RUN: glab api --method POST "projects/$PROJECT_ID/issues/{story_issue_id}/notes" --hostname $HOST -F "body=@/tmp/dev-story-comment.md"
+    - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
       PLATFORM: gitlab
       EXPECT_EXIT: 0
-    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/dev-story-comment.md" -R "$HOST/$OWNER/$REPO"
+    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
       PLATFORM: github
       EXPECT_EXIT: 0
     - RUN: rm -f /tmp/dev-story-comment.md

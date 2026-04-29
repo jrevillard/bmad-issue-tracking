@@ -9,7 +9,7 @@
 # Side effects: updates issue labels and state on the issue tracker
 
 # GitLab: fetch current labels, filter out old status::*, append new, send full set
-- RUN: glab api "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST --paginate
+- RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} --paginate
   STORE: issue_detail
   PLATFORM: gitlab
 - RUN: python3 -c "
@@ -21,27 +21,27 @@ print(','.join(labels))
 " {new_status}
   STORE: gitlab_labels
   PLATFORM: gitlab
-- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "labels={gitlab_labels}"
+- RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "labels={gitlab_labels}"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
 # GitHub: targeted add/remove
-- RUN: gh issue edit {issue_id} --add-label "status:{new_status}" -R "$HOST/$OWNER/$REPO"
+- RUN: gh issue edit {issue_id} --add-label "status:{new_status}" -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
 # State change: close, reopen, or skip
 - CHECK: close eq "true"
   TRUE:
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "state_event=close"
+    - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "state_event=close"
       PLATFORM: gitlab
       EXPECT_EXIT: 0
-    - RUN: gh issue close {issue_id} -R "$HOST/$OWNER/$REPO"
+    - RUN: gh issue close {issue_id} -R "{host}/{project}"
       PLATFORM: github
       EXPECT_EXIT: 0
 - CHECK: close eq "false"
   TRUE:
-    - RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "state_event=reopen"
+    - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "state_event=reopen"
       PLATFORM: gitlab
       EXPECT_EXIT: 0
-    - RUN: gh issue reopen {issue_id} -R "$HOST/$OWNER/$REPO"
+    - RUN: gh issue reopen {issue_id} -R "{host}/{project}"
       PLATFORM: github
       EXPECT_EXIT: 0

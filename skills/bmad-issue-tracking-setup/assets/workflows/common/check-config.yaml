@@ -5,6 +5,8 @@
 # Output variables:
 #   - platform: the configured platform ("gitlab" or "github")
 #   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
+#   - host: the issue tracker hostname
+#   - project: the issue tracker project path (group/project or owner/repo)
 #   - worktree_base: base directory for worktrees (required — set by /bmad-issue-tracking-setup step 4)
 #   - branch_patterns: the configured branch patterns object
 # Side effects: none
@@ -13,6 +15,8 @@
   EXTRACT:
     platform: issue_tracking.platform
     git_platform: issue_tracking.git_platform
+    host: issue_tracking.host
+    project: issue_tracking.project
     worktree_base: issue_tracking.worktree_base
     branch_patterns: issue_tracking.branch_patterns
 - CHECK: exists platform

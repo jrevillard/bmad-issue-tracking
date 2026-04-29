@@ -84,10 +84,10 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
     mode: overwrite
 # Search for existing issue
-- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={epic_num}.{story_num}&labels=prd{sep}{prd_key}" --hostname $HOST
+- RUN: glab api --paginate "projects/{project}/issues?search={epic_num}.{story_num}&labels=prd{sep}{prd_key}" --hostname {host}
   STORE: search_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
   STORE: search_result
   PLATFORM: github
 - CHECK: empty search_result
@@ -130,12 +130,12 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
   FALSE:
     - CHECK: platform eq "gitlab"
       TRUE:
-        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://$HOST/$PROJECT_PATH/-/issues/{issue_id}" }
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://{host}/{project}/-/issues/{issue_id}" }
       FALSE:
-        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://$HOST/$OWNER/$REPO/issues/{issue_id}" }
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to https://{host}/{project}/issues/{issue_id}" }
 - CHECK: git_platform eq platform
   TRUE:
-    - SET: { variable: mr_repo, value: "$HOST/$PROJECT_PATH" }
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
   FALSE:
     - CHECK: git_platform eq "gitlab"
       TRUE:

@@ -10,11 +10,15 @@
 #   - issue_id: the IID (GitLab) or number (GitHub) of the created/found issue
 # Side effects: creates an issue on the issue tracker if it does not already exist
 
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    host: issue_tracking.host
+    project: issue_tracking.project
 # Search for existing issue
-- RUN: glab api --paginate "projects/$PROJECT_ID/issues?search={title}&labels=prd{sep}{prd_key}" --hostname $HOST
+- RUN: glab api --paginate "projects/{project}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
   STORE: search_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
   STORE: search_result
   PLATFORM: github
 # If found, extract issue_id and stop
@@ -33,12 +37,12 @@
             where: title matches "{title}"
             store: issue_id
     - CHECK: empty issue_id
-      TRUE:
-        - STOP
-      FALSE:
-        - OUTPUT:
-            message: "Issue already exists (#{issue_id}). Skipping creation."
-        - STOP
+    TRUE:
+      - STOP
+    FALSE:
+      - OUTPUT:
+          message: "Issue already exists (#{issue_id}). Skipping creation."
+      - STOP
 # Create the issue
 - RUN: python3 -c "
 import sys
@@ -46,10 +50,10 @@ labels = sys.argv[1].strip().split('\n')
 print(','.join(labels))
 " "{labels}"
   STORE: label_arg
-- RUN: glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
+- RUN: glab api --method POST "projects/{project}/issues" --hostname {host} -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
   STORE: create_result
   PLATFORM: gitlab
-- RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "$HOST/$OWNER/$REPO"
+- RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "{host}/{project}"
   STORE: create_result
   PLATFORM: github
 # Extract issue_id from creation result

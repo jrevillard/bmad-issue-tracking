@@ -30,10 +30,10 @@ else:
         message: "Could not determine story_key from branch '{current_branch}'."
         stop: true
 # Find the issue
-- RUN: glab api "projects/$PROJECT_ID/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname $HOST --paginate
+- RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "repos/$OWNER/$REPO/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --paginate
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result
@@ -80,10 +80,10 @@ print(parts[0] + '.' + parts[1])
     store: has_comment
 - CHECK: has_comment eq "yes"
   TRUE:
-    - RUN: glab api --method POST "projects/$PROJECT_ID/issues/{story_issue_id}/notes" --hostname $HOST -F "body=@/tmp/code-review-comment.md"
+    - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/code-review-comment.md"
       PLATFORM: gitlab
       EXPECT_EXIT: 0
-    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/code-review-comment.md" -R "$HOST/$OWNER/$REPO"
+    - RUN: gh issue comment {story_issue_id} --body-file "/tmp/code-review-comment.md" -R "{host}/{project}"
       PLATFORM: github
       EXPECT_EXIT: 0
     - RUN: rm -f /tmp/code-review-comment.md
@@ -127,7 +127,7 @@ print(parsed.path.strip('/.git'))
       FALSE:
         - CHECK: git_platform eq platform
           TRUE:
-            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "$HOST/$OWNER/$REPO"
+            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{host}/{project}"
               STORE: pr_list
             - CHECK: empty pr_list
               FALSE:
@@ -135,7 +135,7 @@ print(parsed.path.strip('/.git'))
                     source: pr_list
                     select: number
                     store: pr_number
-                - RUN: gh pr merge {pr_number} --delete-branch -R "$HOST/$OWNER/$REPO"
+                - RUN: gh pr merge {pr_number} --delete-branch -R "{host}/{project}"
                   EXPECT_EXIT: 0
               TRUE:
                 - OUTPUT:

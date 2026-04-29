@@ -45,10 +45,10 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
 - SET: { variable: description_file, value: "/tmp/retro-desc.md" }
 - INCLUDE: common/create-issue
 # Close the issue immediately (status is "done")
-- RUN: glab api --method PUT "projects/$PROJECT_ID/issues/{issue_id}" --hostname $HOST -F "state_event=close"
+- RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "state_event=close"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
-- RUN: gh issue close {issue_id} -R "$HOST/$OWNER/$REPO"
+- RUN: gh issue close {issue_id} -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
 - RUN: rm -f /tmp/retro-desc.md
