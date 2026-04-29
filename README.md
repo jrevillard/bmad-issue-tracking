@@ -63,9 +63,9 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-create-ux-design.toml` | `create-ux-design` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
 | `bmad-create-epics-and-stories.toml` | `create-epics-and-stories` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
 | `bmad-create-story.toml` | `create-story` | `activation_steps_append`, `on_complete` | Sets up story worktree at activation, creates issue + MR on completion |
-| `bmad-dev-story.toml` | `dev-story` | `on_complete` | Posts implementation summary, updates status |
-| `bmad-code-review.toml` | `code-review` | `on_complete` | Posts review findings as comment, updates status |
-| `bmad-sprint-planning.toml` | `sprint-planning` | `on_complete` | Triggers full issue sync |
+| `bmad-dev-story.toml` | `dev-story` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts summary, updates status |
+| `bmad-code-review.toml` | `code-review` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts review, updates status |
+| `bmad-sprint-planning.toml` | `sprint-planning` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync |
 | `bmad-sprint-status.toml` | `sprint-status` | `on_complete` | Triggers full issue sync |
 | `bmad-edit-prd.toml` | `edit-prd` | `on_complete` | Updates PRD issue description |
 | `bmad-correct-course.toml` | `correct-course` | `on_complete` | Updates issue descriptions for modified stories/epics/PRD |
