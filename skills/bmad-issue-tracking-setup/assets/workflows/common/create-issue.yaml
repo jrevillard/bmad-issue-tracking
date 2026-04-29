@@ -15,7 +15,7 @@
 - RUN: glab api --paginate "projects/{project}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
   STORE: search_result
   PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: search_result
   PLATFORM: github
 # If found, extract issue_id and stop

@@ -36,7 +36,7 @@ print(''.join(lines[start:]).strip())
     - RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}" --hostname {host} --paginate
       STORE: prd_issues
       PLATFORM: gitlab
-    - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+    - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
       STORE: prd_issues
       PLATFORM: github
     - CHECK: empty prd_issues
@@ -99,7 +99,7 @@ print(content[start:end].strip())
           - RUN: glab api "projects/{project}/issues?search=Epic%20{epic_num}:&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: epic_issues
             PLATFORM: gitlab
-          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: epic_issues
             PLATFORM: github
           - CHECK: empty epic_issues
@@ -127,9 +127,5 @@ print(content[start:end].strip())
   FALSE:
     - CHECK: modified_files contains "{planning_artifacts}/epics.md"
       FALSE:
-        - CHECK: modified_files contains "{planning_artifacts}/architecture.md"
-          FALSE:
-            - CHECK: modified_files contains "{planning_artifacts}/ux-design.md"
-              FALSE:
-                - OUTPUT:
-                    message: "No tracked artifacts were modified. No updates needed."
+        - OUTPUT:
+            message: "No tracked artifacts were modified. No updates needed."

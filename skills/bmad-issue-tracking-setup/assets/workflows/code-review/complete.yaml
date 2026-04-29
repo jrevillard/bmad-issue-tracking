@@ -33,7 +33,7 @@ else:
 - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result
@@ -106,24 +106,17 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
       STORE: prd_branch
     - CHECK: git_platform eq "gitlab"
       TRUE:
-        - RUN: git remote get-url origin
-          STORE: remote_url
-        - RUN: python3 -c "
-import sys
-from urllib.parse import urlparse
-parsed = urlparse(sys.argv[1])
-print(parsed.hostname)
-" {remote_url}
-          STORE: git_host
-        - RUN: python3 -c "
-import sys
-from urllib.parse import urlparse
-parsed = urlparse(sys.argv[1])
-print(parsed.path.strip('/.git'))
-" {remote_url}
-          STORE: git_project
-        - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{git_host}/{git_project}"
-          EXPECT_EXIT: 0
+        - CHECK: git_platform eq platform
+          TRUE:
+            - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{host}/{project}"
+              EXPECT_EXIT: 0
+          FALSE:
+            - READ: _bmad/custom/issue-tracking.yaml
+              EXTRACT:
+                git_host: issue_tracking.git_host
+                git_project: issue_tracking.git_project
+            - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{git_host}/{git_project}"
+              EXPECT_EXIT: 0
       FALSE:
         - CHECK: git_platform eq platform
           TRUE:

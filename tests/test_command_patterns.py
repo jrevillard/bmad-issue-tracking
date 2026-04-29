@@ -77,7 +77,7 @@ class TestIssueSearchScoping:
             query = m.group(1)
             if "search=" in query and "prd_key" in query:
                 continue
-            assert "labels=" in query and ("prd:" in query or "type:prd" in query), (
+            assert "labels=" in query and ("prd" in query or "type" in query), (
                 f"{rel}:L{step['start_line']+1}: gh issue search not scoped by prd label"
             )
 

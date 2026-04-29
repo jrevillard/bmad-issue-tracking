@@ -53,7 +53,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
           - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: story_issues
             PLATFORM: gitlab
-          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: story_issues
             PLATFORM: github
           - CHECK: empty story_issues
@@ -101,7 +101,7 @@ print(''.join(lines[start:]).strip())
     - RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}" --hostname {host} --paginate
       STORE: prd_issues
       PLATFORM: gitlab
-    - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+    - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
       STORE: prd_issues
       PLATFORM: github
     - CHECK: empty prd_issues
@@ -163,7 +163,7 @@ print(content[start:end].strip())
           - RUN: glab api "projects/{project}/issues?search=Epic%20{epic_num}:&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: epic_issues
             PLATFORM: gitlab
-          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd:{prd_key}" --hostname {host} --paginate
+          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
             STORE: epic_issues
             PLATFORM: github
           - CHECK: empty epic_issues

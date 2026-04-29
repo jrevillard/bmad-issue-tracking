@@ -48,7 +48,7 @@ Inserts all steps from the referenced sub-workflow at this position. Execution c
 ```
 
 **Fields:**
-- `path` (required): path to the sub-workflow file. Paths are relative to `_bmad/_config/custom/workflows/`.
+- `path` (required): path to the sub-workflow file. Paths starting with `_bmad/` are absolute from the project root. All other paths are relative to `_bmad/_config/custom/workflows/`.
 
 **Variable scope:** Variables defined in the parent scope are accessible within the included sub-workflow. Variables defined within the sub-workflow are accessible in the parent scope after the INCLUDE returns (shared scope).
 
@@ -303,33 +303,6 @@ Iterates over a collection and executes steps for each item.
           store: worktree_path
       - RUN: cd {worktree_path} && git pull --ff-only
         EXPECT_EXIT: 0
-    FILTER:
-      where: entries any value eq "review"
-      store: matched_stories
-```
-
-**Fields:**
-- `items` (required): the collection variable to iterate over (must be a list or a multi-line string split by newline).
-- `as` (required): the loop variable name for each item.
-- `do` (required): steps to execute for each item.
-- `filter` (optional): post-loop filter. Has a single `where` condition and a single `store` target. The agent evaluates the `where` condition against the variables set during each loop iteration. If the condition is true, the current loop item (the value of `as`) is appended to the target variable (initialized as empty string if not already defined, items separated by newlines).
-
-**Example (from find-stories.yaml):**
-
-```yaml
-- LOOP:
-    items: story_branches
-    as: branch
-    do:
-      - RUN: git worktree list
-        STORE: worktrees
-      - FILTER:
-          source: worktrees
-          select: path
-          where: branch eq "{branch}"
-          store: worktree_path
-      - RUN: cd {worktree_path} && git pull --ff-only
-        EXPECT_EXIT: 0
       - READ: {implementation_artifacts}/sprint-status.yaml
         EXTRACT:
           entries: development_status
@@ -339,6 +312,21 @@ Iterates over a collection and executes steps for each item.
 ```
 
 This iterates over each story branch, pulls the worktree, reads sprint-status, and collects branches whose sprint-status entry has the target status value.
+
+**Example (from correct-course complete.yaml — simple iteration over file list):**
+
+```yaml
+- LOOP:
+    items: modified_stories
+    as: story_file
+    do:
+      - RUN: python3 -c "print(sys.argv[1].replace('.md', ''))" {story_file}
+        STORE: story_key
+      - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host}
+        STORE: story_issues
+        PLATFORM: gitlab
+      # ... update issue description
+```
 
 ### 2.9 SET
 
@@ -464,16 +452,13 @@ These variables are resolved at workflow execution time:
 | `{story_num}` | Derived from `story_key` | Second dash-separated segment (e.g., `3` from `1-3-login-form`) |
 | `{prd_branch}` | Config pattern | `issue_tracking.branch_patterns.prd` with `{prd_key}` substituted |
 | `{story_branch}` | Config pattern | `issue_tracking.branch_patterns.story` with `{prd_key}` and `{story_key}` substituted |
-
-**Shell variables** (set by `git remote` and `glab`/`gh` CLI, resolved during sync task step 1):
-
-| Variable | Source | Example |
-|----------|--------|---------|
-| `{HOST}` | Git remote URL | `gitlab.example.com` |
-| `{PROJECT_ID}` | `glab api` response | `42` |
-| `{PROJECT_PATH}` | Git remote path | `group/project` |
-| `{OWNER}` | Git remote path | `octocat` |
-| `{REPO}` | Git remote path | `my-repo` |
+| `{host}` | Issue tracking config | `issue_tracking.host` — issue tracker hostname |
+| `{project}` | Issue tracking config | `issue_tracking.project` — issue tracker project path (e.g. `group/project`) |
+| `{platform}` | Issue tracking config | `issue_tracking.platform` — `gitlab` or `github` |
+| `{git_platform}` | Issue tracking config | `issue_tracking.git_platform` — git remote platform (may differ from `platform`) |
+| `{git_host}` | Issue tracking config | `issue_tracking.git_host` — git remote hostname (only when `git_platform != platform`) |
+| `{git_project}` | Issue tracking config | `issue_tracking.git_project` — git remote project path (only when `git_platform != platform`) |
+| `{worktree_base}` | Issue tracking config | `issue_tracking.worktree_base` — base directory for worktrees |
 
 ### 4.5 Resolution Failure
 
