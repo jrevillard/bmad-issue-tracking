@@ -30,10 +30,12 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-bmm-issue-sync/SKILL.md`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
 
-<action>Copy the skill file to `_bmad/_config/custom/`:</action>
+<action>IMPORTANT: Always overwrite the existing file — new versions may have changed the sync task content.</action>
+
+<action>Copy the skill file to `_bmad/_config/custom/`, overwriting if it exists:</action>
 
 ```bash
-cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
+cp -f <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
 ```
 
 <action>Verify that `bmad-bmm-issue-sync.md` exists in `_bmad/_config/custom/`.</action>
@@ -44,11 +46,15 @@ cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/custom/`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
 
-<action>Copy all TOML files to `_bmad/custom/`:</action>
+<action>IMPORTANT: Always overwrite existing TOML files — this is an update, not a first install. New versions may have changed TOML content.</action>
+
+<action>Copy all TOML files to `_bmad/custom/`, overwriting existing files:</action>
 
 ```bash
-cp <path>/*.toml _bmad/custom/
+cp -f <path>/*.toml _bmad/custom/
 ```
+
+<action>Remove any `bmad-*.toml` files in `_bmad/custom/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
 - `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
@@ -73,13 +79,17 @@ cp <path>/*.toml _bmad/custom/
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
 
-<action>Copy the workflow language specification and workflow YAML files:</action>
+<action>IMPORTANT: Always overwrite existing files — new versions may have changed workflow content.</action>
+
+<action>Copy the workflow language specification and workflow YAML files, overwriting existing files:</action>
 
 ```bash
-cp <path>/bmad-workflow-lang.md _bmad/_config/custom/
+cp -f <path>/bmad-workflow-lang.md _bmad/_config/custom/
 mkdir -p _bmad/_config/custom/workflows
-cp -r <path>/workflows/* _bmad/_config/custom/workflows/
+cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 ```
+
+<action>Remove any workflow YAML files in `_bmad/_config/custom/workflows/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
 
 <action>Verify the following files exist:</action>
 - `_bmad/_config/custom/bmad-workflow-lang.md`
