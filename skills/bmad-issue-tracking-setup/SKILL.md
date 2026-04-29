@@ -117,15 +117,15 @@ issue_tracking:
 
 <step n="5" goal="Configure platform and connection">
 <action>Detect the git remote by running `git remote get-url origin`.</action>
-<action>Detect the git platform from the remote URL hostname: extract the hostname from the remote URL, then if it contains "gitlab" → gitlab, if it contains "github" → github. Store as `issue_tracking.git_platform` in `_bmad/custom/issue-tracking.yaml`.</action>
+<action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
+<action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
 <action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
 <action>Set `issue_tracking.platform` to the chosen value.</action>
-<check if="platform differs from git_platform">
-  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). MR/PR operations will use the git platform ({git_platform}), issue operations will use the tracker platform ({platform}).</output>
-  <action>Since the platforms differ, `host` and `project` MUST be configured explicitly for the issue tracker. Ask the user for the issue tracker host and project path. Also ask for the git remote host and project path (for MR/PR operations). Store all four values in `_bmad/custom/issue-tracking.yaml`.</action>
-</check>
-<check if="platform equals git_platform">
-  <action>Ask the user for the host and project path. These apply to both issue tracking and MR/PR operations.</action>
+<action>Always set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
+<check if="platform differs from git remote platform">
+  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). This is valid — e.g. code on GitLab but issues on GitHub. Writing `git_host` and `git_project` so MRs/PRs target the correct remote.</output>
+  <action>Set `issue_tracking.git_host` to the git remote hostname in `_bmad/custom/issue-tracking.yaml`.</action>
+  <action>Set `issue_tracking.git_project` to the git remote project path in `_bmad/custom/issue-tracking.yaml`.</action>
 </check>
 </step>
 
@@ -160,13 +160,13 @@ issue_tracking:
 ```yaml
 issue_tracking:
   enabled: true
-  platform: <platform>          # issue tracker (gitlab or github)
-  git_platform: <git_platform>  # git remote (gitlab or github) — same as platform if not set
-  host: <host>                  # issue tracker host
-  project: <project>            # issue tracker project
-  # git_host and git_project: only needed when git_platform differs from platform
-  git_host: <git_host>          # git remote host (e.g. gitlab.company.com)
-  git_project: <git_project>    # git remote project (e.g. group/project for GitLab, owner/repo for GitHub)
+  platform: <platform>
+  git_platform: <git_platform>  # git remote platform (same as platform in nominal case)
+  host: <host>
+  project: <project>
+  # The following fields are only present when git remote differs from issue tracker:
+  # git_host: <git_hostname>
+  # git_project: <git_group>/<git_project>
   branch_patterns:
     prd: "<resolved PRD pattern>"
     story: "<resolved story pattern>"

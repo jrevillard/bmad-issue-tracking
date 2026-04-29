@@ -124,9 +124,6 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
 - RUN: git commit -m "create story {story_key}"
 - RUN: git push -u origin {story_branch}
 # Create MR (story branch -> PRD branch) — inline for cross-platform
-- CHECK: exists git_platform
-  FALSE:
-    - SET: { variable: git_platform, value: "{platform}" }
 - CHECK: git_platform eq platform
   TRUE:
     - SET: { variable: issue_ref, value: "Sprint key: {story_key}\\n\\nRelated to #{issue_id}" }

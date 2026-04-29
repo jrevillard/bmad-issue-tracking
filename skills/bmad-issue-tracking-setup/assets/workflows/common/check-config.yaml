@@ -4,7 +4,7 @@
 # Input variables: (none)
 # Output variables:
 #   - platform: the configured platform ("gitlab" or "github")
-#   - git_platform: the git remote platform (defaults to platform if not set)
+#   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
 #   - branch_patterns: the configured branch patterns object
 # Side effects: none
 
@@ -25,4 +25,6 @@
         stop: true
 - CHECK: exists git_platform
   FALSE:
-    - SET: { variable: git_platform, value: "{platform}" }
+    - OUTPUT:
+        message: "git_platform not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
+        stop: true

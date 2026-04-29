@@ -55,9 +55,6 @@ print(''.join(lines[start:]).strip())
 - RUN: git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'
   STORE: default_branch
 # Resolve git platform variables for MR operations
-- CHECK: exists git_platform
-  FALSE:
-    - SET: { variable: git_platform, value: "{platform}" }
 - CHECK: git_platform eq platform
   TRUE:
     - SET: { variable: issue_ref, value: "Closes #{issue_id}" }
