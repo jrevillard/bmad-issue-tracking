@@ -481,19 +481,52 @@ The following situations cause the workflow to stop immediately. No retry. No fa
 
 ---
 
-## 6. CLI Anti-Improvisation Rule
+## 6. Execution Trace
+
+The agent MUST output a structured trace as it executes each step. This trace is the ONLY output the user sees during workflow execution. The agent MUST NOT output prose, commentary, or reasoning between steps — only the trace.
+
+### Format
+
+```
+Step N: STEP_TYPE value
+
+  ● RUN command
+  ● READ file → extracting key1, key2
+  ● CHECK condition → TRUE (pass) / FALSE
+  ● SET variable = value
+  ● INCLUDE sub-workflow → "result summary"
+
+  Sub-workflow-name terminé. Variables en scope: key1=val1, key2=val2
+```
+
+Rules:
+- **INCLUDE**: show the included sub-workflow name, then indent its trace. After the sub-workflow completes, show a one-line summary with the variables it added to scope.
+- **READ**: show the file path and which keys were extracted. If the file was read for content (no EXTRACT), show `→ content loaded`.
+- **CHECK**: show the condition and the result. If the branch taken matters for debugging, show it: `→ TRUE (pass)` or `→ FALSE → branch taken`.
+- **SET**: show `variable = value`.
+- **RUN**: show the command (truncated if long).
+- **FILTER**: show `source → key = value`.
+- **OUTPUT with store**: show `message → stored in variable`.
+- **STOP with stop: true**: show `STOP — reason`.
+- **WRITE**: show the file path and whether append/overwrite.
+
+The trace MUST be compact — one line per step or sub-step. No prose explanations between steps.
+
+---
+
+## 7. CLI Anti-Improvisation Rule
 
 The agent MUST NOT use any CLI command that is not explicitly specified in a RUN step within the workflow file or in the sync task command table. The agent MUST NOT add diagnostic commands (e.g., `git status`, `echo`, `cat`), exploration commands, or any command not in the workflow. The only CLI commands the agent may execute are those written in RUN steps and those listed in the sync task's command table.
 
 ---
 
-## 7. Language Version
+## 8. Language Version
 
 This specification is version **1.0**. Workflow files MAY declare a minimum language version. If a workflow file declares `min_lang_version: X.Y` and the deployed language spec version is lower, the workflow stops with an error stating the version mismatch before executing any steps.
 
 ---
 
-## 8. Sub-Workflow Contracts
+## 9. Sub-Workflow Contracts
 
 Each sub-workflow file documents its contract in a YAML comment at the top:
 - **Purpose:** what the sub-workflow does
