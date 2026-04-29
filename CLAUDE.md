@@ -23,7 +23,7 @@ Files in `skills/bmad-issue-tracking-setup/assets/custom/` are TOML overrides fo
 - `[workflow] activation_steps_append` — array, appends to BMM's activation steps
 - `[workflow] on_complete` — scalar, replaces BMM's completion block entirely
 
-All overrides use the same config guard pattern: check `issue_tracking.platform` and `issue_tracking.branch_patterns` in `_bmad/custom/issue-tracking.yaml` before proceeding.
+All overrides are pure pointers — they reference workflow YAML files that handle the actual logic. The config guard (`common/check-config.yaml` validating `issue_tracking.platform`, `issue_tracking.branch_patterns`, etc.) runs inside each workflow YAML, not in the TOML.
 
 ## Key variable conventions in instructions
 
@@ -44,24 +44,35 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 | Workflow | Activation | on_complete | MR direction |
 |----------|-----------|-------------|--------------|
 | create-prd | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD → default (draft) |
+| create-architecture | Switch to PRD worktree | Commit + push | (PRD worktree) |
+| create-ux-design | Switch to PRD worktree | Commit + push | (PRD worktree) |
+| create-epics-and-stories | Switch to PRD worktree | Commit + push | (PRD worktree) |
+| sprint-planning | Switch to PRD worktree | Trigger full issue sync | (PRD worktree) |
+| edit-prd | (via on_complete: find-prd + CD) | Update PRD issue description | (PRD worktree) |
+| check-implementation-readiness | (via on_complete: find-prd + CD) | Update issue descriptions if artifacts modified | (PRD worktree) |
+| correct-course | (via on_complete: find-prd + CD) | Update issue descriptions if artifacts modified | (PRD worktree) |
+| retrospective | (via on_complete: find-prd + CD) | Create retrospective issue + close | (PRD worktree) |
 | create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
 | dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
 | code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
+| sprint-status | (none) | Trigger full issue sync | (none) |
 
 ## Platform differences
 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels
-- GitHub: `gh` CLI, labels use `:` separator, `gh issue edit` with `--add-label`/`--remove-label` (targeted)
+- GitHub: `gh` CLI, labels use `:` separator, `gh api` for label updates (fetch + filter + replace, same pattern as GitLab)
 - `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`
 
 **Git remote vs issue tracker:** The git remote (origin) and issue tracker can be on different platforms (e.g., code on GitLab, issues on GitHub). `issue_tracking.platform` is the issue tracker; `issue_tracking.git_platform` (set during setup) is the git remote. Issue operations (create/update/close issues, labels, comments) use `platform`. MR/PR operations (list, create, merge, mark ready) use `git_platform`. When they differ, `host`/`project` apply to the issue tracker and `git_host`/`git_project` apply to the git remote. Issue references in MR descriptions use `Closes #X` for same-platform, full URL for cross-platform.
 
 ## Files to update when adding a new BMM workflow override
 
-1. Create `skills/bmad-issue-tracking-setup/assets/custom/bmad-{workflow}.toml` with the config guard
-2. Add it to the file list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3)
-3. Add a row to the override table in `README.md`
-4. Update `module-help.csv` if the workflow has a standalone skill
+1. Create `skills/bmad-issue-tracking-setup/assets/custom/bmad-{workflow}.toml` (pointer format — activation_steps_append and/or on_complete)
+2. Create the corresponding workflow YAML files in `skills/bmad-issue-tracking-setup/assets/workflows/{workflow}/`
+3. Add the TOML file to the list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3)
+4. Add the YAML files to the list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3b)
+5. Add a row to the override table in `README.md`
+6. Update `module-help.csv` if the workflow has a standalone skill
 
 ## Python environment
 

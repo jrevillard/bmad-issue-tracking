@@ -24,8 +24,20 @@ print(','.join(labels))
 - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "labels={gitlab_labels}"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
-# GitHub: targeted add/remove
-- RUN: gh issue edit {issue_id} --add-label "status:{new_status}" -R "{host}/{project}"
+# GitHub: fetch current labels, filter out old status:*, append new, send full set
+- RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host}
+  STORE: issue_detail
+  PLATFORM: github
+- RUN: python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+labels = [l['name'] for l in data.get('labels', []) if not l['name'].startswith('status:')]
+labels.append('status:' + sys.argv[1])
+print(','.join(labels))
+" {new_status}
+  STORE: github_labels
+  PLATFORM: github
+- RUN: gh issue edit {issue_id} --labels "{github_labels}" -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
 # State change: close, reopen, or skip
