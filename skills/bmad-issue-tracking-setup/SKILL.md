@@ -60,6 +60,7 @@ cp -f <path>/*.toml _bmad/custom/
 - `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
 - `bmad-code-review.toml` (requires BMM 6.4.0+)
 - `bmad-correct-course.toml` (requires BMM 6.4.0+)
+- `bmad-create-epics-and-stories.toml` (requires BMM 6.4.0+)
 - `bmad-create-prd.toml` (requires BMM 6.4.0+)
 - `bmad-create-story.toml` (requires BMM 6.4.0+)
 - `bmad-dev-story.toml` (requires BMM 6.4.0+)
@@ -103,6 +104,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/code-review/activation.yaml`
 - `_bmad/_config/custom/workflows/code-review/complete.yaml`
 - `_bmad/_config/custom/workflows/correct-course/complete.yaml`
+- `_bmad/_config/custom/workflows/create-epics-and-stories/activation.yaml`
 - `_bmad/_config/custom/workflows/create-prd/activation.yaml`
 - `_bmad/_config/custom/workflows/create-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/create-story/activation.yaml`
@@ -111,6 +113,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/dev-story/complete.yaml`
 - `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/retrospective/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-planning/activation.yaml`
 - `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
