@@ -39,7 +39,7 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
   STORE: prd_branches
 - CHECK: empty prd_branches
   TRUE:
-    - RUN: git worktree add _bmad/worktrees/prd -b {prd_branch} HEAD
+    - RUN: git worktree add {worktree_base}/prd -b {prd_branch} HEAD
   FALSE:
     - OUTPUT:
         message: "PRD worktree already exists."

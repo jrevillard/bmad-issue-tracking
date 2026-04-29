@@ -36,7 +36,7 @@ print(pattern.replace('{prd_key}', prd_key).replace('{story_key}', key))
   STORE: existing_branches
 - CHECK: empty existing_branches
   TRUE:
-    - RUN: git worktree add _bmad/worktrees/story -b {story_branch} {prd_branch}
+    - RUN: git worktree add {worktree_base}/story -b {story_branch} {prd_branch}
   FALSE:
     - OUTPUT:
         message: "Story branch already exists."

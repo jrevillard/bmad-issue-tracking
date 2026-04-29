@@ -5,6 +5,7 @@
 # Output variables:
 #   - platform: the configured platform ("gitlab" or "github")
 #   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
+#   - worktree_base: base directory for worktrees (defaults to _bmad/worktrees)
 #   - branch_patterns: the configured branch patterns object
 # Side effects: none
 
@@ -12,6 +13,7 @@
   EXTRACT:
     platform: issue_tracking.platform
     git_platform: issue_tracking.git_platform
+    worktree_base: issue_tracking.worktree_base
     branch_patterns: issue_tracking.branch_patterns
 - CHECK: exists platform
   FALSE:
@@ -28,3 +30,6 @@
     - OUTPUT:
         message: "git_platform not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
         stop: true
+- CHECK: exists worktree_base
+  FALSE:
+    - SET: { variable: worktree_base, value: "_bmad/worktrees" }

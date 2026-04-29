@@ -111,8 +111,11 @@ cp -r <path>/workflows/* _bmad/_config/custom/workflows/
 issue_tracking:
   enabled: true
   platform: gitlab  # or github — configure in next step
+  worktree_base: _bmad/worktrees
   # host and project configured in step 5
 ```
+
+<action>Ensure the worktree base directory is in `.gitignore`. Check if `_bmad/worktrees` is listed. If not, append it.</action>
 </step>
 
 <step n="5" goal="Configure platform and connection">
@@ -164,6 +167,7 @@ issue_tracking:
   git_platform: <git_platform>  # git remote platform (same as platform in nominal case)
   host: <host>
   project: <project>
+  worktree_base: _bmad/worktrees  # base directory for git worktrees
   # The following fields are only present when git remote differs from issue tracker:
   # git_host: <git_hostname>
   # git_project: <git_group>/<git_project>
