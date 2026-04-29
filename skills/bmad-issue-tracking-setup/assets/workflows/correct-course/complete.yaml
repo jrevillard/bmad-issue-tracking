@@ -50,13 +50,13 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
               file: /tmp/desc.md
               content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
               mode: overwrite
-          - INCLUDE: common/find-story-issue
-          - CHECK: empty story_issue_id
+          - SET: { variable: search_text, value: "{story_key}" }
+          - INCLUDE: common/find-issue
+          - CHECK: empty issue_id
             TRUE:
               - OUTPUT:
                   message: "Story issue not found for '{story_file}'. Skipping."
             FALSE:
-              - SET: { variable: issue_id, value: "{story_issue_id}" }
               - SET: { variable: description_file, value: "/tmp/desc.md" }
               - INCLUDE: common/update-issue-description
 # PRD: if modified, update issue description
@@ -81,30 +81,13 @@ print(''.join(lines[start:]).strip())
         file: /tmp/desc.md
         content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
         mode: overwrite
-    - RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}" --hostname {host} --paginate
-      STORE: prd_issues
-      PLATFORM: gitlab
-    - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-      STORE: prd_issues
-      PLATFORM: github
-    - CHECK: empty prd_issues
+    - SET: { variable: search_text, value: "PRD: {prd_key}" }
+    - INCLUDE: common/find-issue
+    - CHECK: empty issue_id
       TRUE:
         - OUTPUT:
             message: "PRD issue not found. Skipping PRD description update."
       FALSE:
-        - CHECK: platform eq "gitlab"
-          TRUE:
-            - FILTER:
-                source: prd_issues
-                select: iid
-                store: prd_issue_id
-          FALSE:
-            - FILTER:
-                source: prd_issues
-                select: number
-                where: title matches "PRD:"
-                store: prd_issue_id
-        - SET: { variable: issue_id, value: "{prd_issue_id}" }
         - SET: { variable: description_file, value: "/tmp/desc.md" }
         - INCLUDE: common/update-issue-description
 # Epics: if modified, update each epic issue description
@@ -143,29 +126,12 @@ print(content[start:end].strip())
               file: /tmp/desc.md
               content: "**Epic:** {epic_num}\n\n---\n\n{epic_body}"
               mode: overwrite
-          - RUN: glab api "projects/{project}/issues?search=Epic%20{epic_num}:&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-            STORE: epic_issues
-            PLATFORM: gitlab
-          - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
-            STORE: epic_issues
-            PLATFORM: github
-          - CHECK: empty epic_issues
+          - SET: { variable: search_text, value: "Epic {epic_num}:" }
+          - INCLUDE: common/find-issue
+          - CHECK: empty issue_id
             TRUE:
               - OUTPUT:
                   message: "Epic {epic_num} issue not found. Skipping."
             FALSE:
-              - CHECK: platform eq "gitlab"
-                TRUE:
-                  - FILTER:
-                      source: epic_issues
-                      select: iid
-                      store: epic_issue_id
-                FALSE:
-                  - FILTER:
-                      source: epic_issues
-                      select: number
-                      where: title matches "Epic {epic_num}:"
-                      store: epic_issue_id
-              - SET: { variable: issue_id, value: "{epic_issue_id}" }
               - SET: { variable: description_file, value: "/tmp/desc.md" }
               - INCLUDE: common/update-issue-description

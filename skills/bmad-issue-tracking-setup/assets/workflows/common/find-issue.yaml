@@ -1,0 +1,32 @@
+# common/find-issue.yaml
+#
+# Purpose: Finds an issue by search text and returns its tracker ID.
+#           Uses targeted search on both platforms (fixes GitHub fetch-all asymmetry).
+# Input variables:
+#   - search_text: text to search for in the issue (e.g. "{story_key}", "PRD: {prd_key}", "Epic {epic_num}:")
+#   - prd_key: the PRD key (from scope, for label scoping)
+# Output variables:
+#   - issue_id: the issue IID (GitLab) or number (GitHub); empty string if not found
+# Side effects: none
+
+- RUN: glab api "projects/{project}/issues?search={search_text}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
+  STORE: issue_result
+  PLATFORM: gitlab
+- RUN: gh api "search/issues?q={search_text}+repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --jq '.items'
+  STORE: issue_result
+  PLATFORM: github
+- CHECK: empty issue_result
+  TRUE:
+    - SET: { variable: issue_id, value: "" }
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - FILTER:
+            source: issue_result
+            select: iid
+            store: issue_id
+      FALSE:
+        - FILTER:
+            source: issue_result
+            select: number
+            store: issue_id

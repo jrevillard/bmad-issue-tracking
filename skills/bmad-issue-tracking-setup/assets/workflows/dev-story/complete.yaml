@@ -50,12 +50,12 @@ else:
         message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
     - RUN: test -f /tmp/dev-story-comment.md
       EXPECT_EXIT: 0
-    - CHECK: empty story_issue_id
+    - CHECK: empty issue_id
       FALSE:
-        - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
+        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
           PLATFORM: gitlab
           EXPECT_EXIT: 0
-        - RUN: gh issue comment {story_issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
+        - RUN: gh issue comment {issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
           PLATFORM: github
           EXPECT_EXIT: 0
     - RUN: rm -f /tmp/dev-story-comment.md

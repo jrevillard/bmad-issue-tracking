@@ -99,8 +99,8 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/common/check-config.yaml`
 - `_bmad/_config/custom/workflows/common/create-issue.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
+- `_bmad/_config/custom/workflows/common/find-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
-- `_bmad/_config/custom/workflows/common/find-story-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
 - `_bmad/_config/custom/workflows/common/set-story-status.yaml`
 - `_bmad/_config/custom/workflows/common/update-issue-description.yaml`

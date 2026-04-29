@@ -10,29 +10,13 @@
 - INCLUDE: common/find-prd
 - CD: {prd_worktree_path}
 # Find the PRD issue
-- RUN: glab api "projects/{project}/issues?search=PRD:%20{prd_key}&labels=type{sep}prd" --hostname {host} --paginate
-  STORE: prd_issues
-  PLATFORM: gitlab
-- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=type{sep}prd,prd{sep}{prd_key}" --hostname {host} --paginate
-  STORE: prd_issues
-  PLATFORM: github
-- CHECK: empty prd_issues
+- SET: { variable: search_text, value: "PRD: {prd_key}" }
+- INCLUDE: common/find-issue
+- CHECK: empty issue_id
   TRUE:
     - OUTPUT:
         message: "PRD issue not found. Skipping."
         stop: true
-- CHECK: platform eq "gitlab"
-  TRUE:
-    - FILTER:
-        source: prd_issues
-        select: iid
-        store: prd_issue_id
-  FALSE:
-    - FILTER:
-        source: prd_issues
-        select: number
-        where: title matches "PRD:"
-        store: prd_issue_id
 # Strip frontmatter and write description file
 - RUN: python3 -c "
 import sys
@@ -54,6 +38,5 @@ print(''.join(lines[start:]).strip())
     content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
     mode: overwrite
 # Update issue description via common sub-workflow
-- SET: { variable: issue_id, value: "{prd_issue_id}" }
 - SET: { variable: description_file, value: "/tmp/prd-desc.md" }
 - INCLUDE: common/update-issue-description

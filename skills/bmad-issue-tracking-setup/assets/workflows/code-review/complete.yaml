@@ -49,12 +49,12 @@ else:
     store: has_comment
 - CHECK: has_comment eq "yes"
   TRUE:
-    - CHECK: empty story_issue_id
+    - CHECK: empty issue_id
       FALSE:
-        - RUN: glab api --method POST "projects/{project}/issues/{story_issue_id}/notes" --hostname {host} -F "body=@/tmp/code-review-comment.md"
+        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/code-review-comment.md"
           PLATFORM: gitlab
           EXPECT_EXIT: 0
-        - RUN: gh issue comment {story_issue_id} --body-file "/tmp/code-review-comment.md" -R "{host}/{project}"
+        - RUN: gh issue comment {issue_id} --body-file "/tmp/code-review-comment.md" -R "{host}/{project}"
           PLATFORM: github
           EXPECT_EXIT: 0
     - RUN: rm -f /tmp/code-review-comment.md

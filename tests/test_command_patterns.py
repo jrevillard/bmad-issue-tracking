@@ -71,15 +71,23 @@ class TestIssueSearchScoping:
             if step["type"] != "RUN":
                 continue
             cmd = step["raw_value"]
+            # Match repos/{project}/issues?... pattern
             m = re.search(r'gh api "repos/\{project\}/issues\?([^"]+)"', cmd)
-            if not m:
+            if m:
+                query = m.group(1)
+                if "search=" in query and "prd_key" in query:
+                    continue
+                assert "labels=" in query and ("prd" in query or "type" in query), (
+                    f"{rel}:L{step['start_line']+1}: gh issue search not scoped by prd label"
+                )
                 continue
-            query = m.group(1)
-            if "search=" in query and "prd_key" in query:
-                continue
-            assert "labels=" in query and ("prd" in query or "type" in query), (
-                f"{rel}:L{step['start_line']+1}: gh issue search not scoped by prd label"
-            )
+            # Match search/issues?q=... pattern (used by find-issue.yaml)
+            m = re.search(r'gh api "search/issues\?q=([^"]+)"', cmd)
+            if m:
+                query = m.group(1)
+                assert "label:prd" in query, (
+                    f"{rel}:L{step['start_line']+1}: gh search/issues query not scoped by prd label"
+                )
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_no_unresolved_shell_vars(self, rel, wf):

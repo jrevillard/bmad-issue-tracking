@@ -48,7 +48,7 @@ print(''.join(lines[start:]).strip())
 # Ensure all required labels exist before creating the issue
 - INCLUDE: common/ensure-labels
 - SET: { variable: title, value: "PRD: {prd_key}" }
-- SET: { variable: labels, value: "type{sep}prd" }
+- SET: { variable: labels, value: "type{sep}prd\nprd{sep}{prd_key}" }
 - SET: { variable: description_file, value: "/tmp/prd-desc.md" }
 - INCLUDE: common/create-issue
 # Commit and push
