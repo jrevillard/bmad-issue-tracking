@@ -1,0 +1,22 @@
+# create-ux/activation.yaml
+#
+# Purpose: Switches to the PRD worktree for UX design creation.
+# Input variables: (none)
+# Output variables:
+#   - prd_key: the initiative key from PRD frontmatter
+# Side effects: switches agent to PRD worktree
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+# Resolve prd_branch for the output message
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+  EXPECT_EXIT: 0
+- CD: {prd_worktree_path}
+- OUTPUT:
+    message: "Switched to PRD worktree ({prd_branch})."

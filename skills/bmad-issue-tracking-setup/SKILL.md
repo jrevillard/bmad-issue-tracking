@@ -60,9 +60,11 @@ cp -f <path>/*.toml _bmad/custom/
 - `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
 - `bmad-code-review.toml` (requires BMM 6.4.0+)
 - `bmad-correct-course.toml` (requires BMM 6.4.0+)
+- `bmad-create-architecture.toml` (requires BMM 6.4.0+)
 - `bmad-create-epics-and-stories.toml` (requires BMM 6.4.0+)
 - `bmad-create-prd.toml` (requires BMM 6.4.0+)
 - `bmad-create-story.toml` (requires BMM 6.4.0+)
+- `bmad-create-ux.toml` (requires BMM 6.4.0+)
 - `bmad-dev-story.toml` (requires BMM 6.4.0+)
 - `bmad-edit-prd.toml` (requires BMM 6.4.0+)
 - `bmad-retrospective.toml` (requires BMM 6.4.0+)
@@ -102,6 +104,10 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/common/update-issue-status.yaml`
 - `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/activation.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/activation.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/complete.yaml`
+- `_bmad/_config/custom/workflows/create-ux/activation.yaml`
+- `_bmad/_config/custom/workflows/create-ux/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/complete.yaml`
 - `_bmad/_config/custom/workflows/correct-course/complete.yaml`
 - `_bmad/_config/custom/workflows/create-epics-and-stories/activation.yaml`

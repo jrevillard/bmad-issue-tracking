@@ -1,0 +1,15 @@
+# create-architecture/complete.yaml
+#
+# Purpose: Commits and pushes architecture changes in the PRD worktree.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: commits and pushes changes
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
+- RUN: git add .
+- RUN: git commit --allow-empty -m "update architecture"
+- RUN: git push
+- OUTPUT:
+    message: "Architecture updated and pushed."
