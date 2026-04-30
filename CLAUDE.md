@@ -93,6 +93,11 @@ Tests use `pytest` and `pyyaml`. Always use the project venv — never `pip3 ins
 python3 -m venv .venv && source .venv/bin/activate && pip install pytest pyyaml
 ```
 
-## Version alignment
+## Releasing
 
-When bumping `module.yaml` version, also update `.claude-plugin/marketplace.json` plugin version to match.
+When working on a branch, add functional changes to the `[Unreleased]` section of `CHANGELOG.md` following Keep a Changelog format (Added, Changed, Fixed, etc.) — one entry per logical change, not per commit.
+
+When cutting a release:
+1. Update version in `module.yaml` and `.claude-plugin/marketplace.json` (must match)
+2. Update `CHANGELOG.md` — replace `[Unreleased]` with the version and date, add comparison link
+3. Create a git tag `v{version}` on the version bump commit and push it (`git push origin --tags`)
