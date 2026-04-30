@@ -1,12 +1,28 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex when working with code in this repository.
 
 ## What this is
 
-BMAD extension module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
+BMAD extension module that integrates sprint tracking with GitLab/GitHub Issues. It is not a runnable application. It is a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
 
 Requires BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
+
+## Codex compatibility
+
+Codex discovers repository skills from `.agents/skills`. Keep those files as thin wrappers that point to the canonical BMAD skill sources under `skills/`.
+
+Canonical sources:
+
+- `skills/bmad-bmm-issue-sync/SKILL.md`
+- `skills/bmad-issue-tracking-setup/SKILL.md`
+
+Codex wrappers:
+
+- `.agents/skills/bmad-bmm-issue-sync/SKILL.md`
+- `.agents/skills/bmad-issue-tracking-setup/SKILL.md`
+
+Do not duplicate task logic in `.agents/skills`. Update the canonical `skills/` files first, then update wrapper descriptions only if trigger behavior changes.
 
 ## Architecture
 
@@ -15,17 +31,12 @@ Two concepts that must stay aligned:
 - **Standalone skill** (`skills/bmad-bmm-issue-sync/SKILL.md`) — the user-facing slash command (`/bmad-bmm-issue-sync`) and the single source of truth for the sync task
 - **Deployed copy** — during setup, this file is copied to `_bmad/_config/custom/bmad-bmm-issue-sync.md` in the consuming project. TOML `on_complete` hooks reference this deployed path.
 
-The standalone skill IS the source. If you edit it, the deployed copy in consuming projects won't update automatically — users must re-run `/bmad-issue-tracking-setup`.
-
-## Codex compatibility
-
-Codex reads repository guidance from `AGENTS.md` and discovers repo-scoped skills from `.agents/skills`. The `.agents/skills` files are thin wrappers that point to the canonical BMAD skill sources under `skills/`.
-
-Do not duplicate task logic in `.agents/skills`. Update the canonical `skills/` files first, then update wrapper descriptions only if trigger behavior changes.
+The standalone skill is the source. If you edit it, the deployed copy in consuming projects will not update automatically. Users must re-run `/bmad-issue-tracking-setup`.
 
 ## TOML override semantics
 
 Files in `skills/bmad-issue-tracking-setup/assets/custom/` are TOML overrides for BMM workflows:
+
 - `[workflow] activation_steps_append` — array, appends to BMM's activation steps
 - `[workflow] on_complete` — scalar, replaces BMM's completion block entirely
 
@@ -33,7 +44,8 @@ All overrides use the same config guard pattern: check `issue_tracking.platform`
 
 ## Key variable conventions in instructions
 
-TOML instructions reference these placeholders — they are NOT config variables, they're resolved at runtime by the AI agent:
+TOML instructions reference these placeholders. They are not config variables; they are resolved at runtime by the AI agent:
+
 - `{prd_key}` — from PRD frontmatter, e.g. `mobile-oidc`
 - `{story_key}` — sprint-status entry key, e.g. `1-3-login-form`
 - `{epic_num}`, `{story_num}` — extracted from `story_key` (first two dash-separated numbers)
@@ -45,14 +57,14 @@ TOML instructions reference these placeholders — they are NOT config variables
 
 ## Branch/MR flow
 
-Branch setup happens in activation (before BMM workflow runs). The BMM workflow creates files directly in the worktree. on_complete handles commit/push/issue/MR. Never commit on PRD for story work.
+Branch setup happens in activation before BMM workflow output is written. The BMM workflow creates files directly in the worktree. `on_complete` handles commit, push, issue, and MR/PR work. Never commit on the PRD branch for story work.
 
 | Workflow | Activation | on_complete | MR direction |
-|----------|-----------|-------------|--------------|
-| create-prd | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD → default (draft) |
-| create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
+|----------|------------|-------------|--------------|
+| create-prd | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD -> default (draft) |
+| create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story -> PRD |
 | dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
-| code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
+| code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story -> PRD |
 
 ## Platform differences
 
@@ -64,17 +76,17 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 
 ## Files to update when adding a new BMM workflow override
 
-1. Create `skills/bmad-issue-tracking-setup/assets/custom/bmad-{workflow}.toml` with the config guard
-2. Add it to the file list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3)
-3. Add a row to the override table in `README.md`
-4. Update `module-help.csv` if the workflow has a standalone skill
+1. Create `skills/bmad-issue-tracking-setup/assets/custom/bmad-{workflow}.toml` with the config guard.
+2. Add it to the file list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3).
+3. Add a row to the override table in `README.md`.
+4. Update `module-help.csv` if the workflow has a standalone skill.
 
 ## Files to update when adding a new standalone skill
 
-1. Create the canonical skill under `skills/{skill-name}/SKILL.md`
-2. Add a Codex wrapper under `.agents/skills/{skill-name}/SKILL.md`
-3. Add the skill to `module-help.csv`
-4. Document the command in `README.md`
+1. Create the canonical skill under `skills/{skill-name}/SKILL.md`.
+2. Add a Codex wrapper under `.agents/skills/{skill-name}/SKILL.md`.
+3. Add the skill to `module-help.csv`.
+4. Document the command in `README.md`.
 
 ## Version alignment
 

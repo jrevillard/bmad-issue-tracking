@@ -4,6 +4,12 @@ BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Is
 
 Uses BMAD's native TOML customization for all workflow integrations.
 
+Compatible with Claude Code and Codex:
+
+- Claude Code reads repository guidance from `CLAUDE.md`.
+- Codex reads repository guidance from `AGENTS.md`.
+- Codex discovers repo-scoped skill wrappers from `.agents/skills`, which delegate to the canonical BMAD skills under `skills/`.
+
 ## Prerequisites
 
 - BMAD Method module (BMM) 6.4.0+ installed in your project
@@ -51,6 +57,17 @@ Registered as slash commands in your IDE.
 |---|---|---|
 | Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues, mark draft PR ready |
 | Setup | `/bmad-issue-tracking-setup` | One-time integration setup |
+
+### Codex skills
+
+Codex can also discover the same workflows directly from the repository:
+
+| Skill | Codex location | Source of truth |
+|---|---|---|
+| `bmad-bmm-issue-sync` | `.agents/skills/bmad-bmm-issue-sync/SKILL.md` | `skills/bmad-bmm-issue-sync/SKILL.md` |
+| `bmad-issue-tracking-setup` | `.agents/skills/bmad-issue-tracking-setup/SKILL.md` | `skills/bmad-issue-tracking-setup/SKILL.md` |
+
+The `.agents/skills` files are thin discovery wrappers only. Keep workflow logic in `skills/` so BMAD installer behavior stays unchanged.
 
 ### TOML overrides (via setup)
 
