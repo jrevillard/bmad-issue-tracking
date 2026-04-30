@@ -25,20 +25,16 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 </check>
 </step>
 
-<step n="2" goal="Deploy shared task">
-<action>Locate the sync skill. Check these locations in order:</action>
-1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-bmm-issue-sync/SKILL.md`
-2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+<step n="2" goal="Remove obsolete sync task file">
+<action>The sync logic has been converted to workflow YAML files. The old markdown file `bmad-bmm-issue-sync.md` is no longer needed.</action>
 
-<action>IMPORTANT: Always overwrite the existing file — new versions may have changed the sync task content.</action>
-
-<action>Copy the skill file to `_bmad/_config/custom/`, overwriting if it exists:</action>
+<action>Remove the file if it exists in the consuming project:</action>
 
 ```bash
-cp -f <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
+rm -f _bmad/_config/custom/bmad-bmm-issue-sync.md
 ```
 
-<action>Verify that `bmad-bmm-issue-sync.md` exists in `_bmad/_config/custom/`.</action>
+<action>Confirm that the file no longer exists.</action>
 </step>
 
 <step n="3" goal="Deploy TOML overrides">
