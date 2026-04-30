@@ -3,9 +3,6 @@
 # Purpose: Triggers a full issue sync after sprint planning completes.
 # Input variables: (none)
 # Output variables: (none)
-# Side effects: runs the full sync task (Steps 1 through 6)
+# Side effects: runs issue sync (steps 4-6 only; prepare ran during sprint planning)
 
-- INCLUDE: common/check-config
-- OUTPUT:
-    message: "Syncing all entries to the issue tracker..."
-- INCLUDE: _bmad/_config/custom/bmad-bmm-issue-sync.md
+- INCLUDE: issue-sync/sync

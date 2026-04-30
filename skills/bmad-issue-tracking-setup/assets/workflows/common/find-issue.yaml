@@ -12,7 +12,7 @@
 - RUN: glab api "projects/{project}/issues?search={search_text}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
-- RUN: gh api "search/issues?q={search_text}+repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --jq '.items'
+- RUN: gh api "search/issues?q={search_text}+repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin).get('items', [])))"
   STORE: issue_result
   PLATFORM: github
 - CHECK: empty issue_result

@@ -1,0 +1,22 @@
+# issue-sync/sync.yaml
+#
+# Purpose: Syncs sprint-status entries to the issue tracker — creates missing issues,
+#           updates statuses, and marks the draft MR/PR ready when all epics are done.
+#           Requires check-config and find-prd to have been run first (variables in scope).
+# Input variables: (none — expects host, project, sep, prd_key, git_platform, branch_patterns from scope)
+# Output variables:
+#   - sync_created: number of issues created
+#   - sync_updated: number of issues updated
+#   - sync_skipped: number of issues already in sync
+# Side effects: creates/updates issues on the issue tracker; may mark draft MR/PR as ready
+
+# Re-derive config (context may have been compacted between activation and complete)
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+# Step 4: Sync all issues (create missing + reconcile statuses)
+- INCLUDE: common/sync-issues
+# Step 5: Mark draft MR/PR ready when all epics are done
+- INCLUDE: common/mark-mr-ready
+# Step 6: Summary
+- OUTPUT:
+    message: "Sync complete. Created: {sync_created}, Updated: {sync_updated}, Skipped: {sync_skipped}."

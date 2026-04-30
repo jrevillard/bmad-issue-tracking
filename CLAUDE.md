@@ -12,10 +12,22 @@ Requires BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
 
 Two concepts that must stay aligned:
 
-- **Standalone skill** (`skills/bmad-bmm-issue-sync/SKILL.md`) — the user-facing slash command (`/bmad-bmm-issue-sync`) and the single source of truth for the sync task
+- **Standalone skill** (`skills/bmad-bmm-issue-sync/SKILL.md`) — the user-facing slash command (`/bmad-bmm-issue-sync`), delegates to `issue-sync/prepare.yaml` + `issue-sync/sync.yaml`
 - **Deployed copy** — during setup, this file is copied to `_bmad/_config/custom/bmad-bmm-issue-sync.md` in the consuming project. TOML `on_complete` hooks reference this deployed path.
 
 The standalone skill IS the source. If you edit it, the deployed copy in consuming projects won't update automatically — users must re-run `/bmad-issue-tracking-setup`.
+
+### Issue sync workflow split
+
+The sync task is split into two phases so callers can skip redundant setup:
+
+- **`issue-sync/prepare.yaml`** (steps 1-3) — platform detection, labels, board, PRD issue creation
+- **`issue-sync/sync.yaml`** (steps 4-6) — sync issues, mark MR ready, summary (includes its own `check-config` + `find-prd` since context may be compacted)
+
+Callers:
+- `sprint-planning/complete.yaml` → `INCLUDE: issue-sync/sync` (steps 4-6 only, prepare ran during sprint planning)
+- `sprint-status/complete.yaml` → `INCLUDE: issue-sync/sync` (steps 4-6 only, prepare ran during sprint status)
+- `/bmad-bmm-issue-sync` standalone → `INCLUDE: issue-sync/prepare` then `INCLUDE: issue-sync/sync`
 
 ## TOML override semantics
 
@@ -47,7 +59,7 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 | create-architecture | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | create-ux-design | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | create-epics-and-stories | Switch to PRD worktree | Commit + push | (PRD worktree) |
-| sprint-planning | Switch to PRD worktree | Trigger full issue sync | (PRD worktree) |
+| sprint-planning | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (PRD worktree) |
 | edit-prd | Switch to PRD worktree | Update PRD issue description | (PRD worktree) |
 | check-implementation-readiness | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
 | correct-course | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
@@ -55,12 +67,12 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 | create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
 | dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
 | code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
-| sprint-status | Switch to PRD worktree | Trigger full issue sync | (none) |
+| sprint-status | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (none) |
 
 ## Platform differences
 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels
-- GitHub: `gh` CLI, labels use `:` separator, `gh api` for label updates (fetch + filter + replace, same pattern as GitLab)
+- GitHub: `gh` CLI, labels use `:` separator, `gh issue edit --add-label`/`--remove-label` for label updates (preserves other labels)
 - `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`
 
 **Git remote vs issue tracker:** The git remote (origin) and issue tracker can be on different platforms (e.g., code on GitLab, issues on GitHub). `issue_tracking.platform` is the issue tracker; `issue_tracking.git_platform` (set during setup) is the git remote. Issue operations (create/update/close issues, labels, comments) use `platform`. MR/PR operations (list, create, merge, mark ready) use `git_platform`. When they differ, `host`/`project` apply to the issue tracker and `git_host`/`git_project` apply to the git remote. Issue references in MR descriptions use `Closes #X` for same-platform, full URL for cross-platform.

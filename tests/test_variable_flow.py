@@ -23,6 +23,10 @@ _NO_CHECK_CONFIG_COMPLETE = {
     "create-epics-and-stories/complete.yaml",
 }
 
+# Workflows that delegate to the sync task instead of using check-config directly.
+# They INCLUDE issue-sync/sync which has its own check-config.
+_SYNC_DELEGATES = {"sprint-planning/complete.yaml", "sprint-status/complete.yaml"}
+
 
 class TestActivationExists:
     """P0: Every workflow with a complete.yaml must have an activation.yaml.

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING**: All BMM workflow overrides migrated from TOML pointers + markdown instructions to structured workflow YAML with INCLUDE sub-workflows
+- `bmad-bmm-issue-sync/SKILL.md` simplified from 13KB markdown to thin pointer delegating to `issue-sync/prepare.yaml` + `issue-sync/sync.yaml`
+- Issue sync split into `issue-sync/prepare.yaml` (steps 1-3) and `issue-sync/sync.yaml` (steps 4-6) — sprint-planning and sprint-status now only run steps 4-6
+- `sprint-planning/complete.yaml` and `sprint-status/complete.yaml` replaced custom sync logic with `INCLUDE: issue-sync/sync`
+- All `glab api --jq` replaced with `glab api | python3 -c "import json,sys; ..."` (glab has no --jq flag)
+- All `| jq` removed entirely — zero jq dependency, python3 used for all JSON processing
+- `gh api --paginate --jq` replaced with `gh api --paginate | python3 -c` (jq applies per-page, not concatenated)
+
+### Added
+
+- Structured workflow YAML language with 11 step types (SET, CHECK, RUN, WRITE, READ, LOOP, OUTPUT, INCLUDE, FILTER, STOP, CD)
+- 14 new common sub-workflows: check-config, find-prd, find-issue, find-stories, create-issue, create-label, update-issue-status, update-issue-description, set-story-status, ensure-labels, ensure-dynamic-labels, ensure-board, sync-issues, mark-mr-ready
+- 10 activation.yaml files — worktree setup and variable extraction before BMM runs
+- 10 complete.yaml files — commit, push, issue/MR management after BMM runs
+- 683 regression tests covering YAML syntax, CLI patterns, variable flow, include contracts, platform coverage, config requirements, Python compliance
+- Recursive YAML parser in tests/conftest.py for parametrized test flattening
+
+### Fixed
+
+- `glab api --jq` flag does not exist on glab 1.53.0 — replaced with pipe to python3
+- `glab mr list --json` flag does not exist — replaced with `--output json`
+- `sys.stdin.read()` in ensure-dynamic-labels.yaml and mark-mr-ready.yaml — workflow variables are passed as sys.argv, not stdin
+- `int(m.group(1))` crash in ensure-dynamic-labels.yaml — group(1) was `epic-3` (string), needed group(2) for the digit
+- `gh issue edit --labels` does not exist on GitHub CLI — replaced with `--add-label`/`--remove-label`
+- mark-mr-ready false positive when zero epic entries exist — added `epic_found` guard
+
 ## [1.3.0] - 2026-04-27
 
 ### Changed
@@ -115,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-bmm-issue-link` skill (obsolete, sync task handles MR creation)
 - Known issue workaround for git branch naming conflict (fixed by PRD pattern change)
 
+[Unreleased]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.3.0...HEAD
 [1.3.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/jrevillard/bmad-issue-tracking/compare/v1.1.0...v1.1.1

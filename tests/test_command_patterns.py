@@ -4,6 +4,9 @@ import re
 import pytest
 from conftest import load_all_workflows, flatten_steps, build_config_requiring_subworkflows, collect_includes, references_config_vars
 
+# Workflows that delegate to issue-sync/sync (which has its own check-config).
+_SYNC_DELEGATES = {"sprint-planning/complete.yaml", "sprint-status/complete.yaml"}
+
 
 class TestCommandPatterns:
     """P2: CLI commands follow platform conventions."""
@@ -19,6 +22,32 @@ class TestCommandPatterns:
                 assert "--hostname" in cmd, f"{rel}:L{step['start_line']+1}: glab api without --hostname"
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_glab_api_no_jq_flag(self, rel, wf):
+        """glab api does not support --jq (unlike gh api). Use | python3 -c instead."""
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            cmd = step["raw_value"]
+            if "glab api" in cmd and "--jq" in cmd:
+                assert False, (
+                    f"{rel}:L{step['start_line']+1}: glab api does not support --jq. "
+                    f"Use 'glab api ... | python3 -c' instead."
+                )
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_no_jq_dependency(self, rel, wf):
+        """Workflows must not depend on jq (not guaranteed on all systems). Use python3 instead."""
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            cmd = step["raw_value"]
+            if "| jq " in cmd or "|jq " in cmd:
+                assert False, (
+                    f"{rel}:L{step['start_line']+1}: pipeline uses jq which may not be installed. "
+                    f"Use '... | python3 -c \"import json,sys; ...\"' instead."
+                )
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_glab_subcommands_use_r(self, rel, wf):
         """glab mr/label/issue subcommands must include -R."""
         for step in flatten_steps(wf["steps"]):
@@ -27,6 +56,19 @@ class TestCommandPatterns:
             cmd = step["raw_value"]
             if "glab api" not in cmd and any(f"glab {s}" in cmd for s in ("mr ", "label ", "issue ")):
                 assert "-R" in cmd, f"{rel}:L{step['start_line']+1}: glab subcommand without -R"
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_glab_list_no_json_flag(self, rel, wf):
+        """glab mr/issue list does not support --json. Use --output json instead."""
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            cmd = step["raw_value"]
+            if "glab mr list" in cmd or "glab issue list" in cmd:
+                assert "--json " not in cmd, (
+                    f"{rel}:L{step['start_line']+1}: glab list does not support --json. "
+                    f"Use 'glab list ... --output json | jq' instead."
+                )
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_gh_commands_use_r(self, rel, wf):
@@ -154,6 +196,10 @@ class TestCompleteConfigRequirements:
     def test_complete_with_config_deps_has_check_config(self, rel, wf):
         """complete.yaml files depending on config vars must INCLUDE common/check-config."""
         if not rel.endswith("/complete.yaml"):
+            return
+        # Workflows that delegate entirely to issue-sync/sync (which has its own
+        # check-config) don't need a separate check-config include.
+        if rel in _SYNC_DELEGATES:
             return
         includes = collect_includes(wf)
         needs_config = any(inc in self._requiring for inc in includes)

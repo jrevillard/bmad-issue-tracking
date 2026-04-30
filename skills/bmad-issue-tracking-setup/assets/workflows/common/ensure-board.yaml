@@ -11,17 +11,27 @@
     - STOP
 
 # Check if BMAD Sprint Board already exists
-- RUN: glab api "projects/{project}/boards" --hostname {host} --jq '.[] | select(.name=="BMAD Sprint Board") | .id'
+- RUN: glab api "projects/{project}/boards" --hostname {host} | python3 -c "
+import json, sys
+boards = json.load(sys.stdin)
+print(next((b['id'] for b in boards if b['name'] == 'BMAD Sprint Board'), ''))
+"
   STORE: board_id
   PLATFORM: gitlab
 - CHECK: empty board_id
   TRUE:
-    - RUN: glab api --method POST "projects/{project}/boards" --hostname {host} -f "name=BMAD Sprint Board" --jq '.id'
+    - RUN: glab api --method POST "projects/{project}/boards" --hostname {host} -f "name=BMAD Sprint Board" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])"
       STORE: board_id
       PLATFORM: gitlab
 
 # Add columns for active status labels (omit done/closed/deferred/optional)
-- RUN: glab api "projects/{project}/labels" --hostname {host} --jq '.[] | select(.name | test("status{sep}(backlog|ready-for-dev|in-progress|review)$")) | "\(.id)"'
+- RUN: glab api "projects/{project}/labels" --hostname {host} | python3 -c "
+import json, sys, re
+labels = json.load(sys.stdin)
+for l in labels:
+    if re.match(r'status{sep}(backlog|ready-for-dev|in-progress|review)$', l['name']):
+        print(l['id'])
+"
   STORE: status_label_ids
   PLATFORM: gitlab
 - LOOP:
