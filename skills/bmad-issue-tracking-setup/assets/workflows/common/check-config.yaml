@@ -13,12 +13,18 @@
 
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
+    enabled: issue_tracking.enabled
     platform: issue_tracking.platform
     git_platform: issue_tracking.git_platform
     host: issue_tracking.host
     project: issue_tracking.project
     worktree_base: issue_tracking.worktree_base
     branch_patterns: issue_tracking.branch_patterns
+- CHECK: enabled eq "true"
+  FALSE:
+    - OUTPUT:
+        message: "Issue tracking disabled (file-system mode). Skipping sync."
+        stop: true
 - CHECK: exists platform
   FALSE:
     - OUTPUT:
