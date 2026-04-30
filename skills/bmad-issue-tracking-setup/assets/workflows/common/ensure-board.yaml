@@ -1,0 +1,32 @@
+# common/ensure-board.yaml
+#
+# Purpose: Ensures the BMAD Sprint Board exists on GitLab with status columns.
+# Input variables: (none — uses platform, host, project, sep from scope)
+# Output variables: (none)
+# Side effects: creates board and columns on GitLab; skipped on GitHub
+
+# GitHub: skip (uses Projects, not issue boards)
+- CHECK: platform ne "gitlab"
+  TRUE:
+    - STOP
+
+# Check if BMAD Sprint Board already exists
+- RUN: glab api "projects/{project}/boards" --hostname {host} --jq '.[] | select(.name=="BMAD Sprint Board") | .id'
+  STORE: board_id
+  PLATFORM: gitlab
+- CHECK: empty board_id
+  TRUE:
+    - RUN: glab api --method POST "projects/{project}/boards" --hostname {host} -f "name=BMAD Sprint Board" --jq '.id'
+      STORE: board_id
+      PLATFORM: gitlab
+
+# Add columns for active status labels (omit done/closed/deferred/optional)
+- RUN: glab api "projects/{project}/labels" --hostname {host} --jq '.[] | select(.name | test("status{sep}(backlog|ready-for-dev|in-progress|review)$")) | "\(.id)"'
+  STORE: status_label_ids
+  PLATFORM: gitlab
+- LOOP:
+    items: status_label_ids
+    as: label_id
+    do:
+      - RUN: glab api --method POST "projects/{project}/boards/{board_id}/lists" --hostname {host} -f "label_id={label_id}" 2>/dev/null || true
+        PLATFORM: gitlab

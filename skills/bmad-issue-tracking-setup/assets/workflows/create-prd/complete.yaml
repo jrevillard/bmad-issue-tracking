@@ -48,6 +48,7 @@ print(''.join(lines[start:]).strip())
     mode: overwrite
 # Ensure all required labels exist before creating the issue
 - INCLUDE: common/ensure-labels
+- INCLUDE: common/ensure-board
 - SET: { variable: title, value: "PRD: {prd_key}" }
 - SET: { variable: labels, value: "type{sep}prd\nprd{sep}{prd_key}" }
 - SET: { variable: description_file, value: "/tmp/prd-desc.md" }

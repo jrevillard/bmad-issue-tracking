@@ -41,6 +41,19 @@
           message: "Issue already exists (#{issue_id}). Skipping creation."
       - STOP
 # Create the issue
+# Ensure all labels exist (static + dynamic like prd:{prd_key}, {prd_key}:epic-N)
+- RUN: python3 -c "
+import sys
+labels = sys.argv[1].strip().split('\n')
+for label in labels:
+    print(label)
+" "{labels}"
+  STORE: label_list
+- LOOP:
+    items: label_list
+    as: label_name
+    do:
+      - INCLUDE: common/create-label
 - RUN: python3 -c "
 import sys
 labels = sys.argv[1].strip().split('\n')
