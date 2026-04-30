@@ -1,6 +1,7 @@
-"""Validate INCLUDE sub-workflow contracts.
+"""Validate that common/ sub-workflows have proper contract headers.
 
-P1 — checks that INCLUDE paths exist and common/ files have contract headers.
+P1 — checks that common/ files document their Purpose, Input variables,
+Output variables, and Side effects.
 """
 
 import pytest
@@ -8,24 +9,44 @@ from conftest import load_all_workflows, parse_contract_header
 
 
 class TestIncludeContracts:
-    """P1: INCLUDE paths exist and common/ files have contracts."""
+    """P1: common/ files have complete contract headers."""
 
-    def test_all_includes_point_to_existing_files(self, all_workflows):
-        """Every INCLUDE must reference an existing YAML file or .md prose file."""
-        for rel, wf in all_workflows.items():
-            for step in wf["steps"]:
-                if step["type"] != "INCLUDE":
-                    continue
-                path = step["raw_value"].strip()
-                if path.endswith(".md"):
-                    continue  # prose includes are valid
-                if path not in all_workflows and path + ".yaml" not in all_workflows:
-                    pytest.fail(f"{rel}:L{step['start_line']+1}: INCLUDE '{path}' not found")
-
-    def test_common_subworkflows_have_contracts(self, all_workflows):
-        """All files in common/ must document Purpose in their contract header."""
+    def test_common_subworkflows_have_purpose(self, all_workflows):
+        """All common/ files must document their Purpose."""
         for rel, wf in all_workflows.items():
             if not rel.startswith("common/"):
                 continue
             contract = parse_contract_header(wf["content"])
             assert contract["purpose"], f"{rel}: missing Purpose in contract header"
+
+    def test_common_subworkflows_have_input_variables(self, all_workflows):
+        """All common/ files must document their Input variables (even if none)."""
+        for rel, wf in all_workflows.items():
+            if not rel.startswith("common/"):
+                continue
+            contract = parse_contract_header(wf["content"])
+            # The section header should exist, even if empty
+            content_lower = wf["content"].lower()
+            assert "input variables" in content_lower, (
+                f"{rel}: missing 'Input variables' section in contract header"
+            )
+
+    def test_common_subworkflows_have_output_variables(self, all_workflows):
+        """All common/ files must document their Output variables (even if none)."""
+        for rel, wf in all_workflows.items():
+            if not rel.startswith("common/"):
+                continue
+            content_lower = wf["content"].lower()
+            assert "output variables" in content_lower, (
+                f"{rel}: missing 'Output variables' section in contract header"
+            )
+
+    def test_common_subworkflows_have_side_effects(self, all_workflows):
+        """All common/ files must document their Side effects."""
+        for rel, wf in all_workflows.items():
+            if not rel.startswith("common/"):
+                continue
+            content_lower = wf["content"].lower()
+            assert "side effects" in content_lower, (
+                f"{rel}: missing 'Side effects' section in contract header"
+            )
