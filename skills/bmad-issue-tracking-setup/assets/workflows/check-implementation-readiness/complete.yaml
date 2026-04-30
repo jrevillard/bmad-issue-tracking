@@ -1,0 +1,97 @@
+# check-implementation-readiness/complete.yaml
+#
+# Purpose: Updates issue descriptions if implementation readiness checks modified tracked artifacts.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: updates issue descriptions on the issue tracker; creates/removes /tmp/desc.md
+
+- INCLUDE: common/check-config
+# Detect which tracked artifacts were modified
+- RUN: git diff --name-only HEAD
+  STORE: modified_files
+# PRD: if modified, update issue description
+- CHECK: modified_files contains "{planning_artifacts}/prd.md"
+  TRUE:
+    - RUN: python3 -c "
+import sys
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+count = 0
+start = 0
+for i, line in enumerate(lines):
+    if line.strip() == '---':
+        count += 1
+        if count == 2:
+            start = i + 1
+            break
+print(''.join(lines[start:]).strip())
+" {planning_artifacts}/prd.md
+      STORE: prd_body
+    - WRITE:
+        file: /tmp/desc.md
+        content: "**PRD:** {prd_key}\n\n---\n\n{prd_body}"
+        mode: overwrite
+    - SET: { variable: search_text, value: "PRD: {prd_key}" }
+    - INCLUDE: common/find-issue
+    - CHECK: empty issue_id
+      TRUE:
+        - OUTPUT:
+            message: "PRD issue not found. Skipping PRD description update."
+      FALSE:
+        - SET: { variable: description_file, value: "/tmp/desc.md" }
+        - INCLUDE: common/update-issue-description
+# Epics: if modified, update each epic issue description
+- CHECK: modified_files contains "{planning_artifacts}/epics.md"
+  TRUE:
+    - READ: {planning_artifacts}/epics.md
+      STORE: epics_content
+    - RUN: python3 -c "
+import sys, re
+content = sys.argv[1]
+# Find all epic section headers
+matches = list(re.finditer(r'^## Epic (\d+):', content, re.MULTILINE))
+for i, m in enumerate(matches):
+    start = m.start()
+    end = matches[i+1].start() if i + 1 < len(matches) else len(content)
+    epic_num = m.group(1)
+    print(f'{epic_num},{start},{end}')
+" {epics_content}
+      STORE: epic_sections
+    - LOOP:
+        items: epic_sections
+        as: section_info
+        do:
+          - RUN: python3 -c "
+import sys
+parts = sys.argv[1].rstrip().split(',')
+print(parts[0])
+" {section_info}
+            STORE: epic_num
+          - RUN: python3 -c "
+import sys
+parts = sys.argv[1].rstrip().split(',')
+start, end = int(parts[1]), int(parts[2])
+content = open('{planning_artifacts}/epics.md', 'r', encoding='utf-8').read()
+print(content[start:end].strip())
+" {section_info}
+            STORE: epic_body
+          - WRITE:
+              file: /tmp/desc.md
+              content: "**Epic:** {epic_num}\n\n---\n\n{epic_body}"
+              mode: overwrite
+          - SET: { variable: search_text, value: "Epic {epic_num}:" }
+          - INCLUDE: common/find-issue
+          - CHECK: empty issue_id
+            TRUE:
+              - OUTPUT:
+                  message: "Epic {epic_num} issue not found. Skipping."
+            FALSE:
+              - SET: { variable: description_file, value: "/tmp/desc.md" }
+              - INCLUDE: common/update-issue-description
+# If nothing was modified
+- CHECK: modified_files contains "{planning_artifacts}/prd.md"
+  FALSE:
+    - CHECK: modified_files contains "{planning_artifacts}/epics.md"
+      FALSE:
+        - OUTPUT:
+            message: "No tracked artifacts were modified. No updates needed."

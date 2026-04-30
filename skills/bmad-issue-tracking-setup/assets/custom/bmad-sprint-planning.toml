@@ -1,13 +1,16 @@
 # Issue Tracking override for bmad-sprint-planning
+# Switches to the PRD worktree before running the BMM workflow.
 # Triggers a full issue sync after sprint planning completes.
 # Overrides merge: scalars win, arrays append.
 # Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
 
+activation_steps_append = [
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/sprint-planning/activation.yaml`.",
+]
+
 # Scalar: runs after sprint planning completes.
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After completing sprint planning and updating sprint-status.yaml, sync all entries to the issue tracker by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Run the full sync (Steps 1 through 6).
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`.
 """

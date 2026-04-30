@@ -1,26 +1,15 @@
 # Issue Tracking override for bmad-retrospective
+# Switches to the PRD worktree before running the BMM workflow.
 # Creates an issue (GitLab or GitHub) when a retrospective is saved.
 # Overrides merge: scalars win, arrays append.
 # Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
 
-# Scalar: runs after Step 12 (Final Summary and Handoff).
+activation_steps_append = [
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/retrospective/activation.yaml`.",
+]
+
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After saving the retrospective document and updating sprint-status, create an issue for the retrospective by following the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter. If not found, ask the user and offer to persist it.
-3. Search for an existing retrospective issue whose title starts with "Retrospective: Epic {epic_number}" or whose description contains "epic-{epic_number}-retrospective". If found, skip creation.
-4. If no issue exists, create it with:
-   - Title: "Retrospective: Epic {epic_number}" (where {epic_number} is extracted from the sprint-status key, e.g., `3` from `epic-3-retrospective`)
-   - Labels: type{sep}retrospective, status{sep}done, prd{sep}{prd_key}, {prd_key}{sep}epic-{epic_number} (use :: for GitLab, : for GitHub)
-   - Description: the retrospective document content
-   Use the platform-appropriate CLI command (glab for GitLab, gh for GitHub).
-   Since the initial status label is `done`, close the issue immediately after creation:
-   - **GitLab:** `glab api --method PUT "projects/$PROJECT_ID/issues/$IID" --hostname $HOST -f "state_event=close"` (do NOT send `labels` parameter)
-   - **GitHub:** `gh issue close {number} -R "$HOST/$OWNER/$REPO"`
-   Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/retrospective/complete.yaml`.
 """

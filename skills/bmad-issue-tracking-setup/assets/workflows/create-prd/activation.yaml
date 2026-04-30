@@ -1,0 +1,56 @@
+# create-prd/activation.yaml
+#
+# Purpose: Captures prd_key and creates/switches to the PRD worktree.
+# Input variables: (none)
+# Output variables:
+#   - prd_key: the initiative key for the project
+# Side effects: creates/switches to PRD worktree; updates PRD frontmatter
+
+- INCLUDE: common/check-config
+- OUTPUT:
+    message: "What is the initiative key for this project? (e.g. auth-refactor, mobile-oidc, api-gateway)"
+    store: prd_key
+- RUN: python3 -c "
+import sys, os
+path, key = sys.argv[1], sys.argv[2]
+if not os.path.exists(path):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(f'---\nprd_key: {key}\n---\n')
+else:
+    with open(path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    for i in range(1, len(lines)):
+        if lines[i].strip() == '---':
+            lines.insert(i, f'prd_key: {key}\n')
+            break
+    with open(path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+" {planning_artifacts}/prd.md {prd_key}
+  EXPECT_EXIT: 0
+# Create or switch to PRD worktree
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+import sys
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+- RUN: git branch --list '{prd_branch}'
+  STORE: prd_branches
+- CHECK: empty prd_branches
+  TRUE:
+    - RUN: git worktree add {worktree_base}/prd -b {prd_branch} HEAD
+  FALSE:
+    - OUTPUT:
+        message: "PRD worktree already exists."
+- RUN: git worktree list
+  STORE: worktrees
+- FILTER:
+    source: worktrees
+    select: path
+    where: branch matches "{prd_branch}"
+    store: prd_worktree_path
+- CD: {prd_worktree_path}
+- OUTPUT:
+    message: "Switched to PRD worktree ({prd_branch})."

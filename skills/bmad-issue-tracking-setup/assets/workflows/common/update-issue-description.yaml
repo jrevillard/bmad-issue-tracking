@@ -1,0 +1,16 @@
+# common/update-issue-description.yaml
+#
+# Purpose: Updates an issue description from a pre-written file.
+# Input variables:
+#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub)
+#   - description_file: path to the file containing the new description
+# Output variables: (none)
+# Side effects: updates issue description on the issue tracker
+
+- RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "description=@{description_file}"
+  PLATFORM: gitlab
+  EXPECT_EXIT: 0
+- RUN: gh issue edit {issue_id} --body-file "{description_file}" -R "{host}/{project}"
+  PLATFORM: github
+  EXPECT_EXIT: 0
+- RUN: rm -f {description_file}

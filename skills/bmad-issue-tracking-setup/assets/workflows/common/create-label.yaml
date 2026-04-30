@@ -1,0 +1,12 @@
+# common/create-label.yaml
+#
+# Purpose: Creates a single label on the issue tracker (idempotent).
+# Input variables:
+#   - label_name: the label to create (e.g. "prd:loyalty-points")
+# Output variables: (none)
+# Side effects: creates the label on the tracker if it doesn't exist
+
+- RUN: glab label create --name "{label_name}" -R "{host}/{project}" 2>/dev/null || true
+  PLATFORM: gitlab
+- RUN: gh label create "{label_name}" -R "{host}/{project}" 2>/dev/null || true
+  PLATFORM: github

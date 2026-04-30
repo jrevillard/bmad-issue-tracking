@@ -15,6 +15,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 ## Instructions
 
 <task>
+<action>IMPORTANT: When a step asks you to configure a value with a default, you MUST present the default as a suggestion and wait for the user's answer before writing anything. Never silently apply a default.</action>
 
 <step n="1" goal="Verify BMM installation">
 <action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.4.0+.</action>
@@ -24,18 +25,16 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 </check>
 </step>
 
-<step n="2" goal="Deploy shared task">
-<action>Locate the sync skill. Check these locations in order:</action>
-1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-bmm-issue-sync/SKILL.md`
-2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+<step n="2" goal="Remove obsolete sync task file">
+<action>The sync logic has been converted to workflow YAML files. The old markdown file `bmad-bmm-issue-sync.md` is no longer needed.</action>
 
-<action>Copy the skill file to `_bmad/_config/custom/`:</action>
+<action>Remove the file if it exists in the consuming project:</action>
 
 ```bash
-cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
+rm -f _bmad/_config/custom/bmad-bmm-issue-sync.md
 ```
 
-<action>Verify that `bmad-bmm-issue-sync.md` exists in `_bmad/_config/custom/`.</action>
+<action>Confirm that the file no longer exists.</action>
 </step>
 
 <step n="3" goal="Deploy TOML overrides">
@@ -43,56 +42,194 @@ cp <path>/SKILL.md _bmad/_config/custom/bmad-bmm-issue-sync.md
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/custom/`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
 
-<action>Copy all TOML files to `_bmad/custom/`:</action>
+<action>IMPORTANT: Always overwrite existing TOML files — this is an update, not a first install. New versions may have changed TOML content.</action>
+
+<action>Copy all TOML files to `_bmad/custom/`, overwriting existing files:</action>
 
 ```bash
-cp <path>/*.toml _bmad/custom/
+cp -f <path>/*.toml _bmad/custom/
 ```
+
+<action>Remove any `bmad-*.toml` files in `_bmad/custom/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
 - `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
 - `bmad-code-review.toml` (requires BMM 6.4.0+)
 - `bmad-correct-course.toml` (requires BMM 6.4.0+)
+- `bmad-create-architecture.toml` (requires BMM 6.4.0+)
+- `bmad-create-epics-and-stories.toml` (requires BMM 6.4.0+)
 - `bmad-create-prd.toml` (requires BMM 6.4.0+)
 - `bmad-create-story.toml` (requires BMM 6.4.0+)
+- `bmad-create-ux-design.toml` (requires BMM 6.4.0+)
 - `bmad-dev-story.toml` (requires BMM 6.4.0+)
 - `bmad-edit-prd.toml` (requires BMM 6.4.0+)
 - `bmad-retrospective.toml` (requires BMM 6.4.0+)
 - `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
 - `bmad-sprint-status.toml` (requires BMM 6.4.0+)
 
+<action>Note: All TOML files are in pointer format — they reference workflow YAML files deployed in step 3b.</action>
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
 </step>
 
-<step n="4" goal="Configure issue_tracking">
-<action>Create `_bmad/custom/issue-tracking.yaml` with the following content (this file is independent from BMM and survives BMM updates):</action>
+<step n="3b" goal="Deploy workflow language files">
+<action>The TOML overrides reference workflow language YAML files. These are deployed separately to keep the TOML files as simple pointers.</action>
 
-```yaml
-issue_tracking:
-  enabled: true
-  platform: gitlab  # or github — configure in next step
-  # host and project configured in step 5
+<action>Locate the workflow language files. They are siblings of the `custom/` directory (in the same `assets/` parent):</action>
+1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/`
+2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+
+<action>IMPORTANT: Always overwrite existing files — new versions may have changed workflow content.</action>
+
+<action>Copy the workflow language specification and workflow YAML files, overwriting existing files:</action>
+
+```bash
+cp -f <path>/bmad-workflow-lang.md _bmad/_config/custom/
+mkdir -p _bmad/_config/custom/workflows
+cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 ```
+
+<action>Remove any workflow YAML files in `_bmad/_config/custom/workflows/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
+
+<action>Verify the following files exist:</action>
+- `_bmad/_config/custom/bmad-workflow-lang.md`
+- `_bmad/_config/custom/workflows/common/check-config.yaml`
+- `_bmad/_config/custom/workflows/common/create-issue.yaml`
+- `_bmad/_config/custom/workflows/common/create-label.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-board.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
+- `_bmad/_config/custom/workflows/common/find-issue.yaml`
+- `_bmad/_config/custom/workflows/common/find-prd.yaml`
+- `_bmad/_config/custom/workflows/common/find-stories.yaml`
+- `_bmad/_config/custom/workflows/common/set-story-status.yaml`
+- `_bmad/_config/custom/workflows/common/update-issue-description.yaml`
+- `_bmad/_config/custom/workflows/common/update-issue-status.yaml`
+- `_bmad/_config/custom/workflows/check-implementation-readiness/activation.yaml`
+- `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`
+- `_bmad/_config/custom/workflows/code-review/activation.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/activation.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/complete.yaml`
+- `_bmad/_config/custom/workflows/create-ux-design/activation.yaml`
+- `_bmad/_config/custom/workflows/create-ux-design/complete.yaml`
+- `_bmad/_config/custom/workflows/code-review/complete.yaml`
+- `_bmad/_config/custom/workflows/correct-course/activation.yaml`
+- `_bmad/_config/custom/workflows/correct-course/complete.yaml`
+- `_bmad/_config/custom/workflows/create-epics-and-stories/activation.yaml`
+- `_bmad/_config/custom/workflows/create-epics-and-stories/complete.yaml`
+- `_bmad/_config/custom/workflows/create-prd/activation.yaml`
+- `_bmad/_config/custom/workflows/create-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/create-story/activation.yaml`
+- `_bmad/_config/custom/workflows/create-story/complete.yaml`
+- `_bmad/_config/custom/workflows/dev-story/activation.yaml`
+- `_bmad/_config/custom/workflows/dev-story/complete.yaml`
+- `_bmad/_config/custom/workflows/edit-prd/activation.yaml`
+- `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/retrospective/activation.yaml`
+- `_bmad/_config/custom/workflows/retrospective/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-planning/activation.yaml`
+- `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-status/activation.yaml`
+- `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
+</step>
+
+<step n="4" goal="Configure issue_tracking">
+<action>Check if `_bmad/custom/issue-tracking.yaml` already exists.</action>
+<check if="config file exists">
+  <false>
+    <action>Create `_bmad/custom/issue-tracking.yaml` with the following content (this file is independent from BMM and survives BMM updates):</action>
+
+    ```yaml
+    issue_tracking:
+      enabled: true
+      platform: gitlab  # or github — configure in next step
+      # worktree_base, host, project configured in steps 4-5
+    ```
+  </false>
+</check>
+<check if="worktree_base is already set">
+  <true>
+    <output>worktree_base already configured: {worktree_base}.</output>
+  </true>
+  <false>
+    <action>Ask the user for their worktree base directory. Default: `_bmad/worktrees`</action>
+    <action>Set `issue_tracking.worktree_base` to the user's answer in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
+</check>
+<action>Ensure the worktree base directory is in `.gitignore`. Read the configured `worktree_base` value and check if it is listed. If not, append it.</action>
 </step>
 
 <step n="5" goal="Configure platform and connection">
 <action>Detect the git remote by running `git remote get-url origin`.</action>
-<action>Detect the git platform from the remote URL hostname: extract the hostname from the remote URL, then if it contains "gitlab" → gitlab, if it contains "github" → github. Store as `issue_tracking.git_platform` in `_bmad/custom/issue-tracking.yaml`.</action>
-<action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
-<action>Set `issue_tracking.platform` to the chosen value.</action>
-<check if="platform differs from git_platform">
-  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). MR/PR operations will use the git platform ({git_platform}), issue operations will use the tracker platform ({platform}).</output>
-  <action>Since the platforms differ, `host` and `project` MUST be configured explicitly for the issue tracker. Ask the user for the issue tracker host and project path. Also ask for the git remote host and project path (for MR/PR operations). Store all four values in `_bmad/custom/issue-tracking.yaml`.</action>
+<action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
+<action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
+<action>Always set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
+<check if="platform is already set">
+  <true>
+    <output>Platform already configured: {platform}.</output>
+  </true>
+  <false>
+    <action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
+    <action>Set `issue_tracking.platform` to the chosen value.</action>
+  </false>
 </check>
-<check if="platform equals git_platform">
-  <action>Ask the user for the host and project path. These apply to both issue tracking and MR/PR operations.</action>
+<check if="git_platform is already set">
+  <true>
+    <output>git_platform already configured: {git_platform}.</output>
+  </true>
+  <false>
+    <action>Set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
+</check>
+<check if="platform differs from git remote platform">
+  <output>NOTE: The issue tracker ({platform}) differs from the git remote ({git_platform}). This is valid — e.g. code on GitLab but issues on GitHub. MRs/PRs will target the git remote, so `git_host` and `git_project` are also needed.</output>
+  <check if="git_host is already set">
+    <true>
+      <output>git_host already configured: {git_host}.</output>
+    </true>
+    <false>
+      <action>Set `issue_tracking.git_host` to the git remote hostname (already extracted from the remote URL above).</action>
+    </false>
+  </check>
+  <check if="git_project is already set">
+    <true>
+      <output>git_project already configured: {git_project}.</output>
+    </true>
+    <false>
+      <action>Set `issue_tracking.git_project` to the git remote project path (already extracted from the remote URL above).</action>
+    </false>
+  </check>
+</check>
+<check if="platform does NOT differ from git remote platform">
+  <check if="git_host is set">
+    <output>NOTE: Platform and git remote match — `git_host` is no longer needed. Removing it.</output>
+    <action>Remove `issue_tracking.git_host` from `_bmad/custom/issue-tracking.yaml`.</action>
+  </check>
+  <check if="git_project is set">
+    <output>NOTE: Platform and git remote match — `git_project` is no longer needed. Removing it.</output>
+    <action>Remove `issue_tracking.git_project` from `_bmad/custom/issue-tracking.yaml`.</action>
+  </check>
+</check>
+<check if="host is already set">
+  <true>
+    <output>host already configured: {host}.</output>
+  </true>
+  <false>
+    <action>Ask the user for the issue tracker host (e.g. `gitlab.company.com` or `github.com`). Set `issue_tracking.host` in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
+</check>
+<check if="project is already set">
+  <true>
+    <output>project already configured: {project}.</output>
+  </true>
+  <false>
+    <action>Ask the user for the issue tracker project path (e.g. `my-group/my-project`). Set `issue_tracking.project` in `_bmad/custom/issue-tracking.yaml`.</action>
+  </false>
 </check>
 </step>
 
 <step n="6" goal="Verify CLI connectivity">
-<action>Run the platform auth check (use `--hostname $HOST` for self-hosted instances):</action>
-- GitLab: `glab auth status --hostname $HOST`
-- GitHub: `gh auth status --hostname $HOST`
+<action>Run the platform auth check (use `--hostname {host}` for self-hosted instances):</action>
+- GitLab: `glab auth status --hostname {host}`
+- GitHub: `gh auth status --hostname {host}`
 
 <check if="auth fails">
   <output>WARN: CLI not authenticated. Issue tracking will fall back to file-system until authenticated.</output>
@@ -120,13 +257,14 @@ issue_tracking:
 ```yaml
 issue_tracking:
   enabled: true
-  platform: <platform>          # issue tracker (gitlab or github)
-  git_platform: <git_platform>  # git remote (gitlab or github) — same as platform if not set
-  host: <host>                  # issue tracker host
-  project: <project>            # issue tracker project
-  # git_host and git_project: only needed when git_platform differs from platform
-  git_host: <git_host>          # git remote host (e.g. gitlab.company.com)
-  git_project: <git_project>    # git remote project (e.g. group/project for GitLab, owner/repo for GitHub)
+  platform: <platform>
+  git_platform: <git_platform>  # git remote platform (same as platform in nominal case)
+  host: <host>
+  project: <project>
+  worktree_base: <configured_worktree_base>
+  # Only present when git remote differs from issue tracker:
+  # git_host: <git_hostname>
+  # git_project: <git_group>/<git_project>
   branch_patterns:
     prd: "<resolved PRD pattern>"
     story: "<resolved story pattern>"

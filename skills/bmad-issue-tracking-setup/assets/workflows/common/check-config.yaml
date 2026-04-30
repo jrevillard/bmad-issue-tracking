@@ -1,0 +1,41 @@
+# common/check-config.yaml
+#
+# Purpose: Validates that the issue-tracking configuration is present and complete.
+# Input variables: (none)
+# Output variables:
+#   - platform: the configured platform ("gitlab" or "github")
+#   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
+#   - host: the issue tracker hostname
+#   - project: the issue tracker project path (group/project or owner/repo)
+#   - worktree_base: base directory for worktrees (required — set by /bmad-issue-tracking-setup step 4)
+#   - branch_patterns: the configured branch patterns object
+# Side effects: none
+
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    platform: issue_tracking.platform
+    git_platform: issue_tracking.git_platform
+    host: issue_tracking.host
+    project: issue_tracking.project
+    worktree_base: issue_tracking.worktree_base
+    branch_patterns: issue_tracking.branch_patterns
+- CHECK: exists platform
+  FALSE:
+    - OUTPUT:
+        message: "Issue tracking not configured. Open a new session and run /bmad-issue-tracking-setup (step 5) to configure the platform."
+        stop: true
+- CHECK: exists branch_patterns
+  FALSE:
+    - OUTPUT:
+        message: "Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns."
+        stop: true
+- CHECK: exists git_platform
+  FALSE:
+    - OUTPUT:
+        message: "git_platform not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
+        stop: true
+- CHECK: exists worktree_base
+  FALSE:
+    - OUTPUT:
+        message: "worktree_base not configured. Run /bmad-issue-tracking-setup (step 4) to configure."
+        stop: true

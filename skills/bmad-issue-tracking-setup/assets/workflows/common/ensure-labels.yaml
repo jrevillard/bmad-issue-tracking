@@ -1,0 +1,31 @@
+# common/ensure-labels.yaml
+#
+# Purpose: Ensures all required BMAD static labels exist on the issue tracker.
+#           Creates any labels that are missing (skips if already exist).
+# Input variables: (none — uses platform, host, project from scope)
+# Output variables: (none)
+# Side effects: creates labels on the issue tracker
+#
+# NOTE: || true suppresses ALL errors (not just "already exists"), including auth/network
+# failures. The sync task (/bmad-bmm-issue-sync) handles additional dynamic/extended labels.
+
+# Type labels
+- SET: { variable: label_name, value: "type{sep}prd" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "type{sep}story" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "type{sep}epic" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "type{sep}retrospective" }
+- INCLUDE: common/create-label
+# Status labels
+- SET: { variable: label_name, value: "status{sep}backlog" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "status{sep}ready-for-dev" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "status{sep}in-progress" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "status{sep}review" }
+- INCLUDE: common/create-label
+- SET: { variable: label_name, value: "status{sep}done" }
+- INCLUDE: common/create-label

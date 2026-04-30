@@ -1,0 +1,80 @@
+# common/create-issue.yaml
+#
+# Purpose: Searches for an existing issue by title, creates one if not found.
+#           Extracts and returns the issue ID.
+# Input variables:
+#   - title: the exact issue title to search for (prefix match)
+#   - labels: newline-separated list of labels to assign (e.g. "type::prd\nstatus::done")
+#   - description_file: path to the file containing the issue description
+# Output variables:
+#   - issue_id: the IID (GitLab) or number (GitHub) of the created/found issue
+# Side effects: creates an issue on the issue tracker if it does not already exist
+# Requires: host and project in scope (provided by common/check-config via callers)
+
+# Search for existing issue
+- RUN: glab api --paginate "projects/{project}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
+  STORE: search_result
+  PLATFORM: gitlab
+- RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
+  STORE: search_result
+  PLATFORM: github
+# If found, extract issue_id and stop
+- CHECK: empty search_result
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - FILTER:
+            source: search_result
+            select: iid
+            store: issue_id
+      FALSE:
+        - FILTER:
+            source: search_result
+            select: number
+            where: title matches "{title}"
+            store: issue_id
+    - CHECK: empty issue_id
+    TRUE:
+      - STOP
+    FALSE:
+      - OUTPUT:
+          message: "Issue already exists (#{issue_id}). Skipping creation."
+      - STOP
+# Create the issue
+# Ensure all labels exist (static + dynamic like prd:{prd_key}, {prd_key}:epic-N)
+- RUN: python3 -c "
+import sys
+labels = sys.argv[1].strip().split('\n')
+for label in labels:
+    print(label)
+" "{labels}"
+  STORE: label_list
+- LOOP:
+    items: label_list
+    as: label_name
+    do:
+      - INCLUDE: common/create-label
+- RUN: python3 -c "
+import sys
+labels = sys.argv[1].strip().split('\n')
+print(','.join(labels))
+" "{labels}"
+  STORE: label_arg
+- RUN: glab api --method POST "projects/{project}/issues" --hostname {host} -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
+  STORE: create_result
+  PLATFORM: gitlab
+- RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "{host}/{project}"
+  STORE: create_result
+  PLATFORM: github
+# Extract issue_id from creation result
+- CHECK: platform eq "gitlab"
+  TRUE:
+    - FILTER:
+        source: create_result
+        select: iid
+        store: issue_id
+  FALSE:
+    - FILTER:
+        source: create_result
+        select: number
+        store: issue_id
