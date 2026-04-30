@@ -2,7 +2,7 @@
 
 import re
 import pytest
-from conftest import load_all_workflows, flatten_steps
+from conftest import load_all_workflows, flatten_steps, build_config_requiring_subworkflows, collect_includes, references_config_vars
 
 
 class TestCommandPatterns:
@@ -130,3 +130,39 @@ class TestPythonImportCompliance:
             assert has_import, (
                 f"{rel}:L{step['start_line']+1}: python3 -c uses sys.argv without import sys"
             )
+
+
+class TestCompleteConfigRequirements:
+    """P1: complete.yaml files that depend on config variables must include check-config.
+
+    Between activation and on_complete, the BMM workflow runs and the AI agent's
+    context may be compacted, losing variables set during activation. Any complete.yaml
+    that (directly or transitively via INCLUDE) depends on config variables must
+    re-derive them via common/check-config.
+
+    This test is platform-agnostic: it checks for variable references ({host},
+    {project}, {platform}) rather than specific CLI tools (glab, gh, jira, ...).
+    """
+
+    _requiring = None
+
+    @classmethod
+    def setup_class(cls):
+        cls._requiring = build_config_requiring_subworkflows(load_all_workflows())
+
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_complete_with_config_deps_has_check_config(self, rel, wf):
+        """complete.yaml files depending on config vars must INCLUDE common/check-config."""
+        if not rel.endswith("/complete.yaml"):
+            return
+        includes = collect_includes(wf)
+        needs_config = any(inc in self._requiring for inc in includes)
+        if not needs_config and references_config_vars(wf):
+            needs_config = True
+        if not needs_config:
+            return
+        has_check_config = "common/check-config" in includes
+        assert has_check_config, (
+            f"{rel}: depends on config variables but does not INCLUDE common/check-config. "
+            f"Config-requiring includes: {sorted(inc for inc in includes if inc in self._requiring)}"
+        )

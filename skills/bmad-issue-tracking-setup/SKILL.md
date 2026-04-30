@@ -98,6 +98,8 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/bmad-workflow-lang.md`
 - `_bmad/_config/custom/workflows/common/check-config.yaml`
 - `_bmad/_config/custom/workflows/common/create-issue.yaml`
+- `_bmad/_config/custom/workflows/common/create-label.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-board.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
 - `_bmad/_config/custom/workflows/common/find-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
@@ -113,6 +115,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/create-ux-design/activation.yaml`
 - `_bmad/_config/custom/workflows/create-ux-design/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/complete.yaml`
+- `_bmad/_config/custom/workflows/correct-course/activation.yaml`
 - `_bmad/_config/custom/workflows/correct-course/complete.yaml`
 - `_bmad/_config/custom/workflows/create-epics-and-stories/activation.yaml`
 - `_bmad/_config/custom/workflows/create-epics-and-stories/complete.yaml`
@@ -122,10 +125,13 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/create-story/complete.yaml`
 - `_bmad/_config/custom/workflows/dev-story/activation.yaml`
 - `_bmad/_config/custom/workflows/dev-story/complete.yaml`
+- `_bmad/_config/custom/workflows/edit-prd/activation.yaml`
 - `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/retrospective/activation.yaml`
 - `_bmad/_config/custom/workflows/retrospective/complete.yaml`
 - `_bmad/_config/custom/workflows/sprint-planning/activation.yaml`
 - `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
+- `_bmad/_config/custom/workflows/sprint-status/activation.yaml`
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 

@@ -161,6 +161,42 @@ def flatten_steps(steps):
     return result
 
 
+def collect_includes(wf):
+    """Return set of all INCLUDE targets (transitive, flattened) in a workflow."""
+    includes = set()
+    for step in flatten_steps(wf["steps"]):
+        if step["type"] == "INCLUDE":
+            target = step["raw_value"].strip()
+            includes.add(target)
+    return includes
+
+
+# Variables provided by common/check-config
+CONFIG_VARS = {"platform", "git_platform", "host", "project", "worktree_base", "branch_patterns", "sep"}
+
+
+def references_config_vars(wf):
+    """Return True if the workflow content references any config variable."""
+    content = wf["content"]
+    for var in CONFIG_VARS:
+        if "{" + var + "}" in content:
+            return True
+    return False
+
+
+def build_config_requiring_subworkflows(all_workflows):
+    """Build set of sub-workflow paths that reference config variables.
+
+    Scans all common/*.yaml files. A sub-workflow is config-requiring if its
+    content references any variable from CONFIG_VARS (e.g. {host}, {project}).
+    """
+    requiring = set()
+    for rel, wf in all_workflows.items():
+        if rel.startswith("common/") and references_config_vars(wf):
+            requiring.add(rel)
+    return requiring
+
+
 def _step_to_dict(step):
     """Convert a parsed step into a dict suitable for extract_step_var_defs/refs.
 

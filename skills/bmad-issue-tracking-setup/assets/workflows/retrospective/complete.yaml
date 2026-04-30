@@ -6,8 +6,6 @@
 # Side effects: creates and closes an issue on the issue tracker
 
 - INCLUDE: common/check-config
-- INCLUDE: common/find-prd
-- CD: {prd_worktree_path}
 # Derive epic_number from sprint-status (find the epic-N-retrospective entry)
 - READ: {implementation_artifacts}/sprint-status.yaml
   EXTRACT:

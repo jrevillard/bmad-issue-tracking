@@ -1,9 +1,14 @@
 # Issue Tracking override for bmad-edit-prd
+# Switches to the PRD worktree before running the BMM workflow.
 # Updates the PRD issue description when the PRD is edited.
 # Overrides merge: scalars win, arrays append.
 # Requires BMM 6.4.0+ (customize.toml support for this skill).
 
 [workflow]
+
+activation_steps_append = [
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/edit-prd/activation.yaml`.",
+]
 
 # Scalar: runs after the edit-prd workflow completes.
 on_complete = """

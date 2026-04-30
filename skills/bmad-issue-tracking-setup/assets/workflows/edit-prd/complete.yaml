@@ -7,8 +7,6 @@
 #               creates and removes /tmp/prd-desc.md
 
 - INCLUDE: common/check-config
-- INCLUDE: common/find-prd
-- CD: {prd_worktree_path}
 # Find the PRD issue
 - SET: { variable: search_text, value: "PRD: {prd_key}" }
 - INCLUDE: common/find-issue

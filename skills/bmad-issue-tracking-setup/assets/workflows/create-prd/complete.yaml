@@ -6,8 +6,6 @@
 # Side effects: creates issue on tracker, pushes branch, creates draft MR
 
 - INCLUDE: common/check-config
-- INCLUDE: common/find-prd
-- CD: {prd_worktree_path}
 # Read prd_key (should have been set during activation, re-derive if lost)
 - READ: {planning_artifacts}/prd.md
   EXTRACT:

@@ -48,14 +48,14 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 | create-ux-design | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | create-epics-and-stories | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | sprint-planning | Switch to PRD worktree | Trigger full issue sync | (PRD worktree) |
-| edit-prd | (via on_complete: find-prd + CD) | Update PRD issue description | (PRD worktree) |
-| check-implementation-readiness | (via on_complete: find-prd + CD) | Update issue descriptions if artifacts modified | (PRD worktree) |
-| correct-course | (via on_complete: find-prd + CD) | Update issue descriptions if artifacts modified | (PRD worktree) |
-| retrospective | (via on_complete: find-prd + CD) | Create retrospective issue + close | (PRD worktree) |
+| edit-prd | Switch to PRD worktree | Update PRD issue description | (PRD worktree) |
+| check-implementation-readiness | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
+| correct-course | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
+| retrospective | Switch to PRD worktree | Create retrospective issue + close | (PRD worktree) |
 | create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
 | dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
 | code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
-| sprint-status | (none) | Trigger full issue sync | (none) |
+| sprint-status | Switch to PRD worktree | Trigger full issue sync | (none) |
 
 ## Platform differences
 

@@ -1,0 +1,12 @@
+# correct-course/activation.yaml
+#
+# Purpose: Switches to the PRD worktree for course correction.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: switches agent to PRD worktree
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
+- OUTPUT:
+    message: "Switched to PRD worktree for course correction."
