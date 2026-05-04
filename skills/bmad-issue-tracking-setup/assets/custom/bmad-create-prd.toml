@@ -6,54 +6,10 @@
 
 [workflow]
 
-# Array (append): runs after greet but before the workflow begins.
-# Captures prd_key early so it's available throughout the PRD workflow.
 activation_steps_append = [
-  "Check that `branch_patterns` is set in `issue_tracking` in `_bmad/custom/issue-tracking.yaml`. If not set, output 'Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns. When done, come back here and say done.' and stop.",
-  "Ask the user: \"What is the initiative key for this project? (e.g. auth-refactor, mobile-oidc, api-gateway). It will be used as the identifier for issue tracking.\" Store the answer as PRD_KEY.",
-  "Prepend `prd_key: {PRD_KEY}` to the PRD frontmatter file at `{planning_artifacts}/prd.md`. If the file doesn't exist yet, create it with only the frontmatter block: `---\\nprd_key: {PRD_KEY}\\n---`.",
-  "Create or switch to the PRD worktree. Use the `branch_patterns.prd` pattern from `issue_tracking` in `_bmad/custom/issue-tracking.yaml`, resolved with `{PRD_KEY}`.",
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/create-prd/activation.yaml`.",
 ]
 
-# Scalar: runs after the create-prd workflow completes (Step 12).
 on_complete = """
-Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md` (Step 1 validates config and connectivity — do NOT skip it). Only use the exact CLI commands from the sync task table — do NOT improvise.
-
-After creating the PRD, create a PRD issue and set up the branch strategy. Follow the shared sync task at `{project-root}/_bmad/_config/custom/bmad-bmm-issue-sync.md`. Specifically:
-
-1. Follow Step 1 (detect platform and project, verify connectivity). Stop if the issue tracker is unavailable.
-2. Read prd_key from the PRD file frontmatter (`{planning_artifacts}/prd.md`). If not found, stop here — prd_key should have been captured during activation. If `{prd_branch}` was not carried from activation (e.g. context was compacted), re-derive it by resolving `branch_patterns.prd` from `issue_tracking` in `_bmad/custom/issue-tracking.yaml` with `{prd_key}`.
-3. Check if a PRD issue already exists (title starts with "PRD:"). If found, skip creation.
-4. Read the full PRD file content from `{planning_artifacts}/prd.md`.
-5. Write the description to `/tmp/prd-desc.md` using this format:
-
-```
-**PRD:** {prd_key}
-
----
-
-{full PRD file content}
-```
-
-6. Create the issue with title "PRD: {prd_key}" and label `type{sep}prd` (use `::` for GitLab, `:` for GitHub — see separator convention in sync task):
-   - **GitLab:** `glab api --method POST "projects/$PROJECT_ID/issues" --hostname $HOST -f "title=PRD: {prd_key}" -F "description=@/tmp/prd-desc.md" -f "labels=type::prd"`
-   - **GitHub:** `gh issue create --title "PRD: {prd_key}" --body-file "/tmp/prd-desc.md" --label "type:prd" -R "$HOST/$OWNER/$REPO"
-7. Commit all changes in the current worktree.
-8. Push the PRD branch to the remote: `git push -u origin {prd_branch}` (where `{prd_branch}` is the branch name resolved in the activation step from `branch_patterns.prd` with `{prd_key}`).
-9. Create a draft PR/MR for the PRD branch (PRD branch → default branch):
-   - Determine the git platform for MR/PR operations: read `issue_tracking.git_platform` from `_bmad/custom/issue-tracking.yaml`. If not set, it equals `platform`. Resolve MR repository variables: if `git_platform` differs from `platform`, use `git_host`/`git_project` from config (parse as GROUP/PROJECT for GitLab, OWNER/REPO for GitHub). If same platform, reuse the standard HOST/PROJECT_PATH/OWNER/REPO variables from Step 1.
-   - Determine the default branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'`.
-   - Check if a draft PR/MR already exists for this branch (PRD branch → default branch):
-     - **GitLab:** `glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "$MR_HOST/$MR_PROJECT"`
-     - **GitHub:** `gh pr list --head {prd_branch} --base {default_branch} --json number -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
-   - If found: skip creation.
-   - If not found, find the PRD issue number from the issue created in step 6.
-   - Build the MR/PR description referencing the issue (note: issue URLs use the tracker variables $HOST/$PROJECT_PATH or $HOST/$OWNER/$REPO, NOT the MR_* variables):
-     - If git_platform equals platform (same platform): use `"Closes #{issue_number}"` — auto-close works natively.
-     - If git_platform differs from platform (cross-platform): build a full URL to the issue. For GitLab tracker: `"Related to https://$HOST/$PROJECT_PATH/-/issues/{issue_number}"`. For GitHub tracker: `"Related to https://$HOST/$OWNER/$REPO/issues/{issue_number}"`.
-   - Create the draft PR/MR:
-     - **GitLab:** `glab mr create --title "PRD: {prd_key}" --description "{issue_reference}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "$MR_HOST/$MR_PROJECT"`
-     - **GitHub:** `gh pr create --title "PRD: {prd_key}" --body "{issue_reference}" --base {default_branch} --head {prd_branch} --draft -R "$MR_HOST/$MR_OWNER/$MR_REPO"`
-10. Stay in the PRD worktree. Do NOT exit — the agent continues working from here.
-11. Clean up temp files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/create-prd/complete.yaml`.
 """

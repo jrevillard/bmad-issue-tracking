@@ -1,0 +1,42 @@
+# common/ensure-board.yaml
+#
+# Purpose: Ensures the BMAD Sprint Board exists on GitLab with status columns.
+# Input variables: (none — uses platform, host, project, sep from scope)
+# Output variables: (none)
+# Side effects: creates board and columns on GitLab; skipped on GitHub
+
+# GitHub: skip (uses Projects, not issue boards)
+- CHECK: platform ne "gitlab"
+  TRUE:
+    - STOP
+
+# Check if BMAD Sprint Board already exists
+- RUN: glab api "projects/{project}/boards" --hostname {host} | python3 -c "
+import json, sys
+boards = json.load(sys.stdin)
+print(next((b['id'] for b in boards if b['name'] == 'BMAD Sprint Board'), ''))
+"
+  STORE: board_id
+  PLATFORM: gitlab
+- CHECK: empty board_id
+  TRUE:
+    - RUN: glab api --method POST "projects/{project}/boards" --hostname {host} -f "name=BMAD Sprint Board" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])"
+      STORE: board_id
+      PLATFORM: gitlab
+
+# Add columns for active status labels (omit done/closed/deferred/optional)
+- RUN: glab api "projects/{project}/labels" --hostname {host} | python3 -c "
+import json, sys, re
+labels = json.load(sys.stdin)
+for l in labels:
+    if re.match(r'status{sep}(backlog|ready-for-dev|in-progress|review)$', l['name']):
+        print(l['id'])
+"
+  STORE: status_label_ids
+  PLATFORM: gitlab
+- LOOP:
+    items: status_label_ids
+    as: label_id
+    do:
+      - RUN: glab api --method POST "projects/{project}/boards/{board_id}/lists" --hostname {host} -f "label_id={label_id}" 2>/dev/null || true
+        PLATFORM: gitlab

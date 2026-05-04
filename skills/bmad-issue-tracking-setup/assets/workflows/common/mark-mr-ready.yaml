@@ -1,0 +1,98 @@
+# common/mark-mr-ready.yaml
+#
+# Purpose: Marks the draft MR/PR for the PRD branch as ready when all epics are done.
+#           Does nothing if not all epics are done or if no draft MR/PR exists.
+# Input variables: (none — uses platform, host, project, prd_key, branch_patterns from scope)
+# Output variables: (none)
+# Side effects: marks draft MR/PR as ready on the issue tracker
+
+# Check if all epics have status "done"
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    entries: development_status
+- RUN: python3 -c "
+import sys, re
+content = sys.argv[1]
+all_done = True
+epic_found = False
+for line in content.split('\n'):
+    m = re.match(r'\s*(epic-\d+)(?!-retrospective)\S*\s*:\s*(.+)$', line.strip())
+    if m:
+        epic_found = True
+        status = m.group(2).strip()
+        if status != 'done':
+            all_done = False
+            break
+print('yes' if all_done and epic_found else 'no')
+" {entries}
+  STORE: all_epics_done
+- CHECK: all_epics_done ne "yes"
+  TRUE:
+    - STOP
+# Resolve PRD branch and default branch
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+- RUN: python3 -c "
+import sys
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+- RUN: git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}'
+  STORE: default_branch
+# Resolve MR/PR repo (unified — avoids duplication between GitLab and GitHub branches)
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
+  FALSE:
+    - READ: _bmad/custom/issue-tracking.yaml
+      EXTRACT:
+        git_host: issue_tracking.git_host
+        git_project: issue_tracking.git_project
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
+      FALSE:
+        - RUN: python3 -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+          STORE: git_owner
+        - RUN: python3 -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+          STORE: git_repo
+        - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
+# Mark draft MR/PR ready
+- CHECK: git_platform eq "gitlab"
+  TRUE:
+    - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}"
+      STORE: mr_list
+    - CHECK: empty mr_list
+      FALSE:
+        - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}" --output json | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['iid'])"
+          STORE: mr_iid
+        - RUN: glab mr update {mr_iid} --ready -R "{mr_repo}"
+          EXPECT_EXIT: 0
+        - OUTPUT:
+            message: "All epics done — draft MR marked as ready for review."
+      TRUE:
+        - OUTPUT:
+            message: "All epics done, but no draft MR found."
+  FALSE:
+    - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
+      STORE: pr_list
+    - CHECK: empty pr_list
+      FALSE:
+        - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}" --jq '.[0].number'
+          STORE: pr_number
+        - RUN: gh pr ready {pr_number} -R "{mr_repo}"
+          EXPECT_EXIT: 0
+        - OUTPUT:
+            message: "All epics done — draft PR marked as ready for review."
+      TRUE:
+        - OUTPUT:
+            message: "All epics done, but no draft PR found."

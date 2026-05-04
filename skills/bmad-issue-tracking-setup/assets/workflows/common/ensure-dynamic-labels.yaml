@@ -1,0 +1,40 @@
+# common/ensure-dynamic-labels.yaml
+#
+# Purpose: Ensures dynamic labels (PRD and epic-specific) exist on the issue tracker.
+#           Creates any labels that are missing (skips if already exist).
+# Input variables: (none — uses platform, host, project, sep, prd_key from scope)
+# Output variables: (none)
+# Side effects: creates labels on the issue tracker
+
+# PRD label
+- SET: { variable: label_name, value: "prd{sep}{prd_key}" }
+- INCLUDE: common/create-label
+# Epic labels — extract unique epic numbers from sprint-status.yaml
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    entries: development_status
+- RUN: python3 -c "
+import sys, re
+content = sys.argv[1]
+epics = set()
+for line in content.split('\n'):
+    m = re.match(r'\s*(epic-(\d+))(?!-retrospective)[-:].*$', line.strip())
+    if m:
+        epics.add(int(m.group(2)))
+for n in sorted(epics):
+    print(n)
+" {entries}
+  STORE: epic_numbers
+- LOOP:
+    items: epic_numbers
+    as: epic_num
+    do:
+      - RUN: python3 -c "
+import sys
+colors = ['#428BCA', '#44AD8E', '#F0AD4E', '#D9534F', '#6B5CE7', '#1ABC9C', '#E74C8B', '#95A5A6', '#3498DB', '#E67E22']
+idx = (int(sys.argv[1]) - 1) % len(colors)
+print(colors[idx])
+" {epic_num}
+        STORE: epic_color
+      - SET: { variable: label_name, value: "{prd_key}{sep}epic-{epic_num}" }
+      - INCLUDE: common/create-label

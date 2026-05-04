@@ -1,0 +1,81 @@
+# dev-story/complete.yaml
+#
+# Purpose: Updates the story issue status after dev-story workflow completes.
+#           Posts an implementation summary comment when transitioning to review.
+# Input variables: (none)
+# Output variables:
+#   - story_key: the story key derived from the current branch name
+# Side effects: updates issue labels/status on the issue tracker; creates/removes
+#               /tmp/dev-story-comment.md; commits and pushes changes in the worktree
+
+- INCLUDE: common/check-config
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+# Re-derive story_key from current branch name (context may have been compacted,
+# and sprint-status.yaml may already reflect the updated status)
+- RUN: git branch --show-current
+  STORE: current_branch
+- RUN: python3 -c "
+import sys
+branch = sys.argv[1]
+parts = branch.rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(branch)
+" {current_branch}
+  STORE: story_key
+- CHECK: empty story_key
+  TRUE:
+    - OUTPUT:
+        message: "Could not determine story_key from branch '{current_branch}'."
+        stop: true
+# Read sprint-status to determine the target status for this story
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    entries: development_status
+- FILTER:
+    source: entries
+    select: value
+    where: key eq "{story_key}"
+    store: story_status
+# Update issue status based on sprint-status
+- CHECK: story_status eq "review"
+  TRUE:
+    - SET: { variable: new_status, value: "review" }
+    - SET: { variable: close, value: "false" }
+    - INCLUDE: common/set-story-status
+    - OUTPUT:
+        message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
+    - RUN: test -f /tmp/dev-story-comment.md
+      EXPECT_EXIT: 0
+    - CHECK: empty issue_id
+      FALSE:
+        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
+          PLATFORM: gitlab
+          EXPECT_EXIT: 0
+        - RUN: gh issue comment {issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
+          PLATFORM: github
+          EXPECT_EXIT: 0
+    - RUN: rm -f /tmp/dev-story-comment.md
+- CHECK: story_status eq "done"
+  TRUE:
+    - SET: { variable: new_status, value: "done" }
+    - SET: { variable: close, value: "true" }
+    - INCLUDE: common/set-story-status
+# Default: set label to in-progress (catch-all for any status
+# other than "review" or "done", e.g. "in-progress", "blocked", "ready-for-dev")
+- CHECK: story_status ne "review"
+  TRUE:
+    - CHECK: story_status ne "done"
+      TRUE:
+        - SET: { variable: new_status, value: "in-progress" }
+        - SET: { variable: close, value: "false" }
+        - INCLUDE: common/set-story-status
+# Commit and push
+- RUN: git add .
+- RUN: git commit --allow-empty -m "update story {story_key}"
+- RUN: git push
+- OUTPUT:
+    message: "Story {story_key} updated. Staying in worktree."

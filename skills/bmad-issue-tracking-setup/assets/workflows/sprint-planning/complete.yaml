@@ -1,0 +1,8 @@
+# sprint-planning/complete.yaml
+#
+# Purpose: Triggers a full issue sync after sprint planning completes.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: runs issue sync (steps 4-6 only; prepare ran during sprint planning)
+
+- INCLUDE: issue-sync/sync

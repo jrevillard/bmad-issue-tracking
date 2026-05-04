@@ -1,0 +1,12 @@
+# create-ux/complete.yaml
+#
+# Purpose: Commits and pushes UX design changes in the PRD worktree.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: commits and pushes changes
+
+- RUN: git add .
+- RUN: git commit --allow-empty -m "update ux design"
+- RUN: git push
+- OUTPUT:
+    message: "UX design updated and pushed."

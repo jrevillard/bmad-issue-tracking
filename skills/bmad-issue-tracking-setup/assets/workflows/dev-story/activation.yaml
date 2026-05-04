@@ -1,0 +1,32 @@
+# dev-story/activation.yaml
+#
+# Purpose: Finds a story with status "ready-for-dev", switches to its worktree,
+#          and sets the issue status to "in-progress".
+# Input variables: (none)
+# Output variables: (set by common/find-stories)
+#   - selected_story: the branch name chosen by the user (or auto-selected if only one match)
+#   - selected_worktree_path: the filesystem path to the selected story worktree
+# Side effects: switches agent working directory, updates issue status to in-progress
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- SET: { variable: target_status, value: "ready-for-dev" }
+- INCLUDE: common/find-stories
+- CD: {selected_worktree_path}
+# Derive story_key from branch name
+- RUN: python3 -c "
+import sys
+branch = sys.argv[1]
+parts = branch.rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(branch)
+" {selected_story}
+  STORE: story_key
+# Set issue status to in-progress
+- SET: { variable: new_status, value: "in-progress" }
+- SET: { variable: close, value: "false" }
+- INCLUDE: common/set-story-status
+- OUTPUT:
+    message: "Switched to story {selected_story}. Status set to in-progress."

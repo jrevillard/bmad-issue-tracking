@@ -1,0 +1,12 @@
+# check-implementation-readiness/activation.yaml
+#
+# Purpose: Switches to the PRD worktree for implementation readiness checks.
+# Input variables: (none)
+# Output variables: (none — prd_key is set in scope for on_complete use)
+# Side effects: switches agent to PRD worktree
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd
+- CD: {prd_worktree_path}
+- OUTPUT:
+    message: "Switched to PRD worktree for implementation readiness check."

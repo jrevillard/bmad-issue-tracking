@@ -1,0 +1,258 @@
+# common/sync-issues.yaml
+#
+# Purpose: Syncs sprint-status.yaml entries to the issue tracker.
+#           Single pass: fetches all PRD issues, then creates missing or updates
+#           status for each entry. Tracks created/updated/skipped counts.
+# Input variables: (none — uses platform, host, project, sep, prd_key, branch_patterns from scope)
+# Output variables:
+#   - sync_created: number of issues created
+#   - sync_updated: number of issues updated
+#   - sync_skipped: number of issues already in sync
+# Side effects: creates/updates/closes issues on the issue tracker; creates
+#               and removes /tmp/issue-desc-*.md files
+
+# Initialize counters
+- SET: { variable: sync_created, value: "0" }
+- SET: { variable: sync_updated, value: "0" }
+- SET: { variable: sync_skipped, value: "0" }
+# Fetch all PRD issues (bulk fetch for matching)
+- RUN: glab api "projects/{project}/issues?labels=prd{sep}{prd_key}&state=all&per_page=100" --hostname {host} --paginate | python3 -c "
+import json, sys
+issues = json.load(sys.stdin)
+for i in issues:
+    status = next((l for l in i['labels'] if l.startswith('status')), 'none')
+    print(str(i['iid']) + '\t' + i['title'] + '\t' + status)
+"
+  STORE: issue_index
+  PLATFORM: gitlab
+- RUN: gh api "search/issues?q=repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --paginate | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for item in data.get('items', []):
+    status = next((l['name'] for l in item['labels'] if l['name'].startswith('status')), 'none')
+    print(str(item['number']) + '\t' + item['title'] + '\t' + status)
+"
+  STORE: issue_index
+  PLATFORM: github
+# Read sprint-status entries
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    entries: development_status
+- LOOP:
+    items: entries
+    as: entry
+    do:
+      # --- Classify entry ---
+      - RUN: python3 -c "
+import sys
+key = sys.argv[1].strip()
+if key.startswith('epic-') and '-retrospective' not in key:
+    print('epic')
+elif key.endswith('-retrospective'):
+    print('retrospective')
+else:
+    print('story')
+" {entry}
+        STORE: entry_type
+      # --- Extract epic number ---
+      - RUN: python3 -c "
+import sys, re
+key = sys.argv[1].strip()
+m = re.match(r'epic-(\d+)', key)
+if m:
+    print(m.group(1))
+else:
+    parts = key.split('-')
+    if len(parts) >= 2:
+        print(parts[0])
+    else:
+        print('')
+" {entry}
+        STORE: epic_num
+      # --- Extract title ---
+      - CHECK: entry_type eq "epic"
+        TRUE:
+          - RUN: python3 -c "
+import sys, re
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    content = f.read()
+n = sys.argv[2]
+sections = list(re.finditer(r'^## Epic ' + n + r':', content, re.MULTILINE))
+if not sections:
+    print('Epic ' + n)
+else:
+    start = sections[0].start()
+    end = sections[1].start() if len(sections) > 1 else len(content)
+    body = content[start:end].strip()
+lines = body.split('\n')
+title_line = ''
+for line in lines:
+    if line.startswith('#') and not line.startswith('## Epic'):
+        title_line = line.lstrip('#').strip()
+        break
+print('Epic ' + n + ': ' + title_line if title_line else 'Epic ' + n)
+" {planning_artifacts}/epics.md {epic_num}
+            STORE: entry_title
+        FALSE:
+          - CHECK: entry_type eq "retrospective"
+            TRUE:
+              - SET: { variable: entry_title, value: "Retrospective: Epic {epic_num}" }
+            FALSE:
+              - RUN: python3 -c "
+import sys, os
+path = os.path.join(sys.argv[1], sys.argv[2] + '.md')
+if os.path.exists(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.startswith('#'):
+                parts = line.lstrip('#').strip().split(' ', 1)
+                epic_story = sys.argv[2].split('-', 1)[0] if '-' in sys.argv[2] else ''
+                print(epic_story + '. ' + parts[1].strip() if len(parts) > 1 else parts[0].strip())
+                break
+else:
+    parts = sys.argv[2].split('-')
+    print(parts[0] + '.' + parts[1] if len(parts) > 1 else sys.argv[2])
+" {implementation_artifacts} {entry}
+                STORE: entry_title
+      # --- Parse status from sprint-status (format: "key: status") ---
+      - RUN: python3 -c "
+parts = sys.argv[1].strip().split(':')
+if len(parts) >= 2:
+    print(parts[-1].strip())
+else:
+    print('')
+" {entry}
+        STORE: entry_status
+      # Map status names
+      - CHECK: entry_status eq "drafted"
+        TRUE:
+          - SET: { variable: mapped_status, value: "ready-for-dev" }
+        FALSE:
+          - CHECK: entry_status eq "contexted"
+            TRUE:
+              - SET: { variable: mapped_status, value: "in-progress" }
+            FALSE:
+              - SET: { variable: mapped_status, value: "{entry_status}" }
+      # --- Find existing issue (3-tier matching) ---
+      - SET: { variable: search_text, value: "{entry}" }
+      - INCLUDE: common/find-issue
+      - CHECK: empty issue_id
+        FALSE:
+          # Verify match: check if the issue title matches (case-sensitive)
+          - CHECK: platform eq "gitlab"
+            TRUE:
+              - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} | python3 -c "import json,sys; print(json.load(sys.stdin)['title'])"
+                STORE: found_title
+                PLATFORM: gitlab
+            FALSE:
+              - RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host} --jq '.title'
+                STORE: found_title
+                PLATFORM: github
+          - CHECK: found_title eq "{entry_title}"
+            TRUE:
+              # Title matches — check status
+              - CHECK: platform eq "gitlab"
+                TRUE:
+                  - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} | python3 -c "
+import json, sys
+for l in json.load(sys.stdin)['labels']:
+    if l.startswith('status'):
+        print(l)
+"
+                    STORE: current_status_label
+                    PLATFORM: gitlab
+                FALSE:
+                  - RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host} --jq '[.labels[] | select(.name | startswith("status:")) | .name][0] // "none"'
+                    STORE: current_status_label
+                    PLATFORM: github
+              - CHECK: current_status_label eq "status{sep}{mapped_status}"
+                TRUE:
+                  # Already in sync
+                  - RUN: python3 -c "
+n = int(sys.argv[1]) + 1
+print(n)
+" {sync_skipped}
+                    STORE: sync_skipped
+                FALSE:
+                  # Status differs — update
+                  - SET: { variable: new_status, value: "{mapped_status}" }
+                  - CHECK: mapped_status eq "done"
+                    TRUE:
+                      - SET: { variable: close, value: "true" }
+                    FALSE:
+                      - CHECK: mapped_status eq "closed"
+                        TRUE:
+                          - SET: { variable: close, value: "true" }
+                        FALSE:
+                          - CHECK: mapped_status eq "backlog"
+                            TRUE:
+                              - SET: { variable: close, value: "none" }
+                            FALSE:
+                              - CHECK: mapped_status eq "deferred"
+                                TRUE:
+                                  - SET: { variable: close, value: "none" }
+                                FALSE:
+                                  - CHECK: mapped_status eq "optional"
+                                    TRUE:
+                                      - SET: { variable: close, value: "none" }
+                                    FALSE:
+                                      - SET: { variable: close, value: "false" }
+                  - INCLUDE: common/update-issue-status
+                  - RUN: python3 -c "
+n = int(sys.argv[1]) + 1
+print(n)
+" {sync_updated}
+                    STORE: sync_updated
+            FALSE:
+              # Title doesn't match — treat as no match (create new)
+              - SET: { variable: issue_id, value: "" }
+        TRUE:
+          # No issue found — create
+          - SET: { variable: issue_id, value: "" }
+      # --- Create issue if needed ---
+      - CHECK: empty issue_id
+        TRUE:
+          - WRITE:
+              file: /tmp/issue-desc-{entry}.md
+              content: "**Sprint Key:** `{entry}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{entry_title}"
+              mode: overwrite
+          - CHECK: entry_type eq "epic"
+            TRUE:
+              - READ: {planning_artifacts}/epics.md
+                STORE: epic_content
+              - RUN: python3 -c "
+import sys, re
+content = sys.argv[1]
+n = sys.argv[2]
+sections = list(re.finditer(r'^## Epic ' + n + r':', content, re.MULTILINE))
+if sections:
+    start = sections[0].start()
+    end = sections[1].start() if len(sections) > 1 else len(content)
+    print(content[start:end].strip())
+else:
+    print('')
+" {epic_content} {epic_num}
+                STORE: epic_body
+              - CHECK: empty epic_body
+                FALSE:
+                  - WRITE:
+                      file: /tmp/issue-desc-{entry}.md
+                      content: "**Sprint Key:** `{entry}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{epic_body}"
+                      mode: overwrite
+          - SET: { variable: title, value: "{entry_title}" }
+          - SET: { variable: labels, value: "type{sep}{entry_type}\nstatus{sep}{mapped_status}\nprd{sep}{prd_key}\n{prd_key}{sep}epic-{epic_num}" }
+          - SET: { variable: description_file, value: "/tmp/issue-desc-{entry}.md" }
+          - INCLUDE: common/create-issue
+          - CHECK: mapped_status eq "done"
+            TRUE:
+              - INCLUDE: common/update-issue-status
+            FALSE:
+              - CHECK: mapped_status eq "closed"
+                TRUE:
+                  - INCLUDE: common/update-issue-status
+          - RUN: rm -f /tmp/issue-desc-{entry}.md
+          - RUN: python3 -c "
+n = int(sys.argv[1]) + 1
+print(n)
+" {sync_created}
+            STORE: sync_created

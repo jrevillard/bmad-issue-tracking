@@ -1,0 +1,8 @@
+# sprint-status/complete.yaml
+#
+# Purpose: Triggers a full issue sync after sprint status reconciliation.
+# Input variables: (none)
+# Output variables: (none)
+# Side effects: runs issue sync (steps 4-6 only; prepare ran during sprint status)
+
+- INCLUDE: issue-sync/sync
