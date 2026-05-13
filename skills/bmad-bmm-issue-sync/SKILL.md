@@ -5,25 +5,16 @@ description: 'Sync sprint-status.yaml entries to GitLab/GitHub Issues. Use when 
 
 # Sync Sprint Status to Issues (GitLab or GitHub)
 
-> Delegates to the structured workflow YAML at `issue-sync/prepare.yaml` and `issue-sync/sync.yaml`.
-> Run `/bmad-issue-tracking-setup` to deploy the workflow files first.
-
 ## Prerequisites
 
 - `glab` CLI (for GitLab) or `gh` CLI (for GitHub) installed and authenticated
 - Repository has Issues enabled
 - `sprint-status.yaml` exists at `{implementation_artifacts}/sprint-status.yaml`
 - `prd_key` in `prd.md` frontmatter, or provided by user if absent
+- Workflow files deployed by `/bmad-issue-tracking-setup` in `_bmad/_config/custom/workflows/`
 
 ## Instructions
 
-1. Prepare the issue tracker: `INCLUDE: issue-sync/prepare`
-2. Sync all issues: `INCLUDE: issue-sync/sync`
-3. The prepare step handles Steps 1-3 automatically:
-   - Step 1: Platform detection and configuration
-   - Step 2: Ensure all labels exist (static + dynamic PRD/epic labels) and board
-   - Step 3: Create PRD issue if not exists
-4. The sync step handles Steps 4-6 automatically:
-   - Step 4: Sync all issues (create missing + reconcile statuses)
-   - Step 5: Mark draft MR/PR ready when all epics are done
-   - Step 6: Report sync summary
+1. Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification.
+2. Execute the prepare workflow: `_bmad/_config/custom/workflows/issue-sync/prepare.yaml`
+3. Execute the sync workflow: `_bmad/_config/custom/workflows/issue-sync/sync.yaml`
