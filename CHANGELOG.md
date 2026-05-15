@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use explicit workflow file paths in standalone issue-sync SKILL.md instead of INCLUDE syntax that agents can't resolve from plain markdown
 - Story worktree now uses unique name based on branch path instead of hardcoded `story`, enabling parallel work on multiple stories
+- Code review complete no longer asks user for verdict — reads it from sprint-status.yaml
+- Code review complete no longer asks user about review comment — extracts Review Findings section from story file
+- Code review complete no longer asks user for verdict — reads it from sprint-status.yaml
+- Code review complete no longer asks user about review comment — checks if file exists
 
 ## [2.0.0] - 2026-05-04
 

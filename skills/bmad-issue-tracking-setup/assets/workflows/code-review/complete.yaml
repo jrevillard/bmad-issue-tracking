@@ -29,35 +29,45 @@ else:
     - OUTPUT:
         message: "Could not determine story_key from branch '{current_branch}'."
         stop: true
-# Update issue status based on review verdict
-- OUTPUT:
-    message: "What was the review verdict? (passed/changes-requested)"
-    store: review_verdict
-- CHECK: review_verdict eq "passed"
+# Determine review verdict from sprint-status.yaml
+- READ: {implementation_artifacts}/sprint-status.yaml
+  EXTRACT:
+    review_status: development_status.{story_key}
+- CHECK: review_status eq "done"
   TRUE:
     - SET: { variable: new_status, value: "done" }
     - SET: { variable: close, value: "true" }
     - INCLUDE: common/set-story-status
-- CHECK: review_verdict eq "changes-requested"
-  TRUE:
+  FALSE:
     - SET: { variable: new_status, value: "in-progress" }
     - SET: { variable: close, value: "false" }
     - INCLUDE: common/set-story-status
-# Post review comment
-- OUTPUT:
-    message: "Was a review comment written to /tmp/code-review-comment.md? (yes/no)"
-    store: has_comment
-- CHECK: has_comment eq "yes"
-  TRUE:
-    - CHECK: empty issue_id
+# Post review findings as comment on issue
+- CHECK: empty issue_id
+  FALSE:
+    - RUN: python3 -c "
+import sys, re
+with open(sys.argv[1]) as f:
+    content = f.read()
+match = re.search(r'(### Review Findings.*?)(?=\n## |\Z)', content, re.DOTALL)
+if match:
+    print(match.group(1).strip())
+else:
+    print('')
+" {implementation_artifacts}/{story_key}.md
+      STORE: review_section
+    - CHECK: empty review_section
       FALSE:
-        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/code-review-comment.md"
+        - WRITE:
+            file: /tmp/review-findings.md
+            content: "{review_section}"
+        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/review-findings.md"
           PLATFORM: gitlab
           EXPECT_EXIT: 0
-        - RUN: gh issue comment {issue_id} --body-file "/tmp/code-review-comment.md" -R "{host}/{project}"
+        - RUN: gh issue comment {issue_id} --body-file "/tmp/review-findings.md" -R "{host}/{project}"
           PLATFORM: github
           EXPECT_EXIT: 0
-    - RUN: rm -f /tmp/code-review-comment.md
+        - RUN: rm -f /tmp/review-findings.md
 # Commit and push
 - RUN: git add .
 - RUN: git commit --allow-empty -m "code review {story_key}"
