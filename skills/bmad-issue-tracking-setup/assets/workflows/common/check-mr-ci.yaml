@@ -1,0 +1,106 @@
+# common/check-mr-ci.yaml
+#
+# Purpose: Checks the CI pipeline status for the current branch's MR/PR.
+# Input variables:
+#   - current_branch: the source branch to check
+#   - git_platform: "gitlab" or "github" (from check-config)
+#   - platform: issue tracker platform (from check-config)
+#   - host: issue tracker host (from check-config)
+#   - project: issue tracker project (from check-config)
+# Output variables:
+#   - ci_status: "passed", "failed", "running", "no_ci", "no_mr"
+# Side effects: none
+
+# Resolve MR/PR repo (handles cross-platform: git remote may differ from issue tracker)
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: mr_host, value: "{host}" }
+    - SET: { variable: mr_project, value: "{project}" }
+  FALSE:
+    - READ: _bmad/custom/issue-tracking.yaml
+      EXTRACT:
+        git_host: issue_tracking.git_host
+        git_project: issue_tracking.git_project
+    - SET: { variable: mr_host, value: "{git_host}" }
+    - SET: { variable: mr_project, value: "{git_project}" }
+# --- GitLab: find MR and check pipeline ---
+- CHECK: git_platform eq "gitlab"
+  TRUE:
+    - RUN: glab mr list --source-branch {current_branch} -R "{mr_host}/{mr_project}" --output json
+      STORE: mr_list
+      PLATFORM: gitlab
+    - CHECK: empty mr_list
+      TRUE:
+        - SET: { variable: ci_status, value: "no_mr" }
+      FALSE:
+        - FILTER:
+            source: mr_list
+            select: iid
+            store: mr_iid
+        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+pipeline = data.get('pipeline')
+if not pipeline:
+    print('no_ci')
+else:
+    status = pipeline.get('status', 'unknown')
+    if status == 'success':
+        print('passed')
+    elif status == 'failed':
+        print('failed')
+    elif status in ('running', 'pending'):
+        print('running')
+    else:
+        print('no_ci')
+"
+          STORE: ci_status
+          PLATFORM: gitlab
+# --- GitHub: find PR and check status checks ---
+- CHECK: git_platform eq "github"
+  TRUE:
+    - RUN: python3 -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {mr_project}
+        STORE: mr_owner
+    - RUN: python3 -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {mr_project}
+        STORE: mr_repo
+    - RUN: gh pr list --head {current_branch} --json number -R "{mr_host}/{mr_owner}/{mr_repo}"
+      STORE: pr_list
+      PLATFORM: github
+    - CHECK: empty pr_list
+      TRUE:
+        - SET: { variable: ci_status, value: "no_mr" }
+      FALSE:
+        - FILTER:
+            source: pr_list
+            select: number
+            store: pr_number
+        - RUN: gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]"
+          STORE: pr_checks
+          PLATFORM: github
+        - RUN: python3 -c "
+import json, sys
+raw = sys.argv[1].strip()
+checks = json.loads(raw) if raw else []
+if not checks:
+    print('no_ci')
+else:
+    conclusions = [c.get('conclusion', '') for c in checks]
+    statuses = [c.get('status', '') for c in checks]
+    if all(c == 'success' for c in conclusions):
+        print('passed')
+    elif any(c == 'failure' for c in conclusions):
+        print('failed')
+    elif any(s in ('queued', 'in_progress') for s in statuses):
+        print('running')
+    else:
+        print('no_ci')
+" {pr_checks}
+          STORE: ci_status

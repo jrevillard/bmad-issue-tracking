@@ -40,6 +40,10 @@ else:
     select: value
     where: key eq "{story_key}"
     store: story_status
+# CI gate: story must have green CI before transitioning to review
+- CHECK: story_status eq "review"
+  TRUE:
+    - INCLUDE: common/wait-for-green-ci
 # Update issue status based on sprint-status
 - CHECK: story_status eq "review"
   TRUE:

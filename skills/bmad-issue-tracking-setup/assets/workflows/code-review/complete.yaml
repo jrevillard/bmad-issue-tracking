@@ -72,6 +72,10 @@ else:
 - RUN: git add .
 - RUN: git commit --allow-empty -m "code review {story_key}"
 - RUN: git push
+# CI gate: MR must have green CI before merging
+- CHECK: review_status eq "done"
+  TRUE:
+    - INCLUDE: common/wait-for-green-ci
 # Optional merge
 - OUTPUT:
     message: "Merge the story MR now? (yes/no)"

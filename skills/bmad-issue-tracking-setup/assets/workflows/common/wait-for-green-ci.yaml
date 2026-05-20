@@ -1,0 +1,127 @@
+# common/wait-for-green-ci.yaml
+#
+# Purpose: Waits for CI to pass on the current branch's MR/PR.
+#          On failure, instructs the agent to fix, commit, push, and retry.
+# Input variables:
+#   - current_branch: the source branch to check
+#   - git_platform: "gitlab" or "github" (from check-config)
+#   - platform: issue tracker platform (from check-config)
+#   - host: issue tracker host (from check-config)
+#   - project: issue tracker project (from check-config)
+# Output variables:
+#   - ci_status: "passed", "no_ci", or "no_mr" (terminal green states)
+# Side effects: polls CI every 30s while running; on failure, expects agent to
+#               fix, commit, push, then re-run this workflow
+
+# Initial check
+- INCLUDE: common/check-mr-ci
+# Already green or no CI — proceed
+- CHECK: ci_status eq "passed"
+  TRUE:
+    - STOP
+- CHECK: ci_status eq "no_ci"
+  TRUE:
+    - STOP
+- CHECK: ci_status eq "no_mr"
+  TRUE:
+    - STOP
+# CI running — poll until terminal state (timeout: 30 min)
+- CHECK: ci_status eq "running"
+  TRUE:
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - RUN: |
+            max_attempts=60
+            attempt=0
+            while [ $attempt -lt $max_attempts ]; do
+              sleep 30
+              attempt=$((attempt + 1))
+              STATUS=$(glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} 2>/dev/null | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+p = data.get('pipeline')
+if not p:
+    print('no_ci')
+else:
+    s = p.get('status', 'unknown')
+    if s == 'success': print('passed')
+    elif s == 'failed': print('failed')
+    elif s in ('running', 'pending'): print('running')
+    else: print('no_ci')
+" 2>/dev/null)
+              if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ] || [ "$STATUS" = "no_ci" ]; then
+                echo "$STATUS"
+                break
+              fi
+            done
+            if [ $attempt -ge $max_attempts ]; then
+              echo "timeout"
+            fi
+          PLATFORM: gitlab
+          STORE: ci_status
+      FALSE:
+        - CHECK: git_platform eq "github"
+          TRUE:
+            - RUN: |
+                max_attempts=60
+                attempt=0
+                while [ $attempt -lt $max_attempts ]; do
+                  sleep 30
+                  attempt=$((attempt + 1))
+                  CHECKS=$(gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]")
+                  STATUS=$(python3 -c "
+import json, sys
+checks = json.loads(sys.argv[1].strip()) if sys.argv[1].strip() else []
+if not checks: print('no_ci')
+else:
+    conclusions = [c.get('conclusion', '') for c in checks]
+    statuses = [c.get('status', '') for c in checks]
+    if all(c == 'success' for c in conclusions): print('passed')
+    elif any(c == 'failure' for c in conclusions): print('failed')
+    elif any(s in ('queued', 'in_progress') for s in statuses): print('running')
+    else: print('no_ci')
+" "$CHECKS" 2>/dev/null)
+                  if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ] || [ "$STATUS" = "no_ci" ]; then
+                    echo "$STATUS"
+                    break
+                  fi
+                done
+                if [ $attempt -ge $max_attempts ]; then
+                  echo "timeout"
+                fi
+              PLATFORM: github
+              STORE: ci_status
+# After polling — check if passed or failed
+- CHECK: ci_status eq "passed"
+  TRUE:
+    - STOP
+- CHECK: ci_status eq "no_ci"
+  TRUE:
+    - STOP
+# CI timed out after 30 minutes
+- CHECK: ci_status eq "timeout"
+  TRUE:
+    - OUTPUT:
+        message: "CI did not reach a terminal state after 30 minutes. Check the pipeline manually and re-run this workflow when resolved."
+        stop: true
+# CI failed — agent must fix
+- CHECK: ci_status eq "failed"
+  TRUE:
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}/pipelines" --hostname {mr_host} --paginate | python3 -c "
+import json, sys
+pipelines = json.load(sys.stdin)
+if pipelines:
+    p = pipelines[0]
+    print('Pipeline ' + str(p.get('id', '')) + ': ' + p.get('status', ''))
+    print(p.get('web_url', ''))
+"
+          PLATFORM: gitlab
+          STORE: pipeline_info
+      FALSE:
+        - RUN: gh run list --branch {current_branch} -R "{mr_host}/{mr_owner}/{mr_repo}" --limit 1 --json databaseId,status,conclusion,url
+          PLATFORM: github
+          STORE: pipeline_info
+    - OUTPUT:
+        message: "CI failed. {pipeline_info}\n\nRead the CI logs, fix the issue, then:\n1. git add .\n2. git commit -m \"fix: ci failure\"\n3. git push\n4. Re-run this workflow (INCLUDE: common/wait-for-green-ci)"
