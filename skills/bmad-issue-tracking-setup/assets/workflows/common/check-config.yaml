@@ -3,7 +3,7 @@
 # Purpose: Validates that the issue-tracking configuration is present and complete.
 # Input variables: (none)
 # Output variables:
-#   - platform: the configured platform ("gitlab" or "github")
+#   - platform: the configured platform ("gitlab", "github", or "azure-devops")
 #   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
 #   - host: the issue tracker hostname
 #   - project: the issue tracker project path (group/project or owner/repo)

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-BMAD extension module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
+BMAD extension module that integrates sprint tracking with GitLab/GitHub/Azure DevOps Issues. It's not a runnable application — it's a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
 
 Requires BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
 
@@ -45,7 +45,7 @@ TOML instructions reference these placeholders — they are NOT config variables
 - `{epic_num}`, `{story_num}` — extracted from `story_key` (first two dash-separated numbers)
 - `{prd_branch}` — `branch_patterns.prd` resolved with `{prd_key}`, e.g. `feat/mobile-oidc/prd`
 - `{story_branch}` — `branch_patterns.story` resolved with `{prd_key}` and `{story_key}`
-- `{sep}` — `::` for GitLab, `:` for GitHub (label separator)
+- `{sep}` — `::` for GitLab, `:` for GitHub and Azure DevOps (label separator)
 - `$MR_HOST`, `$MR_PROJECT` — git remote host/project for MR operations (GitLab); same as `$HOST`/`$PROJECT_PATH` when platforms match
 - `$MR_OWNER`, `$MR_REPO` — git remote owner/repo for PR operations (GitHub); same as `$OWNER`/`$REPO` when platforms match
 
@@ -87,7 +87,18 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels
 - GitHub: `gh` CLI, labels use `:` separator, `gh issue edit --add-label`/`--remove-label` for label updates (preserves other labels)
-- `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`
+- Azure DevOps: `az boards`/`az repos` CLI, tags are semicolon-separated flat strings in `System.Tags` field (auto-created on first use, no pre-creation needed), WIQL queries for search (`az boards query --wiql "SELECT ..."`), work item type "Issue" for universal compatibility across all process templates
+- `glab api` uses `--hostname`; `glab mr`/`glab label` use `-R`; `gh` uses `-R` with format `[HOST/]OWNER/REPO`; `az` uses `--org {host} --project {project}`
+
+### Azure DevOps state mapping
+
+| BMAD status | ADO state |
+|-------------|-----------|
+| backlog | New |
+| ready-for-dev | New (with status:ready-for-dev tag) |
+| in-progress | Active |
+| review | Active (with status:review tag) |
+| done | Closed |
 
 **Git remote vs issue tracker:** The git remote (origin) and issue tracker can be on different platforms (e.g., code on GitLab, issues on GitHub). `issue_tracking.platform` is the issue tracker; `issue_tracking.git_platform` (set during setup) is the git remote. Issue operations (create/update/close issues, labels, comments) use `platform`. MR/PR operations (list, create, merge, mark ready) use `git_platform`. When they differ, `host`/`project` apply to the issue tracker and `git_host`/`git_project` apply to the git remote. Issue references in MR descriptions use `Closes #X` for same-platform, full URL for cross-platform.
 

@@ -4,7 +4,7 @@
 #          On failure, instructs the agent to fix, commit, push, and retry.
 # Input variables:
 #   - current_branch: the source branch to check
-#   - git_platform: "gitlab" or "github" (from check-config)
+#   - git_platform: "gitlab", "github", or "azure-devops" (from check-config)
 #   - platform: issue tracker platform (from check-config)
 #   - host: issue tracker host (from check-config)
 #   - project: issue tracker project (from check-config)
@@ -91,6 +91,37 @@ else:
                 fi
               PLATFORM: github
               STORE: ci_status
+          FALSE:
+            - CHECK: git_platform eq "azure-devops"
+              TRUE:
+                - RUN: |
+                    max_attempts=60
+                    attempt=0
+                    while [ $attempt -lt $max_attempts ]; do
+                      sleep 30
+                      attempt=$((attempt + 1))
+                      STATUS=$(az repos pr policy list --id {pr_id} --org {mr_host} --project {mr_project} 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    print('no_ci')
+    sys.exit(0)
+policies = json.loads(raw)
+if not policies: print('no_ci')
+elif all(p.get('status') == 'approved' for p in policies): print('passed')
+elif any(p.get('status') == 'rejected' for p in policies): print('failed')
+else: print('running')
+" 2>/dev/null)
+                      if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ] || [ "$STATUS" = "no_ci" ]; then
+                        echo "$STATUS"
+                        break
+                      fi
+                    done
+                    if [ $attempt -ge $max_attempts ]; then
+                      echo "timeout"
+                    fi
+                  PLATFORM: azure-devops
+                  STORE: ci_status
 # After polling — check if passed or failed
 - CHECK: ci_status eq "passed"
   TRUE:
@@ -120,8 +151,25 @@ if pipelines:
           PLATFORM: gitlab
           STORE: pipeline_info
       FALSE:
-        - RUN: gh run list --branch {current_branch} -R "{mr_host}/{mr_owner}/{mr_repo}" --limit 1 --json databaseId,status,conclusion,url
-          PLATFORM: github
-          STORE: pipeline_info
+        - CHECK: git_platform eq "github"
+          TRUE:
+            - RUN: gh run list --branch {current_branch} -R "{mr_host}/{mr_owner}/{mr_repo}" --limit 1 --json databaseId,status,conclusion,url
+              PLATFORM: github
+              STORE: pipeline_info
+          FALSE:
+            - CHECK: git_platform eq "azure-devops"
+              TRUE:
+                - RUN: az repos pr list --source-branch {current_branch} --org {mr_host} --project {mr_project} --output json 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if raw:
+    data = json.loads(raw)
+    if data:
+        pr = data[0]
+        print('PR #' + str(pr.get('pullRequestId', '')) + ': ' + pr.get('status', ''))
+        print(pr.get('url', ''))
+"
+                  PLATFORM: azure-devops
+                  STORE: pipeline_info
     - OUTPUT:
         message: "CI failed. {pipeline_info}\n\nRead the CI logs, fix the issue, then:\n1. git add .\n2. git commit -m \"fix: ci failure\"\n3. git push\n4. Re-run this workflow (INCLUDE: common/wait-for-green-ci)"

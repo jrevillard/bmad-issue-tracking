@@ -67,6 +67,9 @@ else:
         - RUN: gh issue comment {issue_id} --body-file "/tmp/review-findings.md" -R "{host}/{project}"
           PLATFORM: github
           EXPECT_EXIT: 0
+        - RUN: az boards work-item update --id {issue_id} --discussion "$(cat /tmp/review-findings.md)" --org {host} --project {project}
+          PLATFORM: azure-devops
+          EXPECT_EXIT: 0
         - RUN: rm -f /tmp/review-findings.md
 # Commit and push
 - RUN: git add .
@@ -104,51 +107,93 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
             - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{git_host}/{git_project}"
               EXPECT_EXIT: 0
       FALSE:
-        - CHECK: git_platform eq platform
+        - CHECK: git_platform eq "github"
           TRUE:
-            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{host}/{project}"
-              STORE: pr_list
-            - CHECK: empty pr_list
-              FALSE:
-                - FILTER:
-                    source: pr_list
-                    select: number
-                    store: pr_number
-                - RUN: gh pr merge {pr_number} --delete-branch -R "{host}/{project}"
-                  EXPECT_EXIT: 0
+            - CHECK: git_platform eq platform
               TRUE:
-                - OUTPUT:
-                    message: "No PR found for this story branch. Cannot merge."
-          FALSE:
-            - READ: _bmad/custom/issue-tracking.yaml
-              EXTRACT:
-                git_host: issue_tracking.git_host
-                git_project: issue_tracking.git_project
-            - RUN: python3 -c "
+                - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{host}/{project}"
+                  STORE: pr_list
+                - CHECK: empty pr_list
+                  FALSE:
+                    - FILTER:
+                        source: pr_list
+                        select: number
+                        store: pr_number
+                    - RUN: gh pr merge {pr_number} --delete-branch -R "{host}/{project}"
+                      EXPECT_EXIT: 0
+                  TRUE:
+                    - OUTPUT:
+                        message: "No PR found for this story branch. Cannot merge."
+              FALSE:
+                - READ: _bmad/custom/issue-tracking.yaml
+                  EXTRACT:
+                    git_host: issue_tracking.git_host
+                    git_project: issue_tracking.git_project
+                - RUN: python3 -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[0])
 " {git_project}
-              STORE: git_owner
-            - RUN: python3 -c "
+                  STORE: git_owner
+                - RUN: python3 -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[1])
 " {git_project}
-              STORE: git_repo
-            - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{git_host}/{git_owner}/{git_repo}"
-              STORE: pr_list
-            - CHECK: empty pr_list
-              FALSE:
-                - FILTER:
-                    source: pr_list
-                    select: number
-                    store: pr_number
-                - RUN: gh pr merge {pr_number} --delete-branch -R "{git_host}/{git_owner}/{git_repo}"
-                  EXPECT_EXIT: 0
+                  STORE: git_repo
+                - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{git_host}/{git_owner}/{git_repo}"
+                  STORE: pr_list
+                - CHECK: empty pr_list
+                  FALSE:
+                    - FILTER:
+                        source: pr_list
+                        select: number
+                        store: pr_number
+                    - RUN: gh pr merge {pr_number} --delete-branch -R "{git_host}/{git_owner}/{git_repo}"
+                      EXPECT_EXIT: 0
+                  TRUE:
+                    - OUTPUT:
+                        message: "No PR found for this story branch. Cannot merge."
+          FALSE:
+            - CHECK: git_platform eq "azure-devops"
               TRUE:
-                - OUTPUT:
-                    message: "No PR found for this story branch. Cannot merge."
+                - CHECK: git_platform eq platform
+                  TRUE:
+                    - RUN: az repos pr list --source-branch {current_branch} --target-branch {prd_branch} --org {host} --project {project} --output json
+                      STORE: pr_list
+                    - CHECK: empty pr_list
+                      FALSE:
+                        - RUN: python3 -c "
+import json, sys
+data = json.loads(sys.argv[1])
+print(data[0]['pullRequestId'])
+" {pr_list}
+                          STORE: pr_id
+                        - RUN: az repos pr update --id {pr_id} --status completed --org {host} --project {project}
+                          EXPECT_EXIT: 0
+                      TRUE:
+                        - OUTPUT:
+                            message: "No PR found for this story branch. Cannot merge."
+                  FALSE:
+                    - READ: _bmad/custom/issue-tracking.yaml
+                      EXTRACT:
+                        git_host: issue_tracking.git_host
+                        git_project: issue_tracking.git_project
+                    - RUN: az repos pr list --source-branch {current_branch} --target-branch {prd_branch} --org {git_host} --project {git_project} --output json
+                      STORE: pr_list
+                    - CHECK: empty pr_list
+                      FALSE:
+                        - RUN: python3 -c "
+import json, sys
+data = json.loads(sys.argv[1])
+print(data[0]['pullRequestId'])
+" {pr_list}
+                          STORE: pr_id
+                        - RUN: az repos pr update --id {pr_id} --status completed --org {git_host} --project {git_project}
+                          EXPECT_EXIT: 0
+                      TRUE:
+                        - OUTPUT:
+                            message: "No PR found for this story branch. Cannot merge."
     - RUN: git worktree remove .
 - OUTPUT:
     message: "Story {story_key} code review complete."

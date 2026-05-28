@@ -34,6 +34,20 @@ for item in data.get('items', []):
 "
   STORE: issue_index
   PLATFORM: github
+- RUN: az boards query --wiql "SELECT [System.Id],[System.Title],[System.Tags],[System.State] FROM WorkItems WHERE [System.Tags] CONTAINS 'prd{sep}{prd_key}'" --org {host} --project {project} 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    sys.exit(0)
+items = json.loads(raw)
+for item in items:
+    fields = item.get('fields', {})
+    tags = fields.get('System.Tags', '')
+    status = next((t.strip() for t in tags.split(';') if t.strip().startswith('status:')), 'none')
+    print(str(item.get('id', '')) + '\t' + fields.get('System.Title', '') + '\t' + status)
+"
+  STORE: issue_index
+  PLATFORM: azure-devops
 # Read sprint-status entries
 - READ: {implementation_artifacts}/sprint-status.yaml
   EXTRACT:
@@ -156,10 +170,25 @@ for l in json.load(sys.stdin)['labels']:
 "
                   STORE: current_status_label
                   PLATFORM: gitlab
-              FALSE:
-                - RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host} --jq '[.labels[] | select(.name | startswith("status:")) | .name][0] // "none"'
-                  STORE: current_status_label
-                  PLATFORM: github
+            FALSE:
+              - CHECK: platform eq "github"
+                TRUE:
+                  - RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host} --jq '[.labels[] | select(.name | startswith("status:")) | .name][0] // "none"'
+                    STORE: current_status_label
+                    PLATFORM: github
+                FALSE:
+                  - RUN: az boards work-item show --id {issue_id} --org {host} --project {project} --query "fields.System.Tags" --output tsv 2>/dev/null | python3 -c "
+import sys
+raw = sys.stdin.read().strip()
+for tag in raw.split(';'):
+    t = tag.strip()
+    if t.startswith('status:'):
+        print(t)
+        sys.exit(0)
+print('none')
+"
+                    PLATFORM: azure-devops
+                    STORE: current_status_label
           - CHECK: current_status_label eq "status{sep}{mapped_status}"
             TRUE:
               # Already in sync

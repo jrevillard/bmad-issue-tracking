@@ -62,6 +62,9 @@ else:
         - RUN: gh issue comment {issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
           PLATFORM: github
           EXPECT_EXIT: 0
+        - RUN: az boards work-item update --id {issue_id} --discussion "$(cat /tmp/dev-story-comment.md)" --org {host} --project {project}
+          PLATFORM: azure-devops
+          EXPECT_EXIT: 0
     - RUN: rm -f /tmp/dev-story-comment.md
 - CHECK: story_status eq "done"
   TRUE:

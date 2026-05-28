@@ -172,7 +172,7 @@ Executes a CLI command in the shell.
 - `store` (optional): variable name to store the captured output. The output is stored as a raw string (multi-line output includes newlines).
 - `capture` (optional): what to capture -- `stdout` (default), `stderr`.
 - `expect_exit` (optional): expected exit code (default: `0`). If the command exits with a different code, the workflow stops with an error including the command and the actual exit code.
-- `platform` (optional): if specified (`gitlab` or `github`), the step is executed ONLY when the `platform` variable (from `issue_tracking.platform`) matches this value. If omitted, the step is always executed. Only one platform value is allowed per step -- use two separate RUN steps for platform divergence.
+- `platform` (optional): if specified (`gitlab`, `github`, or `azure-devops`), the step is executed ONLY when the `platform` variable (from `issue_tracking.platform`) matches this value. If omitted, the step is always executed. Only one platform value is allowed per step -- use separate RUN steps for platform divergence.
 
 **Example (from edit-prd complete.yaml):**
 
@@ -445,7 +445,7 @@ These variables are resolved at workflow execution time:
 | `{planning_artifacts}` | `bmm/config.yaml` field `planning_artifacts` | Read from BMM config at workflow start |
 | `{implementation_artifacts}` | `bmm/config.yaml` field `implementation_artifacts` | Read from BMM config at workflow start |
 | `{project-root}` | Working directory root | Resolved from current git repo root |
-| `{sep}` | Label separator | `::` if platform is `gitlab`, `:` if `github`. Resolved by reading `_bmad/custom/issue-tracking.yaml` at workflow start. |
+| `{sep}` | Label separator | `::` if platform is `gitlab`, `:` if `github` or `azure-devops`. Resolved by reading `_bmad/custom/issue-tracking.yaml` at workflow start. |
 | `{prd_key}` | PRD frontmatter | Extracted from `{planning_artifacts}/prd.md` frontmatter field `prd_key` |
 | `{story_key}` | Sprint status | Resolved per-workflow by reading `{implementation_artifacts}/sprint-status.yaml` and matching the entry whose status equals the workflow's target status |
 | `{epic_num}` | Derived from `story_key` | First dash-separated segment (e.g., `1` from `1-3-login-form`) |

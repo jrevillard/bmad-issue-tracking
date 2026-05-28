@@ -3,7 +3,7 @@
 # Purpose: Checks the CI pipeline status for the current branch's MR/PR.
 # Input variables:
 #   - current_branch: the source branch to check
-#   - git_platform: "gitlab" or "github" (from check-config)
+#   - git_platform: "gitlab", "github", or "azure-devops" (from check-config)
 #   - platform: issue tracker platform (from check-config)
 #   - host: issue tracker host (from check-config)
 #   - project: issue tracker project (from check-config)
@@ -104,3 +104,38 @@ else:
         print('no_ci')
 " {pr_checks}
           STORE: ci_status
+          PLATFORM: github
+# --- Azure DevOps: find PR and check policy status ---
+- CHECK: git_platform eq "azure-devops"
+  TRUE:
+    - RUN: az repos pr list --source-branch {current_branch} --org {mr_host} --project {mr_project} --output json
+      STORE: pr_list
+      PLATFORM: azure-devops
+    - CHECK: empty pr_list
+      TRUE:
+        - SET: { variable: ci_status, value: "no_mr" }
+      FALSE:
+        - RUN: python3 -c "
+import json, sys
+data = json.loads(sys.argv[1])
+print(data[0]['pullRequestId'])
+" {pr_list}
+          STORE: pr_id
+        - RUN: az repos pr policy list --id {pr_id} --org {mr_host} --project {mr_project} 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    print('no_ci')
+    sys.exit(0)
+policies = json.loads(raw)
+if not policies:
+    print('no_ci')
+elif all(p.get('status') == 'approved' for p in policies):
+    print('passed')
+elif any(p.get('status') == 'rejected' for p in policies):
+    print('failed')
+else:
+    print('running')
+"
+          STORE: ci_status
+          PLATFORM: azure-devops

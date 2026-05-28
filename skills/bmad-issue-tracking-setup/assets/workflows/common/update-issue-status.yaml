@@ -2,11 +2,15 @@
 #
 # Purpose: Updates an issue's status label and optionally closes/reopens it.
 # Input variables:
-#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub)
+#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub, work item ID for Azure DevOps)
 #   - new_status: the target status (e.g. "review", "done", "in-progress")
 #   - close: "true" to close the issue, "false" to reopen it, "none" to skip state change
 # Output variables: (none)
 # Side effects: updates issue labels and state on the issue tracker
+# Platform state mapping:
+#   - GitLab: opened/closed
+#   - GitHub: open/closed
+#   - Azure DevOps: New/Active/Closed
 
 # GitLab: fetch current labels, filter out old status::*, append new, send full set
 - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} --paginate
@@ -36,6 +40,22 @@ print(','.join(labels))
 - RUN: gh issue edit {issue_id} --add-label "status:{new_status}" -R "{host}/{project}"
   PLATFORM: github
   EXPECT_EXIT: 0
+# Azure DevOps: fetch current tags, filter, rebuild, write back
+- RUN: az boards work-item show --id {issue_id} --org {host} --project {project} --query "fields.System.Tags" --output tsv 2>/dev/null || echo ""
+  PLATFORM: azure-devops
+  STORE: ado_current_tags
+- RUN: python3 -c "
+import sys
+current = sys.argv[1]
+tags = [t.strip() for t in current.split(';') if t.strip() and not t.strip().startswith('status:')]
+tags.append('status:' + sys.argv[2])
+print('; '.join(tags))
+" "{ado_current_tags}" {new_status}
+  PLATFORM: azure-devops
+  STORE: ado_new_tags
+- RUN: az boards work-item update --id {issue_id} --fields "System.Tags={ado_new_tags}" --org {host} --project {project}
+  PLATFORM: azure-devops
+  EXPECT_EXIT: 0
 # State change: close, reopen, or skip
 - CHECK: close eq "true"
   TRUE:
@@ -45,6 +65,9 @@ print(','.join(labels))
     - RUN: gh issue close {issue_id} -R "{host}/{project}"
       PLATFORM: github
       EXPECT_EXIT: 0
+    - RUN: az boards work-item update --id {issue_id} --state "Closed" --org {host} --project {project}
+      PLATFORM: azure-devops
+      EXPECT_EXIT: 0
 - CHECK: close eq "false"
   TRUE:
     - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "state_event=reopen"
@@ -52,4 +75,7 @@ print(','.join(labels))
       EXPECT_EXIT: 0
     - RUN: gh issue reopen {issue_id} -R "{host}/{project}"
       PLATFORM: github
+      EXPECT_EXIT: 0
+    - RUN: az boards work-item update --id {issue_id} --state "Active" --org {host} --project {project}
+      PLATFORM: azure-devops
       EXPECT_EXIT: 0

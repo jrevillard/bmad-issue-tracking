@@ -85,6 +85,22 @@ class TestCommandPatterns:
                                                      "pr ready")):
                 assert "-R" in cmd, f"{rel}:L{step['start_line']+1}: gh command without -R"
 
+    @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
+    def test_az_commands_use_org_and_project(self, rel, wf):
+        """az boards/repos commands must include --org and --project."""
+        for step in flatten_steps(wf["steps"]):
+            if step["type"] != "RUN":
+                continue
+            cmd = step["raw_value"]
+            if not cmd.strip().startswith("az "):
+                continue
+            # Skip az devops login (auth-only, no project needed)
+            if "az devops login" in cmd or "az login" in cmd:
+                continue
+            if any(f"az {s}" in cmd for s in ("boards work-item", "boards query", "repos pr")):
+                assert "--org" in cmd, f"{rel}:L{step['start_line']+1}: az command without --org"
+                assert "--project" in cmd, f"{rel}:L{step['start_line']+1}: az command without --project"
+
 
 class TestIssueSearchScoping:
     """P1: Issue search API calls must be scoped by prd_key label to prevent multi-PRD collisions."""

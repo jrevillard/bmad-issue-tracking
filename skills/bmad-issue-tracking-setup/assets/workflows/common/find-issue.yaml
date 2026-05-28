@@ -1,12 +1,12 @@
 # common/find-issue.yaml
 #
 # Purpose: Finds an issue by search text and returns its tracker ID.
-#           Uses targeted search on both platforms (fixes GitHub fetch-all asymmetry).
+#           Uses targeted search on all platforms (fixes GitHub fetch-all asymmetry).
 # Input variables:
 #   - search_text: text to search for in the issue (e.g. "{story_key}", "PRD: {prd_key}", "Epic {epic_num}:")
 #   - prd_key: the PRD key (from scope, for label scoping)
 # Output variables:
-#   - issue_id: the issue IID (GitLab) or number (GitHub); empty string if not found
+#   - issue_id: the issue IID (GitLab), number (GitHub), or ID (Azure DevOps); empty string if not found
 # Side effects: none
 
 - RUN: glab api "projects/{project}/issues?search={search_text}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
@@ -15,6 +15,23 @@
 - RUN: gh api "search/issues?q={search_text}+repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin).get('items', [])))"
   STORE: issue_result
   PLATFORM: github
+- RUN: az boards query --wiql "SELECT [System.Id],[System.Title],[System.Tags] FROM WorkItems WHERE [System.Tags] CONTAINS 'prd{sep}{prd_key}'" --org {host} --project {project} 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    print('')
+    sys.exit(0)
+items = json.loads(raw)
+for item in items:
+    fields = item.get('fields', {})
+    title = fields.get('System.Title', '')
+    if '{search_text}' in title:
+        print(str(item.get('id', '')))
+        sys.exit(0)
+print('')
+"
+  STORE: issue_result
+  PLATFORM: azure-devops
 - CHECK: empty issue_result
   TRUE:
     - SET: { variable: issue_id, value: "" }
@@ -26,7 +43,12 @@
             select: iid
             store: issue_id
       FALSE:
-        - FILTER:
-            source: issue_result
-            select: number
-            store: issue_id
+        - CHECK: platform eq "github"
+          TRUE:
+            - FILTER:
+                source: issue_result
+                select: number
+                store: issue_id
+          FALSE:
+            # Azure DevOps: python3 already extracted the ID
+            - SET: { variable: issue_id, value: "{issue_result}" }

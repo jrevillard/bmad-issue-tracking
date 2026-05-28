@@ -2,15 +2,18 @@
 #
 # Purpose: Updates an issue description from a pre-written file.
 # Input variables:
-#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub)
+#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub/Azure DevOps)
 #   - description_file: path to the file containing the new description
 # Output variables: (none)
-# Side effects: updates issue description on the issue tracker
+# Side effects: updates issue description on the issue tracker (GitLab, GitHub, Azure DevOps)
 
 - RUN: glab api --method PUT "projects/{project}/issues/{issue_id}" --hostname {host} -F "description=@{description_file}"
   PLATFORM: gitlab
   EXPECT_EXIT: 0
 - RUN: gh issue edit {issue_id} --body-file "{description_file}" -R "{host}/{project}"
   PLATFORM: github
+  EXPECT_EXIT: 0
+- RUN: az boards work-item update --id {issue_id} --description "$(cat {description_file})" --org {host} --project {project}
+  PLATFORM: azure-devops
   EXPECT_EXIT: 0
 - RUN: rm -f {description_file}
