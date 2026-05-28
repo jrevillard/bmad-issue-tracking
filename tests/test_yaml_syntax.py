@@ -27,12 +27,12 @@ class TestYamlSyntax:
                 )
 
     def test_platform_values(self, all_workflows):
-        """PLATFORM annotation must be 'gitlab' or 'github' only."""
+        """PLATFORM annotation must be 'gitlab', 'github', or 'azure-devops' only."""
         for rel, wf in all_workflows.items():
             for step in flatten_steps(wf["steps"]):
                 for _, key, value in step["block"]:
                     if key == "PLATFORM":
-                        assert value in ("gitlab", "github"), (
+                        assert value in ("gitlab", "github", "azure-devops"), (
                             f"{rel}:L{step['start_line']+1}: invalid PLATFORM '{value}'"
                         )
 

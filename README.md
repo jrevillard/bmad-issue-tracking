@@ -1,13 +1,13 @@
 # BMAD Issue Tracking
 
-BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Issues. Supports both cloud and self-hosted instances via their respective CLIs (`glab` / `gh`).
+BMAD extension module that mirrors sprint tracking to GitLab Issues, GitHub Issues, or Azure DevOps Work Items. Supports both cloud and self-hosted instances via their respective CLIs (`glab` / `gh` / `az`).
 
 Uses BMAD's native TOML customization for all workflow integrations.
 
 ## Prerequisites
 
 - BMAD Method module (BMM) 6.4.0+ installed in your project
-- `glab` CLI (GitLab) or `gh` CLI (GitHub) installed and authenticated
+- `glab` CLI (GitLab), `gh` CLI (GitHub), or `az` CLI (Azure DevOps) installed and authenticated
 - Repository with Issues enabled
 
 ## Installation
@@ -33,7 +33,7 @@ This registers two skills as slash commands:
 ```
 
 This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/custom/`, and configures:
-- **Platform** (GitLab or GitHub) — detected from git remote, with mismatch handling
+- **Platform** (GitLab, GitHub, or Azure DevOps) — detected from git remote, with mismatch handling
 - **Connection** (host and project) — always configured explicitly
 - **Branch patterns** (PRD branch, story branches) — controls automatic branch and MR/PR creation
 
@@ -118,15 +118,16 @@ When `branch_patterns` is configured in the setup:
 
 ## Platform differences
 
-| Aspect | GitLab | GitHub |
-|---|---|---|
-| CLI | `glab` | `gh` |
-| Labels | `status::done` (double colon) | `status:done` (single colon) |
-| Description file | `-F "description=@file"` | `--body-file "file"` |
-| State changes | Single `glab api` call with `state_event` | Separate `gh issue close` / `gh issue reopen` |
-| Label updates | `-f "labels=..."` (replaces all) | `--add-label` / `--remove-label` (targeted) |
-| Boards | Created automatically | Skipped in v1 |
-| Enterprise | `-R` on subcommands, `--hostname` on `glab api` only | `-R` on subcommands, `--hostname` on `gh api` only |
+| Aspect | GitLab | GitHub | Azure DevOps |
+|---|---|---|---|
+| CLI | `glab` | `gh` | `az` |
+| Labels/Tags | `status::done` (double colon) | `status:done` (single colon) | `status:done` (semicolon-separated tags) |
+| Description file | `-F "description=@file"` | `--body-file "file"` | `--description "$(cat file)"` |
+| State changes | Single `glab api` call with `state_event` | Separate `gh issue close` / `gh issue reopen` | `az boards work-item update --state "Closed\|Active"` |
+| Label updates | `-f "labels=..."` (replaces all) | `--add-label` / `--remove-label` (targeted) | Read-modify-write on `System.Tags` field |
+| Work item type | N/A | N/A | "Issue" (universal across all templates) |
+| Boards | Created automatically | Skipped | Native boards (no setup needed) |
+| Enterprise | `-R` on subcommands, `--hostname` on `glab api` only | `-R` on subcommands, `--hostname` on `gh api` only | `--org {host} --project {project}` on all commands |
 
 ## After BMM updates
 
@@ -145,7 +146,7 @@ The `issue_tracking` block in `_bmad/custom/issue-tracking.yaml` controls the in
 ```yaml
 issue_tracking:
   enabled: true
-  platform: gitlab  # or github
+  platform: gitlab  # or github, azure-devops
   host: gitlab.com  # always configured by setup
   project: group/project  # always configured by setup
   branch_patterns:
@@ -153,10 +154,10 @@ issue_tracking:
     story: "feat/{prd_key}/{story_key}"
 ```
 
-- **`platform`** — required. `gitlab` or `github`. Determines which CLI to use (`glab` / `gh`).
+- **`platform`** — required. `gitlab`, `github`, or `azure-devops`. Determines which CLI to use (`glab` / `gh` / `az`).
 - **`host`** — required. The issue tracker host (e.g. `gitlab.com`, `github.com`, or a self-hosted instance).
 - **`project`** — required. The project path (e.g. `my-org/my-repo`).
 - **`branch_patterns.prd`** — required. Pattern for the PRD branch. Must contain `{prd_key}`.
 - **`branch_patterns.story`** — required. Pattern for story branches. Must contain `{prd_key}` and `{story_key}`.
 
-**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), the setup skill detects the mismatch and asks for the issue tracker host and project explicitly.
+**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), the setup skill detects the mismatch and asks for the issue tracker host and project explicitly. Azure DevOps config: `host` should be the full org URL (e.g. `https://dev.azure.com/myorg`), `project` the project name (e.g. `MyProject`).

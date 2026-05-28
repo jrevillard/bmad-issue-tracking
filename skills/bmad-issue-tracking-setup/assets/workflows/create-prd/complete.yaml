@@ -89,36 +89,58 @@ print(''.join(lines[start:]).strip())
         - RUN: glab mr create --title "PRD: {prd_key}" --description "{issue_ref}" --target-branch {default_branch} --source-branch {prd_branch} --draft -R "{mr_repo}"
           EXPECT_EXIT: 0
   FALSE:
-    - CHECK: git_platform eq platform
+    - CHECK: git_platform eq "github"
       TRUE:
-        - SET: { variable: mr_repo, value: "{host}/{project}" }
-      FALSE:
-        - READ: _bmad/custom/issue-tracking.yaml
-          EXTRACT:
-            git_host: issue_tracking.git_host
-            git_project: issue_tracking.git_project
-        - RUN: python3 -c "
+        - CHECK: git_platform eq platform
+          TRUE:
+            - SET: { variable: mr_repo, value: "{host}/{project}" }
+          FALSE:
+            - READ: _bmad/custom/issue-tracking.yaml
+              EXTRACT:
+                git_host: issue_tracking.git_host
+                git_project: issue_tracking.git_project
+            - RUN: python3 -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[0])
 " {git_project}
-          STORE: git_owner
-        - RUN: python3 -c "
+              STORE: git_owner
+            - RUN: python3 -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[1])
 " {git_project}
-          STORE: git_repo
-        - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
-    - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
-      STORE: pr_list
-    - CHECK: empty pr_list
+              STORE: git_repo
+            - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
+        - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
+          STORE: pr_list
+        - CHECK: empty pr_list
+          FALSE:
+            - OUTPUT:
+                message: "Draft PR already exists for PRD branch. Skipping creation."
+          TRUE:
+            - RUN: gh pr create --title "PRD: {prd_key}" --body "{issue_ref}" --base {default_branch} --head {prd_branch} --draft -R "{mr_repo}"
+              EXPECT_EXIT: 0
       FALSE:
-        - OUTPUT:
-            message: "Draft PR already exists for PRD branch. Skipping creation."
-      TRUE:
-        - RUN: gh pr create --title "PRD: {prd_key}" --body "{issue_ref}" --base {default_branch} --head {prd_branch} --draft -R "{mr_repo}"
-          EXPECT_EXIT: 0
+        # Azure DevOps
+        - CHECK: git_platform eq platform
+          TRUE:
+            - SET: { variable: mr_repo, value: "{host}/{project}" }
+          FALSE:
+            - READ: _bmad/custom/issue-tracking.yaml
+              EXTRACT:
+                git_host: issue_tracking.git_host
+                git_project: issue_tracking.git_project
+            - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
+        - RUN: az repos pr list --source-branch {prd_branch} --target-branch {default_branch} --org {host} --project {project} --output json 2>/dev/null
+          STORE: pr_list
+        - CHECK: empty pr_list
+          FALSE:
+            - OUTPUT:
+                message: "Draft PR already exists for PRD branch. Skipping creation."
+          TRUE:
+            - RUN: az repos pr create --title "PRD: {prd_key}" --description "{issue_ref}" --source-branch {prd_branch} --target-branch {default_branch} --draft --org {host} --project {project}
+              EXPECT_EXIT: 0
 - RUN: rm -f /tmp/prd-desc.md
 - OUTPUT:
     message: "PRD {prd_key} issue created and draft MR ready."

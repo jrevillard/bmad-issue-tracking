@@ -162,7 +162,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 
 <step n="5" goal="Configure platform and connection">
 <action>Detect the git remote by running `git remote get-url origin`.</action>
-<action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
+<action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, dev.azure.com or *.visualstudio.com → azure-devops, self-hosted → ask user).</action>
 <action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
 <action>Always set `issue_tracking.git_platform` to the git remote platform in `_bmad/custom/issue-tracking.yaml`.</action>
 <check if="platform is already set">
@@ -170,7 +170,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     <output>Platform already configured: {platform}.</output>
   </true>
   <false>
-    <action>Ask the user which platform they use for issue tracking: GitLab or GitHub.</action>
+    <action>Ask the user which platform they use for issue tracking: GitLab, GitHub, or Azure DevOps.</action>
     <action>Set `issue_tracking.platform` to the chosen value.</action>
   </false>
 </check>
@@ -233,6 +233,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 <action>Run the platform auth check (use `--hostname {host}` for self-hosted instances):</action>
 - GitLab: `glab auth status --hostname {host}`
 - GitHub: `gh auth status --hostname {host}`
+- Azure DevOps: `az devops login --organization {host}` (or `az login` if using Azure AD)
 
 <check if="auth fails">
   <output>WARN: CLI not authenticated. Issue tracking will fall back to file-system until authenticated.</output>

@@ -10,3 +10,4 @@
   PLATFORM: gitlab
 - RUN: gh label create "{label_name}" -R "{host}/{project}" 2>/dev/null || true
   PLATFORM: github
+# Azure DevOps: tags are auto-created when first assigned to a work item — no pre-creation needed

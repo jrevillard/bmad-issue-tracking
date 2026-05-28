@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-05-28
+
+[compare v2.2.0...v2.3.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.2.0...v2.3.0)
+
+### Added
+
+- Azure DevOps platform support: `az boards work-item` for issues, `az repos pr` for PRs, WIQL queries for search, semicolon-separated tags for labels
+- Azure DevOps CI gate: policy status checks via `az repos pr policy list`
+- All workflow YAML files updated with `PLATFORM: azure-devops` annotations (36 new annotations across 16 files)
+- Azure DevOps state mapping: backlog→New, ready-for-dev→New (with tag), in-progress→Active, review→Active (with tag), done→Closed
+- Setup skill detects `dev.azure.com` and `*.visualstudio.com` remote URLs as Azure DevOps
+
+## [Unreleased]
+
 ## [2.2.0] - 2026-05-28
 
 [compare v2.1.0...v2.2.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.1.0...v2.2.0)

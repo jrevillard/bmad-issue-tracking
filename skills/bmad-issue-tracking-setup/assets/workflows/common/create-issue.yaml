@@ -7,9 +7,10 @@
 #   - labels: newline-separated list of labels to assign (e.g. "type::prd\nstatus::done")
 #   - description_file: path to the file containing the issue description
 # Output variables:
-#   - issue_id: the IID (GitLab) or number (GitHub) of the created/found issue
+#   - issue_id: the IID (GitLab), number (GitHub), or ID (Azure DevOps) of the created/found issue
 # Side effects: creates an issue on the issue tracker if it does not already exist
 # Requires: host and project in scope (provided by common/check-config via callers)
+# Notes: Azure DevOps uses semicolon-separated tags, GitLab/GitHub use comma-separated labels
 
 # Search for existing issue
 - RUN: glab api --paginate "projects/{project}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
@@ -18,6 +19,23 @@
 - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: search_result
   PLATFORM: github
+- RUN: az boards query --wiql "SELECT [System.Id],[System.Title],[System.Tags] FROM WorkItems WHERE [System.Tags] CONTAINS 'prd{sep}{prd_key}'" --org {host} --project {project} 2>/dev/null | python3 -c "
+import json, sys
+raw = sys.stdin.read().strip()
+if not raw:
+    print('')
+    sys.exit(0)
+items = json.loads(raw)
+for item in items:
+    fields = item.get('fields', {})
+    title = fields.get('System.Title', '')
+    if '{title}' in title:
+        print(str(item.get('id', '')))
+        sys.exit(0)
+print('')
+"
+  PLATFORM: azure-devops
+  STORE: search_result
 # If found, extract issue_id and stop
 - CHECK: empty search_result
   FALSE:
@@ -28,11 +46,16 @@
             select: iid
             store: issue_id
       FALSE:
-        - FILTER:
-            source: search_result
-            select: number
-            where: title matches "{title}"
-            store: issue_id
+        - CHECK: platform eq "github"
+          TRUE:
+            - FILTER:
+                source: search_result
+                select: number
+                where: title matches "{title}"
+                store: issue_id
+          FALSE:
+            # Azure DevOps: python3 already extracted the ID
+            - SET: { variable: issue_id, value: "{search_result}" }
     - CHECK: empty issue_id
     TRUE:
       - STOP
@@ -60,12 +83,22 @@ labels = sys.argv[1].strip().split('\n')
 print(','.join(labels))
 " "{labels}"
   STORE: label_arg
+- RUN: python3 -c "
+import sys
+labels = sys.argv[1].strip().split('\n')
+print('; '.join(labels))
+" "{labels}"
+  PLATFORM: azure-devops
+  STORE: label_arg
 - RUN: glab api --method POST "projects/{project}/issues" --hostname {host} -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
   STORE: create_result
   PLATFORM: gitlab
 - RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "{host}/{project}"
   STORE: create_result
   PLATFORM: github
+- RUN: az boards work-item create --title "{title}" --type "Issue" --description "$(cat {description_file})" --fields "System.Tags={label_arg}" --org {host} --project {project}
+  PLATFORM: azure-devops
+  STORE: create_result
 # Extract issue_id from creation result
 - CHECK: platform eq "gitlab"
   TRUE:
@@ -74,7 +107,15 @@ print(','.join(labels))
         select: iid
         store: issue_id
   FALSE:
-    - FILTER:
-        source: create_result
-        select: number
-        store: issue_id
+    - CHECK: platform eq "github"
+      TRUE:
+        - FILTER:
+            source: create_result
+            select: number
+            store: issue_id
+      FALSE:
+        # Azure DevOps: extract id from create result
+        - FILTER:
+            source: create_result
+            select: id
+            store: issue_id
