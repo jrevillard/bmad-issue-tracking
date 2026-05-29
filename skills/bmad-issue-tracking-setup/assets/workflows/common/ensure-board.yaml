@@ -25,9 +25,13 @@ print(next((b['id'] for b in boards if b['name'] == 'BMAD Sprint Board'), ''))
       PLATFORM: gitlab
 
 # Add columns for active status labels (omit done/closed/deferred/optional)
-- RUN: glab api "projects/{project}/labels" --hostname {host} | python3 -c "
+- RUN: glab api "projects/{project}/labels" --hostname {host} --paginate | python3 -c "
 import json, sys, re
-labels = json.load(sys.stdin)
+pages = sys.stdin.read().strip().split('\n')
+labels = []
+for page in pages:
+    if page:
+        labels.extend(json.loads(page))
 for l in labels:
     if re.match(r'status{sep}(backlog|ready-for-dev|in-progress|review)$', l['name']):
         print(l['id'])

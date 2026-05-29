@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `ensure-board.yaml`: added missing `--paginate` to `glab api projects/{project}/labels` — projects with >20 labels would miss status labels beyond the first page, causing board columns to not be created
+- `find-issue.yaml`: added missing `--paginate` to GitHub `gh api search/issues` — could miss issue matches beyond the first 100 results
+
 ## [2.2.0] - 2026-05-28
 
 [compare v2.1.0...v2.2.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.1.0...v2.2.0)
