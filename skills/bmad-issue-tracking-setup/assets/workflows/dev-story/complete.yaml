@@ -16,7 +16,7 @@
 # and sprint-status.yaml may already reflect the updated status)
 - RUN: git branch --show-current
   STORE: current_branch
-- RUN: uv run python -c "
+- RUN: uv run --no-project python -c "
 import sys
 branch = sys.argv[1]
 parts = branch.rstrip().split('/')

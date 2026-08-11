@@ -14,7 +14,7 @@
 - INCLUDE: common/find-stories
 - CD: {selected_worktree_path}
 # Derive story_key from branch name
-- RUN: uv run python -c "
+- RUN: uv run --no-project python -c "
 import sys
 branch = sys.argv[1]
 parts = branch.rstrip().split('/')

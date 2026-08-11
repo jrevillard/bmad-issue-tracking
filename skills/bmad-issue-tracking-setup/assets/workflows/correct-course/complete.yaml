@@ -10,7 +10,7 @@
 - RUN: git diff --name-only HEAD
   STORE: modified_files
 # Story files: update issue description for each modified story
-- RUN: uv run python -c "
+- RUN: uv run --no-project python -c "
 import sys, os, re
 base = sys.argv[1]
 for line in sys.stdin:
@@ -27,24 +27,24 @@ for line in sys.stdin:
         items: modified_stories
         as: story_file
         do:
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 print(sys.argv[1].replace('.md', ''))
 " {story_file}
             STORE: story_key
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].replace('.md', '').split('-')
 print(parts[0])
 " {story_file}
             STORE: epic_num
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].replace('.md', '').split('-')
 print(parts[1])
 " {story_file}
             STORE: story_num
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     print(f.read())
@@ -66,7 +66,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
 # PRD: if modified, update issue description
 - CHECK: modified_files contains "{planning_artifacts}/prd.md"
   TRUE:
-    - RUN: uv run python -c "
+    - RUN: uv run --no-project python -c "
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     lines = f.readlines()
@@ -99,7 +99,7 @@ print(''.join(lines[start:]).strip())
   TRUE:
     - READ: {planning_artifacts}/epics.md
       STORE: epics_content
-    - RUN: uv run python -c "
+    - RUN: uv run --no-project python -c "
 import sys, re
 content = sys.argv[1]
 matches = list(re.finditer(r'^## Epic (\d+):', content, re.MULTILINE))
@@ -114,13 +114,13 @@ for i, m in enumerate(matches):
         items: epic_sections
         as: section_info
         do:
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].rstrip().split(',')
 print(parts[0])
 " {section_info}
             STORE: epic_num
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].rstrip().split(',')
 start, end = int(parts[1]), int(parts[2])

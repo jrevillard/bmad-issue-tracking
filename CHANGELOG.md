@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ensure-board.yaml`: added missing `--paginate` to `glab api projects/{project}/labels` — projects with >20 labels would miss status labels beyond the first page, causing board columns to not be created
 - `find-issue.yaml`: added missing `--paginate` to GitHub `gh api search/issues` — could miss issue matches beyond the first 100 results
+- `sync-issues.yaml`: four `uv run python` blocks referenced `sys.argv` without `import sys` (NameError at runtime) — added the missing imports
+- All Python invocations use `uv run --no-project python -c` so `uv run` does not create `.venv`/`uv.lock` in consuming projects with a `pyproject.toml` (which `git add .` would otherwise commit into worktrees)
+- `test_python_sys_argv_has_import` now scans the full multi-line `uv run python` body instead of only the first line of each RUN step — the missing-imports bug was invisible to the previous check
 
 ## [2.2.0] - 2026-05-28
 

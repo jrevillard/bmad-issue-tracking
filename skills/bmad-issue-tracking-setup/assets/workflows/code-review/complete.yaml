@@ -14,7 +14,7 @@
 # Re-derive story_key from current branch name
 - RUN: git branch --show-current
   STORE: current_branch
-- RUN: uv run python -c "
+- RUN: uv run --no-project python -c "
 import sys
 branch = sys.argv[1]
 parts = branch.rstrip().split('/')
@@ -45,7 +45,7 @@ else:
 # Post review findings as comment on issue
 - CHECK: empty issue_id
   FALSE:
-    - RUN: uv run python -c "
+    - RUN: uv run --no-project python -c "
 import sys, re
 with open(sys.argv[1]) as f:
     content = f.read()
@@ -85,7 +85,7 @@ else:
     - READ: _bmad/custom/issue-tracking.yaml
       EXTRACT:
         prd_pattern: issue_tracking.branch_patterns.prd
-    - RUN: uv run python -c "
+    - RUN: uv run --no-project python -c "
 import sys
 print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
 " {prd_pattern} {prd_key}
@@ -124,13 +124,13 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
               EXTRACT:
                 git_host: issue_tracking.git_host
                 git_project: issue_tracking.git_project
-            - RUN: uv run python -c "
+            - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[0])
 " {git_project}
               STORE: git_owner
-            - RUN: uv run python -c "
+            - RUN: uv run --no-project python -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[1])
