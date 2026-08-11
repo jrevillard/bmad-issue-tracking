@@ -36,7 +36,7 @@
             while [ $attempt -lt $max_attempts ]; do
               sleep 30
               attempt=$((attempt + 1))
-              STATUS=$(glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} 2>/dev/null | uv run python -c "
+              STATUS=$(glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} 2>/dev/null | uv run --no-project python -c "
 import json, sys
 data = json.load(sys.stdin)
 p = data.get('pipeline')
@@ -69,7 +69,7 @@ else:
                   sleep 30
                   attempt=$((attempt + 1))
                   CHECKS=$(gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]")
-                  STATUS=$(uv run python -c "
+                  STATUS=$(uv run --no-project python -c "
 import json, sys
 checks = json.loads(sys.argv[1].strip()) if sys.argv[1].strip() else []
 if not checks: print('no_ci')
@@ -109,7 +109,7 @@ else:
   TRUE:
     - CHECK: git_platform eq "gitlab"
       TRUE:
-        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}/pipelines" --hostname {mr_host} --paginate | uv run python -c "
+        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}/pipelines" --hostname {mr_host} --paginate | uv run --no-project python -c "
 import json, sys
 pipelines = json.load(sys.stdin)
 if pipelines:

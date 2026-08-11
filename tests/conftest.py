@@ -110,6 +110,12 @@ def _parse_steps_from_lines(lines, base_indent=0):
                             block[-1] = (sub_indent, key, val + "\n" + cl.rstrip())
                         i += 1
                 else:
+                    # Continuation of a `uv run python -c "..."` body. Keep the
+                    # full body in raw_value so tests can inspect it. Other
+                    # multi-line blocks (e.g. `RUN: |` bash scripts with shell
+                    # vars) stay as-is and are not captured.
+                    if "python -c" in raw_value:
+                        raw_value += "\n" + line.rstrip()
                     i += 1
             steps.append({
                 "type": step_type,

@@ -16,7 +16,7 @@
 - SET: { variable: sync_updated, value: "0" }
 - SET: { variable: sync_skipped, value: "0" }
 # Fetch all PRD issues (bulk fetch for matching)
-- RUN: glab api "projects/{project}/issues?labels=prd{sep}{prd_key}&state=all&per_page=100" --hostname {host} --paginate | uv run python -c "
+- RUN: glab api "projects/{project}/issues?labels=prd{sep}{prd_key}&state=all&per_page=100" --hostname {host} --paginate | uv run --no-project python -c "
 import json, sys
 issues = json.load(sys.stdin)
 for i in issues:
@@ -25,7 +25,7 @@ for i in issues:
 "
   STORE: issue_index
   PLATFORM: gitlab
-- RUN: gh api "search/issues?q=repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --paginate | uv run python -c "
+- RUN: gh api "search/issues?q=repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --paginate | uv run --no-project python -c "
 import json, sys
 data = json.load(sys.stdin)
 for item in data.get('items', []):
@@ -43,7 +43,7 @@ for item in data.get('items', []):
     as: entry
     do:
       # --- Classify entry ---
-      - RUN: uv run python -c "
+      - RUN: uv run --no-project python -c "
 import sys
 key = sys.argv[1].strip()
 if key.startswith('epic-') and '-retrospective' not in key:
@@ -55,7 +55,7 @@ else:
 " {entry}
         STORE: entry_type
       # --- Extract epic number ---
-      - RUN: uv run python -c "
+      - RUN: uv run --no-project python -c "
 import sys, re
 key = sys.argv[1].strip()
 m = re.match(r'epic-(\d+)', key)
@@ -72,7 +72,7 @@ else:
       # --- Extract title ---
       - CHECK: entry_type eq "epic"
         TRUE:
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 import sys, re
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content = f.read()
@@ -98,7 +98,7 @@ print('Epic ' + n + ': ' + title_line if title_line else 'Epic ' + n)
             TRUE:
               - SET: { variable: entry_title, value: "Retrospective: Epic {epic_num}" }
             FALSE:
-              - RUN: uv run python -c "
+              - RUN: uv run --no-project python -c "
 import sys, os
 path = os.path.join(sys.argv[1], sys.argv[2] + '.md')
 if os.path.exists(path):
@@ -122,7 +122,8 @@ else:
 " {implementation_artifacts} {entry}
                 STORE: entry_title
       # --- Parse status from sprint-status (format: "key: status") ---
-      - RUN: uv run python -c "
+      - RUN: uv run --no-project python -c "
+import sys
 parts = sys.argv[1].strip().split(':')
 if len(parts) >= 2:
     print(parts[-1].strip())
@@ -148,7 +149,7 @@ else:
           # Found — check status
           - CHECK: platform eq "gitlab"
             TRUE:
-              - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} | uv run python -c "
+              - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} | uv run --no-project python -c "
 import json, sys
 for l in json.load(sys.stdin)['labels']:
     if l.startswith('status'):
@@ -163,7 +164,8 @@ for l in json.load(sys.stdin)['labels']:
           - CHECK: current_status_label eq "status{sep}{mapped_status}"
             TRUE:
               # Already in sync
-              - RUN: uv run python -c "
+              - RUN: uv run --no-project python -c "
+import sys
 n = int(sys.argv[1]) + 1
 print(n)
 " {sync_skipped}
@@ -193,7 +195,8 @@ print(n)
                                 FALSE:
                                   - SET: { variable: close, value: "false" }
               - INCLUDE: common/update-issue-status
-              - RUN: uv run python -c "
+              - RUN: uv run --no-project python -c "
+import sys
 n = int(sys.argv[1]) + 1
 print(n)
 " {sync_updated}
@@ -212,7 +215,7 @@ print(n)
             TRUE:
               - READ: {planning_artifacts}/epics.md
                 STORE: epic_content
-              - RUN: uv run python -c "
+              - RUN: uv run --no-project python -c "
 import sys, re
 content = sys.argv[1]
 n = sys.argv[2]
@@ -243,7 +246,7 @@ else:
                 TRUE:
                   - INCLUDE: common/update-issue-status
           - RUN: rm -f /tmp/issue-desc-{entry}.md
-          - RUN: uv run python -c "
+          - RUN: uv run --no-project python -c "
 n = int(sys.argv[1]) + 1
 print(n)
 " {sync_created}

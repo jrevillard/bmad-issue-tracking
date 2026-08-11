@@ -23,7 +23,7 @@ class TestCommandPatterns:
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_glab_api_no_jq_flag(self, rel, wf):
-        """glab api does not support --jq (unlike gh api). Use | uv run python -c instead."""
+        """glab api does not support --jq (unlike gh api). Use | uv run --no-project python -c instead."""
         for step in flatten_steps(wf["steps"]):
             if step["type"] != "RUN":
                 continue
@@ -31,7 +31,7 @@ class TestCommandPatterns:
             if "glab api" in cmd and "--jq" in cmd:
                 assert False, (
                     f"{rel}:L{step['start_line']+1}: glab api does not support --jq. "
-                    f"Use 'glab api ... | uv run python -c' instead."
+                    f"Use 'glab api ... | uv run --no-project python -c' instead."
                 )
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
@@ -44,7 +44,7 @@ class TestCommandPatterns:
             if "| jq " in cmd or "|jq " in cmd:
                 assert False, (
                     f"{rel}:L{step['start_line']+1}: pipeline uses jq which may not be installed. "
-                    f"Use '... | uv run python -c \"import json,sys; ...\"' instead."
+                    f"Use '... | uv run --no-project python -c \"import json,sys; ...\"' instead."
                 )
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
@@ -158,19 +158,19 @@ class TestPythonImportCompliance:
 
     @pytest.mark.parametrize("rel, wf", list(load_all_workflows().items()), ids=lambda x: x[0] if isinstance(x, tuple) else str(x))
     def test_python_sys_argv_has_import(self, rel, wf):
-        """uv run python -c blocks that reference sys.argv must have import sys."""
+        """uv run --no-project python -c blocks that reference sys.argv must have import sys."""
         for step in flatten_steps(wf["steps"]):
             if step["type"] != "RUN":
                 continue
             raw = step["raw_value"]
-            if "uv run python -c" not in raw:
+            if "uv run python" not in raw:
                 continue
             has_sys_argv = "sys.argv" in raw
             if not has_sys_argv:
                 continue
             has_import = bool(re.search(r"(?m)^[^#]*import\s+(json,\s*)?sys", raw))
             assert has_import, (
-                f"{rel}:L{step['start_line']+1}: uv run python -c uses sys.argv without import sys"
+                f"{rel}:L{step['start_line']+1}: uv run --no-project python -c uses sys.argv without import sys"
             )
 
 
