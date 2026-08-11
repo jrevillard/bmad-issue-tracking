@@ -139,7 +139,7 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 | `awaiting-operator` | `status::awaiting-operator` (issue stays **open** — external action pending, confirm with `bmad-loop confirm`) |
 | `done` | `status::done` + issue closed |
 
-**Execution trace:** for projects whose CI only runs on merge requests, the `ci-gate` plugin creates a trace MR per story (left open). After the local merge-back is pushed to the target branch, GitLab auto-marks it merged — the MR keeps the story's diff and pipeline as a durable trace. On GitHub (no auto-detection), the trace PR is closed by the sync instead.
+**Execution trace:** for projects whose CI only runs on merge requests, the `ci-gate` plugin creates a trace MR per story (left open). After the local merge-back is pushed to the target branch, GitLab auto-marks it merged — the MR keeps the story's diff and pipeline as a durable trace. On GitHub there is no auto-detection of an out-of-band merge, so the trace PR stays open; close it with `gh pr close <number>` when the story is `done` if you want the trace PR tidied.
 
 **Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
 

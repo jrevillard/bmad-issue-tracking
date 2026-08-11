@@ -42,9 +42,9 @@ help = "Project path (group/project or owner/repo). Leave empty to resolve from 
 [[settings]]
 key = "target_branch"
 type = "str"
-default = "main"
+default = ""
 label = "Target branch"
-help = "Target branch for the trace MR (and the default pipeline ref)."
+help = "Target branch for the trace MR. Leave empty to detect from origin/HEAD (fallback: main)."
 
 [[settings]]
 key = "timeout_sec"
@@ -65,7 +65,8 @@ help = "auto: create a trace MR only when the branch has no pipeline; always: al
 
 [hooks.pre_ready_gate]
 cmd = "{scripts}/ci-gate.sh"
-# Must cover the longest CI poll: the setting `timeout_sec` may reach 7200.
-timeout_sec = 7300
+# Must cover the longest CI poll (setting `timeout_sec` may reach 7200) plus the
+# pre-poll work (push, MR creation, grace sleep) and a trailing poll sleep.
+timeout_sec = 7500
 blocking = true
 fail_closed = true
