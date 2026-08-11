@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
 - `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
 
+### Added
+
+- **bmad-loop integration** (unattended dev loop): the module now mirrors sprint-status maintained by `bmad-loop` (single writer of `sprint-status.yaml`, compatible status values).
+- `ci-gate` bmad-loop plugin (`assets/bmad-loop/ci-gate/`, deployed by setup step 3c): binds `pre_ready_gate`, pushes each story branch, waits for the remote pipeline (creating a trace MR when CI only runs on merge requests), and defers the unit on red/timeout.
+- `/bmad-bmm-issue-sync` is now **unattended**: new `common/find-prd-key.yaml` resolves `prd_key` from `prd.md` without a PRD worktree or prompts (fails closed); `common/mark-mr-ready.yaml` is a no-op when no MR exists. Run it after `bmad-loop run`, then `git push origin main`.
+- `awaiting-operator` status support (bmad-loop): `status::awaiting-operator` label created and the issue stays **open** (external action pending, confirmed via `bmad-loop confirm`).
+
 ### Removed
 
 - `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.11.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.

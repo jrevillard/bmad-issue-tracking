@@ -193,7 +193,11 @@ print(n)
                                 TRUE:
                                   - SET: { variable: close, value: "none" }
                                 FALSE:
-                                  - SET: { variable: close, value: "false" }
+                                  - CHECK: mapped_status eq "awaiting-operator"
+                                    TRUE:
+                                      - SET: { variable: close, value: "none" }
+                                    FALSE:
+                                      - SET: { variable: close, value: "false" }
               - INCLUDE: common/update-issue-status
               - RUN: uv run --no-project python -c "
 import sys

@@ -103,6 +103,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
 - `_bmad/_config/custom/workflows/common/find-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
+- `_bmad/_config/custom/workflows/common/find-prd-key.yaml`
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
 - `_bmad/_config/custom/workflows/common/mark-mr-ready.yaml`
 - `_bmad/_config/custom/workflows/common/set-story-status.yaml`
@@ -138,6 +139,25 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-planning/complete.yaml`
 - `_bmad/_config/custom/workflows/sprint-status/activation.yaml`
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
+</step>
+
+<step n="3c" goal="Deploy bmad-loop CI-gate plugin (optional)">
+<action>The module ships a `ci-gate` plugin for bmad-loop that waits for the remote CI of each story branch before bmad-loop merges it back locally. Deploy it only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
+
+<check if=".bmad-loop/ directory exists">
+  <true>
+    <action>Copy the plugin into `.bmad-loop/plugins/`:</action>
+    ```bash
+    mkdir -p .bmad-loop/plugins
+    cp -rf <path>/bmad-loop/ci-gate .bmad-loop/plugins/ci-gate
+    ```
+    <action>Verify `.bmad-loop/plugins/ci-gate/plugin.toml` and `ci-gate.sh` exist.</action>
+    <action>Note: the plugin loads automatically (declarative shell hooks — no `[python]` module, so no trust allowlist needed). Host/project/platform are read from the git remote by default; override via `[plugins.ci-gate]` in `.bmad-loop/policy.toml` if needed.</action>
+  </true>
+  <false>
+    <output>Skipping ci-gate plugin — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+  </false>
+</check>
 </step>
 
 <step n="4" goal="Configure issue_tracking">
