@@ -144,7 +144,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 <step n="3c" goal="Deploy bmad-loop CI gate + story tracking (optional)">
 <action>The module ships two pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
 
-- **`ci-wait.sh`** — a `[verify]` command that ONLY checks the remote CI state (no push, no MR, no fix). A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
+- **`ci-wait.sh`** — a `[verify]` command that pushes the story branch (propagating the current code, including deterministic repairs) and waits for the remote CI. It does not create MRs or fix code — a red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
 - **`story-track` plugin** — an LLM workflow session at `post_review_result` that pushes the final story branch, ensures the trace MR exists, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs BEFORE the CI check, so the branch is pushed and the pipeline exists when `ci-wait` polls.
 
 The scripts derive branch/host/project/platform from git and their working directory — no environment variables required.</action>
