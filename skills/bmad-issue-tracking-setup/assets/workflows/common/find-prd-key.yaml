@@ -1,0 +1,20 @@
+# common/find-prd-key.yaml
+#
+# Purpose: Resolves prd_key from prd.md frontmatter WITHOUT switching to a PRD
+#           worktree. Silent (no prompts) — used by the unattended sync path
+#           (e.g. after a bmad-loop run). Fails closed if prd_key is missing.
+# Input variables: (none)
+# Output variables:
+#   - prd_key: the PRD key from prd.md frontmatter
+# Side effects: none
+
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+- CHECK: exists prd_key
+  TRUE:
+    - STOP
+  FALSE:
+    - OUTPUT:
+        message: "prd_key not found in {planning_artifacts}/prd.md frontmatter. Run /bmad-issue-tracking-setup to configure the PRD, or add 'prd_key:' to the PRD frontmatter."
+        stop: true

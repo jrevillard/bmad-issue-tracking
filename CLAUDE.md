@@ -82,6 +82,15 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 | code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
 | sprint-status (shim) | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (none) |
 
+### bmad-loop flow (unattended)
+
+Projects using [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) bypass the manual branch/MR flow: bmad-loop drives `bmad-build-auto` per story in isolated worktrees, is the single writer of `sprint-status.yaml`, and merges each story back locally (never pushes). The module's role shrinks to mirroring:
+
+- `common/find-prd-key.yaml` — silent `prd_key` resolution (no PRD worktree, no prompt); used by `issue-sync/prepare.yaml` + `sync.yaml` so `/bmad-bmm-issue-sync` runs unattended after a bmad-loop run.
+- `common/mark-mr-ready.yaml` — no-op when no MR exists (bmad-loop has none); the MR-based CI gates (`check-mr-ci`, `wait-for-green-ci`) are not used in this flow.
+- `assets/bmad-loop/ci-gate/` — plugin deployed to `.bmad-loop/plugins/ci-gate/` (setup step 3c): pushes each story branch and waits for the remote pipeline at `pre_ready_gate`; creates a trace MR when CI requires one. The MR is left open (GitLab auto-marks it merged after the local merge-back is pushed).
+- `awaiting-operator` — bmad-loop status for a story parked on external action; mapped to `status{sep}awaiting-operator` and the issue stays open.
+
 ## Platform differences
 
 - GitLab: `glab` CLI, labels use `::` separator, `glab api` for issue updates (labels field replaces all), `glab label create` for labels

@@ -1,0 +1,71 @@
+# CI-gate plugin for bmad-loop.
+#
+# Gates each story at `pre_ready_gate` (before bmad-loop merges the story branch
+# back locally): pushes the story branch, waits for the remote pipeline to go
+# green, and vetoes (defers) the unit on red/timeout. When the project's CI only
+# runs on merge requests, a trace MR is created so a pipeline exists — the MR is
+# left open and becomes the story's execution trace once the local merge-back is
+# pushed to the target branch (GitLab auto-marks it merged).
+#
+# Dropped under .bmad-loop/plugins/ci-gate/ by the module setup. Declarative
+# shell hooks load automatically (no [python] module, no trust allowlist).
+
+[plugin]
+name = "ci-gate"
+version = "1.0.0"
+api_version = 1
+description = "Per-story remote CI gate: push story branch, poll pipeline (create a trace MR when CI requires one), veto until green."
+author = "bmad-issue-tracking"
+
+[[settings]]
+key = "platform"
+type = "select"
+default = "gitlab"
+options = ["gitlab", "github"]
+label = "CI platform"
+help = "Which remote CI the gate polls (gitlab | github)."
+
+[[settings]]
+key = "host"
+type = "str"
+default = ""
+label = "Host"
+help = "GitLab/GitHub host (e.g. gitlab.com). Leave empty to resolve from the git remote."
+
+[[settings]]
+key = "project"
+type = "str"
+default = ""
+label = "Project"
+help = "Project path (group/project or owner/repo). Leave empty to resolve from the git remote."
+
+[[settings]]
+key = "target_branch"
+type = "str"
+default = "main"
+label = "Target branch"
+help = "Target branch for the trace MR (and the default pipeline ref)."
+
+[[settings]]
+key = "timeout_sec"
+type = "int"
+default = 1800
+min = 60
+max = 7200
+label = "CI timeout (s)"
+help = "Max seconds to wait for a green pipeline before the unit is deferred."
+
+[[settings]]
+key = "mr_for_ci"
+type = "select"
+default = "auto"
+options = ["auto", "never", "always"]
+label = "MR for CI"
+help = "auto: create a trace MR only when the branch has no pipeline; always: always create one; never: never create one."
+
+[hooks.pre_ready_gate]
+cmd = "{scripts}/ci-gate.sh"
+# Must cover the longest CI poll: the setting `timeout_sec` may reach 7200.
+timeout_sec = 7300
+blocking = true
+fail_closed = true

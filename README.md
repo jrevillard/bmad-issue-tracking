@@ -116,6 +116,33 @@ When `branch_patterns` is configured in the setup:
 | Story reviewed | Issue status updated, worktree exited (only if MR merged) |
 | All epics done | Draft PR/MR marked as ready for review |
 
+## BMAD Loop integration
+
+The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) (deterministic orchestrator that drives `bmad-build-auto` per story in isolated worktrees). bmad-loop is the single writer of `sprint-status.yaml`; the module mirrors it to issues. **Zero user interaction** during the run.
+
+**Prerequisites:** bmad-loop ≥ 0.9.0, BMM ≥ 6.10.0, `sprint-status.yaml` from `bmad-sprint-planning`.
+
+**Flow:**
+
+1. `bmad-loop run` — each story is implemented/reviewed/verified in its own worktree and merged back locally. The `ci-gate` plugin (deployed by `/bmad-issue-tracking-setup`, step 3c) pushes each story branch and waits for the remote pipeline before the merge-back; a red/timeout CI defers the story (`bmad-loop resolve` to recover).
+2. `/bmad-bmm-issue-sync` — now unattended: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
+3. `git push origin main` — the local merge-back is never pushed by bmad-loop.
+
+**Status mapping** (bmad-loop values → module labels):
+
+| bmad-loop sprint-status | Issue |
+|---|---|
+| `backlog` | `status::backlog` |
+| `ready-for-dev` | `status::ready-for-dev` |
+| `in-progress` | `status::in-progress` |
+| `review` | `status::review` |
+| `awaiting-operator` | `status::awaiting-operator` (issue stays **open** — external action pending, confirm with `bmad-loop confirm`) |
+| `done` | `status::done` + issue closed |
+
+**Execution trace:** for projects whose CI only runs on merge requests, the `ci-gate` plugin creates a trace MR per story (left open). After the local merge-back is pushed to the target branch, GitLab auto-marks it merged — the MR keeps the story's diff and pipeline as a durable trace. On GitHub (no auto-detection), the trace PR is closed by the sync instead.
+
+**Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
+
 ## Platform differences
 
 | Aspect | GitLab | GitHub |

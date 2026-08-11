@@ -8,7 +8,7 @@
 
 # Step 1: Detect platform and project
 - INCLUDE: common/check-config
-- INCLUDE: common/find-prd
+- INCLUDE: common/find-prd-key
 # Step 2: Ensure all labels exist
 - INCLUDE: common/ensure-labels
 - INCLUDE: common/ensure-dynamic-labels

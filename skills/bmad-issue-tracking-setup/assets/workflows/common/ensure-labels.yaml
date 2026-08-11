@@ -27,5 +27,7 @@
 - INCLUDE: common/create-label
 - SET: { variable: label_name, value: "status{sep}review" }
 - INCLUDE: common/create-label
+- SET: { variable: label_name, value: "status{sep}awaiting-operator" }
+- INCLUDE: common/create-label
 - SET: { variable: label_name, value: "status{sep}done" }
 - INCLUDE: common/create-label
