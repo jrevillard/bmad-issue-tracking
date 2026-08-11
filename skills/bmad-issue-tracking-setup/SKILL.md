@@ -141,21 +141,27 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
-<step n="3c" goal="Deploy bmad-loop CI-gate plugin (optional)">
-<action>The module ships a `ci-gate` plugin for bmad-loop that waits for the remote CI of each story branch before bmad-loop merges it back locally. Deploy it only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
+<step n="3c" goal="Deploy bmad-loop CI gate (optional)">
+<action>The module ships `ci-wait.sh` — a bmad-loop `[verify]` command that pushes each story branch and waits for the remote pipeline. A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop. Deploy only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy the plugin into `.bmad-loop/plugins/`:</action>
+    <action>Copy the script and register it in `[verify] commands`:</action>
     ```bash
-    mkdir -p .bmad-loop/plugins
-    cp -rf <path>/bmad-loop/ci-gate .bmad-loop/plugins/ci-gate
+    mkdir -p .bmad-loop
+    cp -f <path>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
+    chmod +x .bmad-loop/ci-wait.sh
     ```
-    <action>Verify `.bmad-loop/plugins/ci-gate/plugin.toml` and `ci-gate.sh` exist.</action>
-    <action>Note: the plugin loads automatically (declarative shell hooks — no `[python]` module, so no trust allowlist needed). Host/project/platform are read from the git remote by default; override via `[plugins.ci-gate]` in `.bmad-loop/policy.toml` if needed.</action>
+    <action>Add it to the `[verify]` section of `.bmad-loop/policy.toml` (append to `commands` if a section already exists):</action>
+    ```toml
+    [verify]
+    commands = ["bash .bmad-loop/ci-wait.sh"]
+    ```
+    <action>Verify `.bmad-loop/ci-wait.sh` exists.</action>
+    <action>Note: host/project/platform are read from the git remote by default; the trace MR target branch is detected from `origin/HEAD`. Settings can be overridden via env vars (`BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TARGET_BRANCH/TIMEOUT_SEC/MR_FOR_CI`) if the script is wrapped.</action>
   </true>
   <false>
-    <output>Skipping ci-gate plugin — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+    <output>Skipping ci-wait — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
   </false>
 </check>
 </step>

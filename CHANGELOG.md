@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **bmad-loop integration** (unattended dev loop): the module now mirrors sprint-status maintained by `bmad-loop` (single writer of `sprint-status.yaml`, compatible status values).
-- `ci-gate` bmad-loop plugin (`assets/bmad-loop/ci-gate/`, deployed by setup step 3c): binds `pre_ready_gate`, pushes each story branch, waits for the remote pipeline (creating a trace MR when CI only runs on merge requests), and defers the unit on red/timeout.
+- `ci-wait` bmad-loop `[verify]` command (`assets/bmad-loop/ci-gate/ci-wait.sh`, deployed by setup step 3c): pushes each story branch and waits for the remote pipeline (creating a trace MR when CI only runs on merge requests). A red CI fails the verify command, which bmad-loop answers with a feedback-driven repair session (re-running `bmad-build-auto` with the failing CI output) — the story is auto-fixed and re-verified, bounded by `max_dev_attempts`, before the merge-back.
 - `/bmad-bmm-issue-sync` is now **unattended**: new `common/find-prd-key.yaml` resolves `prd_key` from `prd.md` without a PRD worktree or prompts (fails closed); `common/mark-mr-ready.yaml` is a no-op when no MR exists. Run it after `bmad-loop run`, then `git push origin main`.
 - `awaiting-operator` status support (bmad-loop): `status::awaiting-operator` label created and the issue stays **open** (external action pending, confirmed via `bmad-loop confirm`).
 
