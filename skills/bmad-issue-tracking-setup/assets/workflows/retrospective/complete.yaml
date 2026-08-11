@@ -20,7 +20,7 @@
     - OUTPUT:
         message: "No retrospective entry found in sprint-status.yaml."
         stop: true
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 key = sys.argv[1].rstrip()
 parts = key.split('-')
@@ -28,7 +28,7 @@ print(parts[1])
 " {retro_key}
   STORE: epic_number
 # Write description file (retrospective document content)
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     print(f.read())

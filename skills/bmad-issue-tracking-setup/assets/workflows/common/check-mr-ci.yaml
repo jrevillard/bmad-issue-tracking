@@ -37,7 +37,7 @@
             source: mr_list
             select: iid
             store: mr_iid
-        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} | python3 -c "
+        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} | uv run python -c "
 import json, sys
 data = json.load(sys.stdin)
 pipeline = data.get('pipeline')
@@ -59,13 +59,13 @@ else:
 # --- GitHub: find PR and check status checks ---
 - CHECK: git_platform eq "github"
   TRUE:
-    - RUN: python3 -c "
+    - RUN: uv run python -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[0])
 " {mr_project}
         STORE: mr_owner
-    - RUN: python3 -c "
+    - RUN: uv run python -c "
 import sys
 parts = sys.argv[1].split('/')
 print(parts[1])
@@ -85,7 +85,7 @@ print(parts[1])
         - RUN: gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]"
           STORE: pr_checks
           PLATFORM: github
-        - RUN: python3 -c "
+        - RUN: uv run python -c "
 import json, sys
 raw = sys.argv[1].strip()
 checks = json.loads(raw) if raw else []

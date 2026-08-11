@@ -9,7 +9,8 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.4.0+ installed
+- BMAD Method module (BMM) 6.11.0+ installed
+- `uv` available (required by BMM 6.11.0+ skills; the workflow YAMLs invoke Python via `uv run python`)
 - This module installed via `npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking`
 
 ## Instructions
@@ -18,11 +19,12 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <action>IMPORTANT: When a step asks you to configure a value with a default, you MUST present the default as a suggestion and wait for the user's answer before writing anything. Never silently apply a default.</action>
 
 <step n="1" goal="Verify BMM installation">
-<action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.4.0+.</action>
-<check if="version < 6.4.0 or not found">
-  <output>ERROR: BMM 6.4.0+ required. TOML overrides need customize.toml support for all 6 workflows.</output>
+<action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.11.0+.</action>
+<check if="version < 6.11.0 or not found">
+  <output>ERROR: BMM 6.11.0+ required. This module targets the 6.11.0 skill set (bmad-ux, consolidated sprint-planning, uv-based tooling).</output>
   <action>Stop here</action>
 </check>
+<action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.11.0 requirement (`uv` is mandatory for BMM 6.11.0+ skills).</action>
 </step>
 
 <step n="2" goal="Remove obsolete sync task file">
@@ -53,20 +55,19 @@ cp -f <path>/*.toml _bmad/custom/
 <action>Remove any `bmad-*.toml` files in `_bmad/custom/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
-- `bmad-check-implementation-readiness.toml` (requires BMM 6.4.0+)
-- `bmad-code-review.toml` (requires BMM 6.4.0+)
-- `bmad-correct-course.toml` (requires BMM 6.4.0+)
-- `bmad-create-architecture.toml` (requires BMM 6.4.0+)
-- `bmad-create-epics-and-stories.toml` (requires BMM 6.4.0+)
-- `bmad-create-prd.toml` (requires BMM 6.4.0+, superseded by bmad-prd.toml on BMM 6.8.0+)
-- `bmad-create-story.toml` (requires BMM 6.4.0+)
-- `bmad-create-ux-design.toml` (requires BMM 6.4.0+)
-- `bmad-dev-story.toml` (requires BMM 6.4.0+)
-- `bmad-edit-prd.toml` (requires BMM 6.4.0+, superseded by bmad-prd.toml on BMM 6.8.0+)
-- `bmad-prd.toml` (requires BMM 6.8.0+)
-- `bmad-retrospective.toml` (requires BMM 6.4.0+)
-- `bmad-sprint-planning.toml` (requires BMM 6.4.0+)
-- `bmad-sprint-status.toml` (requires BMM 6.4.0+)
+- `bmad-code-review.toml` (requires BMM 6.11.0+)
+- `bmad-correct-course.toml` (requires BMM 6.11.0+)
+- `bmad-create-architecture.toml` (requires BMM 6.11.0+)
+- `bmad-create-epics-and-stories.toml` (requires BMM 6.11.0+)
+- `bmad-create-prd.toml` (requires BMM 6.11.0+, superseded by bmad-prd.toml)
+- `bmad-create-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path)
+- `bmad-dev-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path)
+- `bmad-edit-prd.toml` (requires BMM 6.11.0+, superseded by bmad-prd.toml)
+- `bmad-prd.toml` (requires BMM 6.11.0+; unified PRD override)
+- `bmad-retrospective.toml` (requires BMM 6.11.0+)
+- `bmad-sprint-planning.toml` (requires BMM 6.11.0+; owns the sprint-status artifact)
+- `bmad-sprint-status.toml` (requires BMM 6.11.0+; consolidated into bmad-sprint-planning, retained as shim alias)
+- `bmad-ux.toml` (requires BMM 6.11.0+; replaces bmad-create-ux-design, removed in 6.11.0)
 
 <action>Note: All TOML files are in pointer format — they reference workflow YAML files deployed in step 3b.</action>
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
@@ -94,30 +95,35 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 <action>Verify the following files exist:</action>
 - `_bmad/_config/custom/bmad-workflow-lang.md`
 - `_bmad/_config/custom/workflows/common/check-config.yaml`
+- `_bmad/_config/custom/workflows/common/check-mr-ci.yaml`
 - `_bmad/_config/custom/workflows/common/create-issue.yaml`
 - `_bmad/_config/custom/workflows/common/create-label.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-board.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-dynamic-labels.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
 - `_bmad/_config/custom/workflows/common/find-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
+- `_bmad/_config/custom/workflows/common/mark-mr-ready.yaml`
 - `_bmad/_config/custom/workflows/common/set-story-status.yaml`
+- `_bmad/_config/custom/workflows/common/sync-issues.yaml`
 - `_bmad/_config/custom/workflows/common/update-issue-description.yaml`
 - `_bmad/_config/custom/workflows/common/update-issue-status.yaml`
-- `_bmad/_config/custom/workflows/check-implementation-readiness/activation.yaml`
-- `_bmad/_config/custom/workflows/check-implementation-readiness/complete.yaml`
+- `_bmad/_config/custom/workflows/common/wait-for-green-ci.yaml`
+- `_bmad/_config/custom/workflows/issue-sync/prepare.yaml`
+- `_bmad/_config/custom/workflows/issue-sync/sync.yaml`
+- `_bmad/_config/custom/workflows/bmad-prd/activation.yaml`
+- `_bmad/_config/custom/workflows/bmad-prd/complete.yaml`
+- `_bmad/_config/custom/workflows/bmad-ux/activation.yaml`
+- `_bmad/_config/custom/workflows/bmad-ux/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/activation.yaml`
-- `_bmad/_config/custom/workflows/create-architecture/activation.yaml`
-- `_bmad/_config/custom/workflows/create-architecture/complete.yaml`
-- `_bmad/_config/custom/workflows/create-ux-design/activation.yaml`
-- `_bmad/_config/custom/workflows/create-ux-design/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/complete.yaml`
 - `_bmad/_config/custom/workflows/correct-course/activation.yaml`
 - `_bmad/_config/custom/workflows/correct-course/complete.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/activation.yaml`
+- `_bmad/_config/custom/workflows/create-architecture/complete.yaml`
 - `_bmad/_config/custom/workflows/create-epics-and-stories/activation.yaml`
 - `_bmad/_config/custom/workflows/create-epics-and-stories/complete.yaml`
-- `_bmad/_config/custom/workflows/bmad-prd/activation.yaml`
-- `_bmad/_config/custom/workflows/bmad-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/create-prd/activation.yaml`
 - `_bmad/_config/custom/workflows/create-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/create-story/activation.yaml`

@@ -58,28 +58,28 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 
 | Override file | Target workflow | Hook | Behavior |
 |---|---|---|---|
-| `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue + PRD branch + draft PR/MR on completion. Superseded by `bmad-prd.toml` on BMM 6.8.0+ |
-| `bmad-prd.toml` | `bmad-prd` | `activation_steps_append`, `on_complete` | Unified PRD override (BMM 6.8.0+): detects create/update/validate intent, replaces `bmad-create-prd.toml` and `bmad-edit-prd.toml` |
+| `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue + PRD branch + draft PR/MR on completion. Superseded by `bmad-prd.toml` |
+| `bmad-prd.toml` | `bmad-prd` | `activation_steps_append`, `on_complete` | Unified PRD override: detects create/update/validate intent, replaces `bmad-create-prd.toml` and `bmad-edit-prd.toml` |
 | `bmad-create-architecture.toml` | `create-architecture` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
-| `bmad-create-ux-design.toml` | `create-ux-design` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
+| `bmad-ux.toml` | `bmad-ux` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion. Replaces `bmad-create-ux-design.toml` (skill removed in BMM 6.11.0) |
 | `bmad-create-epics-and-stories.toml` | `create-epics-and-stories` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
-| `bmad-create-story.toml` | `create-story` | `activation_steps_append`, `on_complete` | Sets up story worktree at activation, creates issue + MR on completion |
-| `bmad-dev-story.toml` | `dev-story` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts summary, updates status |
+| `bmad-create-story.toml` | `create-story` | `activation_steps_append`, `on_complete` | Sets up story worktree at activation, creates issue + MR on completion (shim — deprecated upstream, `bmad-build` is the official path) |
+| `bmad-dev-story.toml` | `dev-story` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts summary, updates status (shim — deprecated upstream, `bmad-build` is the official path) |
 | `bmad-code-review.toml` | `code-review` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts review, updates status |
 | `bmad-sprint-planning.toml` | `sprint-planning` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync |
-| `bmad-sprint-status.toml` | `sprint-status` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync |
-| `bmad-edit-prd.toml` | `edit-prd` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates PRD issue description. Superseded by `bmad-prd.toml` on BMM 6.8.0+ |
+| `bmad-sprint-status.toml` | `sprint-status` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync (consolidated into `bmad-sprint-planning` in BMM 6.11.0, retained as shim alias) |
+| `bmad-edit-prd.toml` | `edit-prd` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates PRD issue description. Superseded by `bmad-prd.toml` |
 | `bmad-correct-course.toml` | `correct-course` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates issue descriptions for modified stories/epics/PRD |
-| `bmad-check-implementation-readiness.toml` | `check-implementation-readiness` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates issue descriptions if artifacts were modified |
 | `bmad-retrospective.toml` | `retrospective` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, creates issue with retrospective content |
 
-> **Note:** All overrides require BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
+> **Note:** All overrides require BMM 6.11.0+ (uniform customize.toml support across all BMM workflows; targets the 6.11.0 skill set).
 
 ### Shared custom tasks (via setup)
 
 Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 
-- `bmad-bmm-issue-sync.md` — Sync `sprint-status.yaml` to issues, manage labels, create branches and MRs
+- `bmad-workflow-lang.md` — the workflow language specification the TOML hooks reference
+- `workflows/issue-sync/` — `prepare.yaml` (platform, labels, board, PRD issue) and `sync.yaml` (sync issues, mark MR ready, summary)
 
 ## Usage
 

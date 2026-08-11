@@ -12,7 +12,7 @@
 - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} --paginate
   STORE: issue_detail
   PLATFORM: gitlab
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import json, sys
 data = json.load(sys.stdin)
 labels = [l for l in data.get('labels', []) if not l.startswith('status::')]
