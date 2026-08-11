@@ -1,0 +1,28 @@
+# story-track plugin for bmad-loop.
+#
+# Injects an LLM session at `post_review_result` (after the story's review, in
+# its worktree, with the final code on disk): pushes the story branch, ensures a
+# trace MR exists (CI vehicle + execution trace), and mirrors the story to its
+# GitLab/GitHub issue. The subsequent `[verify]` ci-wait command then checks the
+# remote pipeline; a red CI is auto-fixed by bmad-loop's feedback-driven repair
+# session.
+#
+# blocking = true: if this session does not complete (e.g. the push failed), the
+# unit is deferred — the CI gate cannot run without the branch pushed. The issue
+# mirror is best-effort inside the prompt (failures are reported, not fatal).
+#
+# Dropped under .bmad-loop/plugins/story-track/ by the module setup. Declarative
+# (no [python] module) — loads automatically, no trust allowlist.
+
+[plugin]
+name = "story-track"
+version = "1.0.0"
+api_version = 1
+description = "Per-story tracking: push the final story branch, ensure the trace MR, mirror the story to its GitLab/GitHub issue."
+author = "bmad-issue-tracking"
+
+[workflows.story-track]
+stage = "post_review_result"
+role = "dev"
+prompt = "{scripts}/story-track-prompt.md"
+blocking = true
