@@ -88,7 +88,7 @@ Projects using [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) bypass 
 
 - `common/find-prd-key.yaml` — silent `prd_key` resolution (no PRD worktree, no prompt); used by `issue-sync/prepare.yaml` + `sync.yaml` so `/bmad-bmm-issue-sync` runs unattended after a bmad-loop run.
 - `common/mark-mr-ready.yaml` — no-op when no MR exists (bmad-loop has none); the MR-based CI gates (`check-mr-ci`, `wait-for-green-ci`) are not used in this flow.
-- `assets/bmad-loop/ci-gate/` — plugin deployed to `.bmad-loop/plugins/ci-gate/` (setup step 3c): pushes each story branch and waits for the remote pipeline at `pre_ready_gate`; creates a trace MR when CI requires one. The MR is left open (GitLab auto-marks it merged after the local merge-back is pushed).
+- `assets/bmad-loop/ci-gate/ci-wait.sh` — bmad-loop `[verify]` command deployed to `.bmad-loop/ci-wait.sh` (setup step 3c): pushes each story branch and waits for the remote pipeline; creates a trace MR when CI requires one. A red CI fails the verify command → bmad-loop's feedback-driven repair session re-runs `bmad-build-auto` with the failing output (auto-fix, bounded by `max_dev_attempts`) → re-verify. The trace MR is left open (GitLab auto-marks it merged after the local merge-back is pushed).
 - `awaiting-operator` — bmad-loop status for a story parked on external action; mapped to `status{sep}awaiting-operator` and the issue stays open.
 
 ## Platform differences

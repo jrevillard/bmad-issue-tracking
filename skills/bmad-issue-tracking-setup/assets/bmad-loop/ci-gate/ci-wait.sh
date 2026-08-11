@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-# bmad-loop CI gate (bound to `pre_ready_gate`).
+# bmad-loop CI gate, used as a `[verify]` command.
 #
-# 1. Push the story branch (so the code is safe even if the run is interrupted).
-# 2. Wait for the remote pipeline to go green:
-#    - branch pipeline by default (GitLab pipelines on pushed branches; GitHub
-#      Actions when configured on push);
-#    - if CI only runs on merge requests (`mr_for_ci=always`, or `auto` when the
-#      branch has no pipeline), create a trace MR and poll ITS pipeline. The MR
-#      is left open: once the local merge-back is pushed to the target branch,
-#      GitLab auto-marks it merged, leaving the story's execution trace.
-# 3. Exit 0 on green (bmad-loop proceeds to merge-back); emit a JSON veto and
-#    exit 1 on red/timeout (unit is DEFERRED).
+# Add it to `.bmad-loop/policy.toml`:
+#   [verify]
+#   commands = ["bash .bmad-loop/ci-wait.sh"]
+#
+# Then bmad-loop's deterministic verify runs it after each dev/review pass:
+#   1. Push the story branch (so the code is safe even if the run is interrupted).
+#   2. Wait for the remote pipeline to go green:
+#      - branch pipeline by default (GitLab pipelines on pushed branches; GitHub
+#        Actions when configured on push);
+#      - if CI only runs on merge requests (`mr_for_ci=always`, or `auto` when the
+#        branch has no pipeline), create a trace MR and poll ITS pipeline. The MR
+#        is left open: once the local merge-back is pushed to the target branch,
+#        GitLab auto-marks it merged, leaving the story's execution trace.
+#   3. Exit 0 on green (bmad-loop proceeds); exit non-zero on red/timeout, which
+#      bmad-loop treats as a failed verify command and answers with a feedback-
+#      driven repair session (it re-runs bmad-build-auto with the failing output
+#      as feedback) — the auto-fix loop, bounded by max_dev_attempts.
 set -u
 
 branch="${BMAD_LOOP_BRANCH:-}"
