@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# bmad-loop CI CHECK, used as a `[verify]` command.
+# bmad-loop CI gate, used as a `[verify]` command.
 #
-# CHECK-ONLY: it does NOT push, create MRs, or fix. The LLM `story-track`
-# workflow (post_review_result) pushes the final story branch and creates the
-# trace MR before this runs. This script only finds the remote pipeline (the
-# story branch's, or the story's trace MR) and waits for it to go green.
+# It pushes the story branch (propagating whatever code is on it — including
+# bmad-loop's deterministic _fix_phase repairs) and waits for the remote pipeline
+# to go green. It does NOT create MRs and does NOT fix code itself: the trace MR
+# and issue tracking are the LLM `story-track` workflow's job, and a red CI is
+# fixed by bmad-loop's feedback-driven repair session.
 #
-# Exit 0 on green, or when no pipeline exists (CI not triggered yet / not
+# Why it pushes: `_fix_phase` (the deterministic repair) commits locally but does
+# not push, so the branch must be re-pushed before each CI check or the fix never
+# reaches the remote pipeline.
+#
+# Exit 0 on green, or when no pipeline exists (CI not triggered / not
 # configured). Exit non-zero on red/timeout -> bmad-loop treats it as a failed
 # verify command and answers with a feedback-driven repair session (re-runs
 # bmad-build-auto with the failing output) — the auto-fix loop.
@@ -117,7 +122,14 @@ else: print("in_progress")' 2>/dev/null \
 
 # -------------------------------------------------------------------- main
 
-# 1. Which pipeline to poll: the branch's if it has one, else the trace MR's.
+# 1. Push the story branch (propagate the current code — including any
+#    _fix_phase repair commits — so the remote CI runs on what we will check).
+if ! git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1; then
+  fail "git push of $branch failed"
+fi
+log "pushed $branch"
+
+# 2. Which pipeline to poll: the branch's if it has one, else the trace MR's.
 bs="$(branch_status)"
 mode="branch"; s="$bs"
 if [ "$s" = "no_pipeline" ] || [ -z "$s" ]; then
