@@ -1,82 +1,78 @@
 #!/usr/bin/env bash
 # bmad-loop CI gate, used as a `[verify]` command.
 #
-# Add it to `.bmad-loop/policy.toml`:
+# bmad-loop runs `[verify]` commands with cwd = the story worktree (worktree
+# isolation) and WITHOUT the BMAD_LOOP_* plugin-hook environment — so this
+# script derives everything (story branch, remote host/project/platform) from
+# git and the current directory. A red/timeout CI exits non-zero, which
+# bmad-loop treats as a failed verify command and answers with a feedback-driven
+# repair session (it re-runs bmad-build-auto with the failing output as
+# feedback) — the auto-fix loop, bounded by bmad-loop's max_dev_attempts.
+#
+# Setup (see /bmad-issue-tracking-setup step 3c):
+#   cp <assets>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
+#   # .bmad-loop/policy.toml
+#   [scm]
+#   worktree_seed = [".bmad-loop/ci-wait.sh"]   # copied into each worktree
 #   [verify]
 #   commands = ["bash .bmad-loop/ci-wait.sh"]
 #
-# Then bmad-loop's deterministic verify runs it after each dev/review pass:
-#   1. Push the story branch (so the code is safe even if the run is interrupted).
-#   2. Wait for the remote pipeline to go green:
-#      - branch pipeline by default (GitLab pipelines on pushed branches; GitHub
-#        Actions when configured on push);
-#      - if CI only runs on merge requests (`mr_for_ci=always`, or `auto` when the
-#        branch has no pipeline), create a trace MR and poll ITS pipeline. The MR
-#        is left open: once the local merge-back is pushed to the target branch,
-#        GitLab auto-marks it merged, leaving the story's execution trace.
-#   3. Exit 0 on green (bmad-loop proceeds); exit non-zero on red/timeout, which
-#      bmad-loop treats as a failed verify command and answers with a feedback-
-#      driven repair session (it re-runs bmad-build-auto with the failing output
-#      as feedback) — the auto-fix loop, bounded by max_dev_attempts.
+# Note: bmad-loop caps each verify command at 30 minutes (COMMAND_TIMEOUT_S);
+# keep TIMEOUT_SEC below that.
 set -u
 
-branch="${BMAD_LOOP_BRANCH:-}"
-repo_root="${BMAD_LOOP_REPO_ROOT:-}"
-worktree="${BMAD_LOOP_WORKTREE:-}"
-platform="${BMAD_LOOP_SETTING_PLATFORM:-gitlab}"
+worktree="$(pwd)"
+branch="$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+platform="${BMAD_LOOP_SETTING_PLATFORM:-}"
 host="${BMAD_LOOP_SETTING_HOST:-}"
 project="${BMAD_LOOP_SETTING_PROJECT:-}"
 target="${BMAD_LOOP_SETTING_TARGET_BRANCH:-}"
-timeout_sec="${BMAD_LOOP_SETTING_TIMEOUT_SEC:-1800}"
+timeout_sec="${BMAD_LOOP_SETTING_TIMEOUT_SEC:-1500}"
 mr_for_ci="${BMAD_LOOP_SETTING_MR_FOR_CI:-auto}"
 
-log() { echo "[ci-gate] $*"; }
-
-veto_defer() {
-  # JSON-escape the reason so a `"` or `\` in it cannot break the veto payload.
-  local reason="$1"
-  local esc
-  esc="$(printf '%s' "$reason" | uv run --no-project python -c 'import json,sys; print(json.dumps(sys.stdin.read().strip())[1:-1])' 2>/dev/null || printf '%s' "$reason")"
-  echo "{\"veto\": {\"action\": \"defer\", \"reason\": \"$esc\"}}"
-  exit 1
-}
+log() { echo "[ci-wait] $*"; }
+fail() { echo "[ci-wait] FAIL: $*"; exit 1; }
 
 # ------------------------------------------------------------------ settings
 
-[ -n "$branch" ] || veto_defer "BMAD_LOOP_BRANCH is empty"
-[ -n "$repo_root" ] || veto_defer "BMAD_LOOP_REPO_ROOT is empty"
-[ -n "$worktree" ] || veto_defer "BMAD_LOOP_WORKTREE is empty"
+[ -n "$branch" ] || fail "not on a git branch (cwd=$worktree)"
 
-# Resolve host/project from the git remote when not configured.
-if [ -z "$host" ] || [ -z "$project" ]; then
-  remote="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
-  [ -n "$remote" ] || veto_defer "no origin remote and host/project not configured"
+# Resolve host/project/platform from the git remote when not configured.
+if [ -z "$host" ] || [ -z "$project" ] || [ -z "$platform" ]; then
+  remote="$(git -C "$worktree" remote get-url origin 2>/dev/null || true)"
+  [ -n "$remote" ] || fail "no origin remote and host/project not configured"
   case "$remote" in
     git@*)
-      host="${remote#git@}"; host="${host%%:*}"
-      proj="${remote#*:}"; proj="${proj%.git}"
+      rhost="${remote#git@}"; rhost="${rhost%%:*}"
+      rproj="${remote#*:}"; rproj="${rproj%.git}"
       ;;
     ssh://git@*)
       rest="${remote#ssh://git@}"
-      # strip a custom port (`host:2222/group/project.git`) from the host part
-      host="${rest%%[:/]*}"
-      proj="${rest#*:}"; proj="${proj#*/}"; proj="${proj%.git}"
+      rhost="${rest%%[:/]*}"
+      rproj="${rest#*:}"; rproj="${rproj#*/}"; rproj="${rproj%.git}"
       ;;
     http*)
-      host="$(printf '%s' "$remote" | sed -E 's#^https?://([^/]+)/.*#\1#')"
-      proj="$(printf '%s' "$remote" | sed -E 's#^https?://[^/]+/(.*)$#\1#')"
-      proj="${proj%.git}"
+      rhost="$(printf '%s' "$remote" | sed -E 's#^https?://([^/]+)/.*#\1#')"
+      rproj="$(printf '%s' "$remote" | sed -E 's#^https?://[^/]+/(.*)$#\1#')"
+      rproj="${rproj%.git}"
       ;;
-    *) veto_defer "unparseable origin remote: $remote" ;;
+    *) fail "unparseable origin remote: $remote" ;;
   esac
-  [ -n "$host" ] || veto_defer "could not resolve host from remote"
-  [ -z "$project" ] && project="$proj"
+  [ -n "$rhost" ] || fail "could not resolve host from remote"
+  [ -z "$host" ] && host="$rhost"
+  [ -z "$project" ] && project="$rproj"
+  [ -z "$platform" ] && case "$host" in
+    *gitlab*) platform="gitlab" ;;
+    *github*) platform="github" ;;
+    *) fail "could not infer platform from host ($host) — set BMAD_LOOP_SETTING_PLATFORM" ;;
+  esac
 fi
-[ -n "$project" ] || veto_defer "could not resolve project from remote"
+[ -n "$project" ] || fail "could not resolve project from remote"
+[ -n "$platform" ] || fail "platform not resolved (gitlab | github)"
 
 # Resolve the target branch (for the trace MR) from origin/HEAD when unset.
 if [ -z "$target" ]; then
-  target="$(git -C "$repo_root" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+  target="$(git -C "$worktree" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
   [ -n "$target" ] || target="main"
 fi
 
@@ -99,7 +95,7 @@ branch_status() {
 }
 
 # Pipeline status of the trace MR/PR for the branch, or "no_mr"/"no_pipeline".
-# Aggregates ALL check states on GitHub (a single green job must not pass the gate).
+# Aggregates ALL check states on GitHub (a single green job must not pass).
 mr_status() {
   case "$platform" in
     gitlab)
@@ -130,13 +126,13 @@ create_mr() {
   case "$platform" in
     gitlab)
       glab mr create --source-branch "$branch" --target-branch "$target" \
-        --title "CI: $branch" --description "Trace MR created by the bmad-loop ci-gate plugin." \
+        --title "CI: $branch" --description "Trace MR created by the bmad-loop ci-wait verify command." \
         --yes --no-editor -R "${host}/${project}" >/dev/null 2>&1 \
         && log "created trace MR for $branch -> $target"
       ;;
     github)
       gh pr create --base "$target" --head "$branch" \
-        --title "CI: $branch" --body "Trace PR created by the bmad-loop ci-gate plugin." \
+        --title "CI: $branch" --body "Trace PR created by the bmad-loop ci-wait verify command." \
         -R "${host}/${project}" >/dev/null 2>&1 \
         && log "created trace PR for $branch -> $target"
       ;;
@@ -145,9 +141,9 @@ create_mr() {
 
 # -------------------------------------------------------------------- main
 
-# 1. Push the story branch.
+# 1. Push the story branch (from the worktree cwd).
 if ! git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1; then
-  veto_defer "git push of $branch failed"
+  fail "git push of $branch failed"
 fi
 log "pushed $branch"
 
@@ -174,7 +170,7 @@ if [ "$mode" = "mr" ]; then
       sleep "$(( attempt * 3 ))"
       [ "$(mr_status)" != "no_mr" ] && break
     done
-    [ "$(mr_status)" != "no_mr" ] || veto_defer "could not create trace MR"
+    [ "$(mr_status)" != "no_mr" ] || fail "could not create trace MR"
   fi
 fi
 log "polling $mode pipeline for $branch (timeout ${timeout_sec}s)"
@@ -183,7 +179,7 @@ log "polling $mode pipeline for $branch (timeout ${timeout_sec}s)"
 deadline=$(( $(date +%s) + timeout_sec ))
 no_pipeline_count=0
 while :; do
-  [ "$(date +%s)" -ge "$deadline" ] && veto_defer "CI timeout after ${timeout_sec}s"
+  [ "$(date +%s)" -ge "$deadline" ] && fail "CI timeout after ${timeout_sec}s"
   if [ "$mode" = "mr" ]; then
     s="$(mr_status)"
     # MR pipeline not indexed yet but a branch pipeline exists — fall back.
@@ -197,13 +193,14 @@ while :; do
   case "$s" in
     success|SUCCESS|completed|successful) log "CI green"; exit 0 ;;
     failed|FAILURE|failure|error|ERROR|cancelled|canceled|skipped|manual|neutral|stale|timed_out|action_required)
-      veto_defer "CI failed ($s)" ;;
-    no_mr) veto_defer "no MR available for CI" ;;
+      fail "CI failed ($s)" ;;
+    no_mr) fail "no MR available for CI" ;;
     running|pending|queued|in_progress|no_pipeline|""|null)
       if [ "$mode" = "branch" ] && { [ "$s" = "no_pipeline" ] || [ -z "$s" ]; }; then
         no_pipeline_count=$(( no_pipeline_count + 1 ))
         # Persistent absence of a branch pipeline (e.g. mr_for_ci=never on an
-        # MR-only-CI project): nothing to gate — pass rather than burn the timeout.
+        # MR-only-CI project): there is no CI to gate. NOTE: this passes the
+        # gate (exit 0) — a misconfigured pipeline trigger means NO gate.
         if [ "$no_pipeline_count" -ge 3 ]; then
           log "no pipeline found for $branch after grace — no CI gate"
           exit 0

@@ -142,23 +142,25 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </step>
 
 <step n="3c" goal="Deploy bmad-loop CI gate (optional)">
-<action>The module ships `ci-wait.sh` — a bmad-loop `[verify]` command that pushes each story branch and waits for the remote pipeline. A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop. Deploy only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
+<action>The module ships `ci-wait.sh` — a bmad-loop `[verify]` command that pushes each story branch and waits for the remote pipeline. A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop. The script derives branch/host/project/platform from git and its working directory, so no environment variables are required. Deploy only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy the script and register it in `[verify] commands`:</action>
+    <action>Copy the script to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees):</action>
     ```bash
     mkdir -p .bmad-loop
     cp -f <path>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
-    chmod +x .bmad-loop/ci-wait.sh
     ```
-    <action>Add it to the `[verify]` section of `.bmad-loop/policy.toml` (append to `commands` if a section already exists):</action>
+    <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
+    [scm]
+    worktree_seed = [".bmad-loop/ci-wait.sh"]
+
     [verify]
     commands = ["bash .bmad-loop/ci-wait.sh"]
     ```
-    <action>Verify `.bmad-loop/ci-wait.sh` exists.</action>
-    <action>Note: host/project/platform are read from the git remote by default; the trace MR target branch is detected from `origin/HEAD`. Settings can be overridden via env vars (`BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TARGET_BRANCH/TIMEOUT_SEC/MR_FOR_CI`) if the script is wrapped.</action>
+    <action>Verify `.bmad-loop/ci-wait.sh` exists and is readable.</action>
+    <action>Note: bmad-loop caps each verify command at 30 minutes — keep `TIMEOUT_SEC` below that. Optional overrides (via env when the command is wrapped): `BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TARGET_BRANCH/TIMEOUT_SEC/MR_FOR_CI`.</action>
   </true>
   <false>
     <output>Skipping ci-wait — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
