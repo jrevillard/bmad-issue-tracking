@@ -42,7 +42,7 @@
       - STOP
 # Create the issue
 # Ensure all labels exist (static + dynamic like prd:{prd_key}, {prd_key}:epic-N)
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 labels = sys.argv[1].strip().split('\n')
 for label in labels:
@@ -54,7 +54,7 @@ for label in labels:
     as: label_name
     do:
       - INCLUDE: common/create-label
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 labels = sys.argv[1].strip().split('\n')
 print(','.join(labels))

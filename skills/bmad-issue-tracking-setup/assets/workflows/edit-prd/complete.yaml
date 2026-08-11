@@ -16,7 +16,7 @@
         message: "PRD issue not found. Skipping."
         stop: true
 # Strip frontmatter and write description file
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     lines = f.readlines()

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Requires BMM 6.11.0+** (was 6.4.0+): targets the 6.11.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
+- All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.11.0 makes `uv` a real requirement and stops assuming a system Python).
+- `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.11.0.
+- `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
+- `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
+
+### Removed
+
+- `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.11.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.
+
 ### Fixed
 
 - `ensure-board.yaml`: added missing `--paginate` to `glab api projects/{project}/labels` — projects with >20 labels would miss status labels beyond the first page, causing board columns to not be created

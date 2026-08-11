@@ -19,7 +19,7 @@ _NO_ACTIVATION = set()
 # (they do no API calls and need no config vars).
 _NO_CHECK_CONFIG_COMPLETE = {
     "create-architecture/complete.yaml",
-    "create-ux-design/complete.yaml",
+    "bmad-ux/complete.yaml",
     "create-epics-and-stories/complete.yaml",
 }
 
@@ -137,9 +137,9 @@ class TestActivationSymmetry:
     """
 
     _PRD_SCOPED_ACTIVATIONS = {
-        "edit-prd", "check-implementation-readiness", "correct-course",
+        "edit-prd", "correct-course",
         "retrospective", "sprint-status", "create-architecture",
-        "create-ux-design", "create-epics-and-stories", "sprint-planning",
+        "bmad-ux", "create-epics-and-stories", "sprint-planning",
         "create-story", "dev-story", "code-review",
     }
     # Activations that create their own PRD (no find-prd needed)

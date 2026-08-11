@@ -320,7 +320,7 @@ This iterates over each story branch, pulls the worktree, reads sprint-status, a
     items: modified_stories
     as: story_file
     do:
-      - RUN: python3 -c "print(sys.argv[1].replace('.md', ''))" {story_file}
+      - RUN: uv run python -c "print(sys.argv[1].replace('.md', ''))" {story_file}
         STORE: story_key
       - RUN: glab api "projects/{project}/issues?search={story_key}&labels=prd{sep}{prd_key}" --hostname {host}
         STORE: story_issues

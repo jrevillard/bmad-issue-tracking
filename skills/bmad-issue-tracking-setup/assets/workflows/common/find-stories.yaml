@@ -14,7 +14,7 @@
 - READ: _bmad/custom/issue-tracking.yaml
   EXTRACT:
     story_pattern: issue_tracking.branch_patterns.story
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys
 print(sys.argv[1].replace('{prd_key}', sys.argv[2]).replace('{story_key}', '*'))
 " {story_pattern} {prd_key}
@@ -39,7 +39,7 @@ print(sys.argv[1].replace('{prd_key}', sys.argv[2]).replace('{story_key}', '*'))
           store: worktree_path
       - RUN: cd {worktree_path} && git pull --ff-only
         EXPECT_EXIT: 0
-      - RUN: python3 -c "
+      - RUN: uv run python -c "
 import sys
 parts = sys.argv[1].rstrip().split('/')
 if len(parts) >= 3:

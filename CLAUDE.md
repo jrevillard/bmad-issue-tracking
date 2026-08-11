@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BMAD extension module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
 
-Requires BMM 6.4.0+ (uniform customize.toml support across all BMM workflows).
+Requires BMM 6.11.0+ (uniform customize.toml support across all BMM workflows; targets the 6.11.0 skill set — `bmad-ux`, consolidated sprint-planning, `uv`-based tooling).
 
 ## Architecture
 
@@ -68,20 +68,19 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 
 | Workflow | Activation | on_complete | MR direction |
 |----------|-----------|-------------|--------------|
-| bmad-prd (6.8.0+) | Detect intent: create → ask key + create worktree; update/validate → find worktree | Create → issue + commit + push + draft MR; update → update description | PRD → default (draft, create only) |
-| create-prd (6.4.0–6.7.x) | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD → default (draft) |
+| bmad-prd (6.11.0+) | Detect intent: create → ask key + create worktree; update/validate → find worktree | Create → issue + commit + push + draft MR; update → update description | PRD → default (draft, create only) |
+| create-prd (6.11.0+ shim) | Create/switch to PRD worktree | Commit + push + issue + draft MR | PRD → default (draft) |
 | create-architecture | Switch to PRD worktree | Commit + push | (PRD worktree) |
-| create-ux-design | Switch to PRD worktree | Commit + push | (PRD worktree) |
+| bmad-ux | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | create-epics-and-stories | Switch to PRD worktree | Commit + push | (PRD worktree) |
 | sprint-planning | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (PRD worktree) |
-| edit-prd (6.4.0–6.7.x) | Switch to PRD worktree | Update PRD issue description | (PRD worktree) |
-| check-implementation-readiness | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
+| edit-prd (6.11.0+ shim) | Switch to PRD worktree | Update PRD issue description | (PRD worktree) |
 | correct-course | Switch to PRD worktree | Update issue descriptions if artifacts modified | (PRD worktree) |
 | retrospective | Switch to PRD worktree | Create retrospective issue + close | (PRD worktree) |
-| create-story | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
-| dev-story | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
+| create-story (shim) | Ask story key, create/switch to story worktree (from PRD) | Commit + push + issue + MR | story → PRD |
+| dev-story (shim) | Find story with status `ready-for-dev`, switch to worktree | Commit + push + update issue | (MR from create-story) |
 | code-review | Find story with status `review`, switch to worktree | Commit + push + post review + optional merge | story → PRD |
-| sprint-status | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (none) |
+| sprint-status (shim) | Switch to PRD worktree | Trigger issue sync (steps 4-6) | (none) |
 
 ## Platform differences
 

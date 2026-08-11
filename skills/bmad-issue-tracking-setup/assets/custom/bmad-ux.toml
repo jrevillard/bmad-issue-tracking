@@ -1,0 +1,15 @@
+# Issue Tracking override for bmad-ux
+# Switches to the PRD worktree before running the BMM workflow.
+# Commits and pushes UX design changes after completion.
+# Overrides merge: scalars win, arrays append.
+# Requires BMM 6.11.0+ (replaces bmad-create-ux-design, removed in 6.11.0).
+
+[workflow]
+
+activation_steps_append = [
+  "Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/bmad-ux/activation.yaml`.",
+]
+
+on_complete = """
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/bmad-ux/complete.yaml`.
+"""

@@ -13,7 +13,7 @@
 - READ: {implementation_artifacts}/sprint-status.yaml
   EXTRACT:
     entries: development_status
-- RUN: python3 -c "
+- RUN: uv run python -c "
 import sys, re
 content = sys.argv[1]
 epics = set()
@@ -29,7 +29,7 @@ for n in sorted(epics):
     items: epic_numbers
     as: epic_num
     do:
-      - RUN: python3 -c "
+      - RUN: uv run python -c "
 import sys
 colors = ['#428BCA', '#44AD8E', '#F0AD4E', '#D9534F', '#6B5CE7', '#1ABC9C', '#E74C8B', '#95A5A6', '#3498DB', '#E67E22']
 idx = (int(sys.argv[1]) - 1) % len(colors)
