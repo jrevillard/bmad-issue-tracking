@@ -141,15 +141,21 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
-<step n="3c" goal="Deploy bmad-loop CI gate (optional)">
-<action>The module ships `ci-wait.sh` — a bmad-loop `[verify]` command that pushes each story branch and waits for the remote pipeline. A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop. The script derives branch/host/project/platform from git and its working directory, so no environment variables are required. Deploy only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`).</action>
+<step n="3c" goal="Deploy bmad-loop CI gate + story tracking (optional)">
+<action>The module ships two pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
+
+- **`ci-wait.sh`** — a `[verify]` command that ONLY checks the remote CI state (no push, no MR, no fix). A red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
+- **`story-track` plugin** — an LLM workflow session at `post_review_result` that pushes the final story branch, ensures the trace MR exists, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs BEFORE the CI check, so the branch is pushed and the pipeline exists when `ci-wait` polls.
+
+The scripts derive branch/host/project/platform from git and their working directory — no environment variables required.</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy the script to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees):</action>
+    <action>Copy `ci-wait.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the `story-track` plugin into `.bmad-loop/plugins/`:</action>
     ```bash
-    mkdir -p .bmad-loop
+    mkdir -p .bmad-loop .bmad-loop/plugins
     cp -f <path>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
+    cp -rf <path>/bmad-loop/story-track .bmad-loop/plugins/story-track
     ```
     <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
@@ -159,11 +165,11 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     [verify]
     commands = ["bash .bmad-loop/ci-wait.sh"]
     ```
-    <action>Verify `.bmad-loop/ci-wait.sh` exists and is readable.</action>
-    <action>Note: bmad-loop caps each verify command at 30 minutes — keep `TIMEOUT_SEC` below that. Optional overrides (via env when the command is wrapped): `BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TARGET_BRANCH/TIMEOUT_SEC/MR_FOR_CI`.</action>
+    <action>Verify `.bmad-loop/ci-wait.sh` and `.bmad-loop/plugins/story-track/plugin.toml` exist.</action>
+    <action>Note: the `story-track` plugin is declarative (no `[python]` module) — it loads automatically, no trust allowlist. bmad-loop caps each verify command at 30 minutes — keep `TIMEOUT_SEC` below that. Optional overrides (via env when the command is wrapped): `BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TIMEOUT_SEC`.</action>
   </true>
   <false>
-    <output>Skipping ci-wait — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+    <output>Skipping ci-wait + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
   </false>
 </check>
 </step>

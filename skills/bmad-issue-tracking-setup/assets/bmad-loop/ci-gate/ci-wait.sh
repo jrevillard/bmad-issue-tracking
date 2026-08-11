@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# bmad-loop CI gate, used as a `[verify]` command.
+# bmad-loop CI CHECK, used as a `[verify]` command.
 #
-# bmad-loop runs `[verify]` commands with cwd = the story worktree (worktree
-# isolation) and WITHOUT the BMAD_LOOP_* plugin-hook environment — so this
-# script derives everything (story branch, remote host/project/platform) from
-# git and the current directory. A red/timeout CI exits non-zero, which
-# bmad-loop treats as a failed verify command and answers with a feedback-driven
-# repair session (it re-runs bmad-build-auto with the failing output as
-# feedback) — the auto-fix loop, bounded by bmad-loop's max_dev_attempts.
+# CHECK-ONLY: it does NOT push, create MRs, or fix. The LLM `story-track`
+# workflow (post_review_result) pushes the final story branch and creates the
+# trace MR before this runs. This script only finds the remote pipeline (the
+# story branch's, or the story's trace MR) and waits for it to go green.
+#
+# Exit 0 on green, or when no pipeline exists (CI not triggered yet / not
+# configured). Exit non-zero on red/timeout -> bmad-loop treats it as a failed
+# verify command and answers with a feedback-driven repair session (re-runs
+# bmad-build-auto with the failing output) — the auto-fix loop.
 #
 # Setup (see /bmad-issue-tracking-setup step 3c):
 #   cp <assets>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
 #   # .bmad-loop/policy.toml
 #   [scm]
-#   worktree_seed = [".bmad-loop/ci-wait.sh"]   # copied into each worktree
+#   worktree_seed = [".bmad-loop/ci-wait.sh"]
 #   [verify]
 #   commands = ["bash .bmad-loop/ci-wait.sh"]
 #
@@ -26,9 +28,7 @@ branch="$(git -C "$worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 platform="${BMAD_LOOP_SETTING_PLATFORM:-}"
 host="${BMAD_LOOP_SETTING_HOST:-}"
 project="${BMAD_LOOP_SETTING_PROJECT:-}"
-target="${BMAD_LOOP_SETTING_TARGET_BRANCH:-}"
 timeout_sec="${BMAD_LOOP_SETTING_TIMEOUT_SEC:-1500}"
-mr_for_ci="${BMAD_LOOP_SETTING_MR_FOR_CI:-auto}"
 
 log() { echo "[ci-wait] $*"; }
 fail() { echo "[ci-wait] FAIL: $*"; exit 1; }
@@ -70,15 +70,9 @@ fi
 [ -n "$project" ] || fail "could not resolve project from remote"
 [ -n "$platform" ] || fail "platform not resolved (gitlab | github)"
 
-# Resolve the target branch (for the trace MR) from origin/HEAD when unset.
-if [ -z "$target" ]; then
-  target="$(git -C "$worktree" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
-  [ -n "$target" ] || target="main"
-fi
-
 # ------------------------------------------------------------------- helpers
 
-# Latest pipeline status for a branch, or "no_pipeline".
+# Latest pipeline status for the branch, or "no_pipeline".
 branch_status() {
   case "$platform" in
     gitlab)
@@ -94,8 +88,8 @@ branch_status() {
   esac
 }
 
-# Pipeline status of the trace MR/PR for the branch, or "no_mr"/"no_pipeline".
-# Aggregates ALL check states on GitHub (a single green job must not pass).
+# Pipeline status of the story's trace MR/PR (created by story-track), or
+# "no_mr"/"no_pipeline". Aggregates ALL check states on GitHub.
 mr_status() {
   case "$platform" in
     gitlab)
@@ -121,71 +115,31 @@ else: print("in_progress")' 2>/dev/null \
   esac
 }
 
-# Create a trace MR/PR (CI vehicle + execution trace). Left open.
-create_mr() {
-  case "$platform" in
-    gitlab)
-      glab mr create --source-branch "$branch" --target-branch "$target" \
-        --title "CI: $branch" --description "Trace MR created by the bmad-loop ci-wait verify command." \
-        --yes --no-editor -R "${host}/${project}" >/dev/null 2>&1 \
-        && log "created trace MR for $branch -> $target"
-      ;;
-    github)
-      gh pr create --base "$target" --head "$branch" \
-        --title "CI: $branch" --body "Trace PR created by the bmad-loop ci-wait verify command." \
-        -R "${host}/${project}" >/dev/null 2>&1 \
-        && log "created trace PR for $branch -> $target"
-      ;;
-  esac
-}
-
 # -------------------------------------------------------------------- main
 
-# 1. Push the story branch (from the worktree cwd).
-if ! git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1; then
-  fail "git push of $branch failed"
-fi
-log "pushed $branch"
-
-# Give GitLab/GitHub a moment to index the just-pushed ref before deciding
-# whether a branch pipeline exists (avoids a spurious auto-mode MR).
-sleep 8
-
-# 2. Decide which pipeline to poll.
-mode="branch"
-if [ "$mr_for_ci" = "always" ]; then
-  mode="mr"
-elif [ "$mr_for_ci" = "auto" ]; then
-  s="$(branch_status)"
-  if [ "$s" = "no_pipeline" ] || [ -z "$s" ]; then
-    mode="mr"
+# 1. Which pipeline to poll: the branch's if it has one, else the trace MR's.
+bs="$(branch_status)"
+mode="branch"; s="$bs"
+if [ "$s" = "no_pipeline" ] || [ -z "$s" ]; then
+  ms="$(mr_status)"
+  if [ "$ms" = "no_mr" ] || [ "$ms" = "no_pipeline" ] || [ -z "$ms" ]; then
+    log "no pipeline found for $branch — no CI gate"
+    exit 0
   fi
-fi
-
-if [ "$mode" = "mr" ]; then
-  if [ "$(mr_status)" = "no_mr" ]; then
-    create_mr
-    # GitLab/GitHub index the new MR asynchronously — retry with backoff.
-    for attempt in 1 2 3 4 5; do
-      sleep "$(( attempt * 3 ))"
-      [ "$(mr_status)" != "no_mr" ] && break
-    done
-    [ "$(mr_status)" != "no_mr" ] || fail "could not create trace MR"
-  fi
+  mode="mr"; s="$ms"
 fi
 log "polling $mode pipeline for $branch (timeout ${timeout_sec}s)"
 
-# 3. Poll until green/red/timeout.
+# 2. Poll until green/red/timeout.
 deadline=$(( $(date +%s) + timeout_sec ))
-no_pipeline_count=0
 while :; do
   [ "$(date +%s)" -ge "$deadline" ] && fail "CI timeout after ${timeout_sec}s"
   if [ "$mode" = "mr" ]; then
     s="$(mr_status)"
-    # MR pipeline not indexed yet but a branch pipeline exists — fall back.
     if [ "$s" = "no_pipeline" ]; then
-      bs="$(branch_status)"
-      [ "$bs" = "no_pipeline" ] || { mode="branch"; s="$bs"; }
+      # MR pipeline not indexed yet but a branch pipeline exists — fall back.
+      bs2="$(branch_status)"
+      [ "$bs2" = "no_pipeline" ] || { mode="branch"; s="$bs2"; }
     fi
   else
     s="$(branch_status)"
@@ -195,20 +149,7 @@ while :; do
     failed|FAILURE|failure|error|ERROR|cancelled|canceled|skipped|manual|neutral|stale|timed_out|action_required)
       fail "CI failed ($s)" ;;
     no_mr) fail "no MR available for CI" ;;
-    running|pending|queued|in_progress|no_pipeline|""|null)
-      if [ "$mode" = "branch" ] && { [ "$s" = "no_pipeline" ] || [ -z "$s" ]; }; then
-        no_pipeline_count=$(( no_pipeline_count + 1 ))
-        # Persistent absence of a branch pipeline (e.g. mr_for_ci=never on an
-        # MR-only-CI project): there is no CI to gate. NOTE: this passes the
-        # gate (exit 0) — a misconfigured pipeline trigger means NO gate.
-        if [ "$no_pipeline_count" -ge 3 ]; then
-          log "no pipeline found for $branch after grace — no CI gate"
-          exit 0
-        fi
-      else
-        no_pipeline_count=0
-      fi
-      sleep 30 ;;
+    running|pending|queued|in_progress|no_pipeline|""|null) sleep 30 ;;
     *) sleep 30 ;;
   esac
 done
