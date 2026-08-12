@@ -42,6 +42,16 @@ fail() { echo "[ci-wait] FAIL: $*"; exit 1; }
 
 [ -n "$branch" ] || fail "not on a git branch (cwd=$worktree)"
 
+# Resolve platform from the module config first — self-hosted instances
+# (opensource.unicc.org, GHE, ...) don't betray their platform in the hostname,
+# but the module records it as `git_platform` (or `platform`) in
+# `_bmad/custom/issue-tracking.yaml`, which bmad-loop copies into each worktree.
+cfg="$worktree/_bmad/custom/issue-tracking.yaml"
+if [ -z "$platform" ] && [ -f "$cfg" ]; then
+  platform="$(sed -n 's/^\s*git_platform:\s*//p' "$cfg" | head -1 | tr -d '"'"'"'[:space:]')"
+  [ -z "$platform" ] && platform="$(sed -n 's/^\s*platform:\s*//p' "$cfg" | head -1 | tr -d '"'"'"'[:space:]')"
+fi
+
 # Resolve host/project/platform from the git remote when not configured.
 if [ -z "$host" ] || [ -z "$project" ] || [ -z "$platform" ]; then
   remote="$(git -C "$worktree" remote get-url origin 2>/dev/null || true)"

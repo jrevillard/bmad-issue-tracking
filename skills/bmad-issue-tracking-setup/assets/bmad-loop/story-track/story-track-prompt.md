@@ -26,10 +26,12 @@ Do this after the push + MR. If any step here fails, **report it and continue â€
 do not fail the session over tracking**. The post-run `/bmad-bmm-issue-sync`
 reconciles the full board.
 
-1. Read `_bmad/custom/issue-tracking.yaml` for `platform`, `host`, `project`
-   (issue tracker). Read `prd_key` from the PRD frontmatter: find `prd.md` under
-   the planning artifacts (path from `_bmad/bmm/config.yaml` `planning_artifacts`,
-   or search the repo for `prd.md`) and read its `prd_key` frontmatter.
+1. Read `_bmad/custom/issue-tracking.yaml` for `git_platform` (git remote
+   platform â€” `gitlab` or `github`; self-hosted GitLab instances have a custom
+   host but `git_platform: gitlab`), `host`, `project`. Read `prd_key` from the
+   PRD frontmatter: find `prd.md` under the planning artifacts (path from
+   `_bmad/bmm/config.yaml` `planning_artifacts`, or search the repo for
+   `prd.md`) and read its `prd_key` frontmatter.
 
 2. Find the story's issue by its sprint key `{story_key}`, scoped by the prd label:
    - GitLab: `glab api "projects/{project}/issues?search={story_key}&labels=prd::{prd_key}" --hostname {host}`
