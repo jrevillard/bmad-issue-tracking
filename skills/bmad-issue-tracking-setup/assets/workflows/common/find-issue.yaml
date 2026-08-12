@@ -9,7 +9,7 @@
 #   - issue_id: the issue IID (GitLab) or number (GitHub); empty string if not found
 # Side effects: none
 
-- RUN: glab api "projects/{project}/issues?search={search_text}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
+- RUN: glab api "projects/{project_enc}/issues?search={search_text}&labels=prd{sep}{prd_key}" --hostname {host} --paginate
   STORE: issue_result
   PLATFORM: gitlab
 - RUN: gh api "search/issues?q={search_text}+repo:{project}+label:prd{sep}{prd_key}&per_page=100" --hostname {host} --paginate | uv run --no-project python -c "import json,sys; pages=sys.stdin.read().strip().split('\n'); items=[]; [items.extend(json.loads(p).get('items',[])) for p in pages if p]; print(json.dumps(items))"

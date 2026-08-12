@@ -11,7 +11,7 @@
     - STOP
 
 # Check if BMAD Sprint Board already exists
-- RUN: glab api "projects/{project}/boards" --hostname {host} | uv run --no-project python -c "
+- RUN: glab api "projects/{project_enc}/boards" --hostname {host} | uv run --no-project python -c "
 import json, sys
 boards = json.load(sys.stdin)
 print(next((b['id'] for b in boards if b['name'] == 'BMAD Sprint Board'), ''))
@@ -20,12 +20,12 @@ print(next((b['id'] for b in boards if b['name'] == 'BMAD Sprint Board'), ''))
   PLATFORM: gitlab
 - CHECK: empty board_id
   TRUE:
-    - RUN: glab api --method POST "projects/{project}/boards" --hostname {host} -f "name=BMAD Sprint Board" | uv run --no-project python -c "import json,sys; print(json.load(sys.stdin)['id'])"
+    - RUN: glab api --method POST "projects/{project_enc}/boards" --hostname {host} -f "name=BMAD Sprint Board" | uv run --no-project python -c "import json,sys; print(json.load(sys.stdin)['id'])"
       STORE: board_id
       PLATFORM: gitlab
 
 # Add columns for active status labels (omit done/closed/deferred/optional)
-- RUN: glab api "projects/{project}/labels" --hostname {host} --paginate | uv run --no-project python -c "
+- RUN: glab api "projects/{project_enc}/labels" --hostname {host} --paginate | uv run --no-project python -c "
 import json, sys, re
 pages = sys.stdin.read().strip().split('\n')
 labels = []
@@ -42,5 +42,5 @@ for l in labels:
     items: status_label_ids
     as: label_id
     do:
-      - RUN: glab api --method POST "projects/{project}/boards/{board_id}/lists" --hostname {host} -f "label_id={label_id}" 2>/dev/null || true
+      - RUN: glab api --method POST "projects/{project_enc}/boards/{board_id}/lists" --hostname {host} -f "label_id={label_id}" 2>/dev/null || true
         PLATFORM: gitlab

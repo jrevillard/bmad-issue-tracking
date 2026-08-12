@@ -61,7 +61,7 @@ else:
         - WRITE:
             file: /tmp/review-findings.md
             content: "{review_section}"
-        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/review-findings.md"
+        - RUN: glab api --method POST "projects/{project_enc}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/review-findings.md"
           PLATFORM: gitlab
           EXPECT_EXIT: 0
         - RUN: gh issue comment {issue_id} --body-file "/tmp/review-findings.md" -R "{host}/{project}"

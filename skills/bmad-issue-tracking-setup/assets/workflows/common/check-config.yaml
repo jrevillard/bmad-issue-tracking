@@ -45,3 +45,15 @@
     - OUTPUT:
         message: "worktree_base not configured. Run /bmad-issue-tracking-setup (step 4) to configure."
         stop: true
+- CHECK: exists project
+  FALSE:
+    - OUTPUT:
+        message: "project not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
+        stop: true
+# GitLab API requires the URL-encoded namespace path for nested groups
+# (`projects/un%2Fitu%2Fgenie-ai`, not `projects/un/itu/genie-ai`).
+- RUN: uv run --no-project python -c "
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+" {project}
+  STORE: project_enc

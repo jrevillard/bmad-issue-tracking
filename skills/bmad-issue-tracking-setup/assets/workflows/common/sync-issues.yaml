@@ -16,7 +16,7 @@
 - SET: { variable: sync_updated, value: "0" }
 - SET: { variable: sync_skipped, value: "0" }
 # Fetch all PRD issues (bulk fetch for matching)
-- RUN: glab api "projects/{project}/issues?labels=prd{sep}{prd_key}&state=all&per_page=100" --hostname {host} --paginate | uv run --no-project python -c "
+- RUN: glab api "projects/{project_enc}/issues?labels=prd{sep}{prd_key}&state=all&per_page=100" --hostname {host} --paginate | uv run --no-project python -c "
 import json, sys
 issues = json.load(sys.stdin)
 for i in issues:
@@ -149,7 +149,7 @@ else:
           # Found — check status
           - CHECK: platform eq "gitlab"
             TRUE:
-              - RUN: glab api "projects/{project}/issues/{issue_id}" --hostname {host} | uv run --no-project python -c "
+              - RUN: glab api "projects/{project_enc}/issues/{issue_id}" --hostname {host} | uv run --no-project python -c "
 import json, sys
 for l in json.load(sys.stdin)['labels']:
     if l.startswith('status'):

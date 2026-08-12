@@ -56,7 +56,7 @@ else:
       EXPECT_EXIT: 0
     - CHECK: empty issue_id
       FALSE:
-        - RUN: glab api --method POST "projects/{project}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
+        - RUN: glab api --method POST "projects/{project_enc}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
           PLATFORM: gitlab
           EXPECT_EXIT: 0
         - RUN: gh issue comment {issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"

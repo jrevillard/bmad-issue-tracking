@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ci-wait.sh` (bmad-loop CI gate): configuration/environment errors now exit **126** (bmad-loop's env-fault class → the run escalates/pauses, budget resets) instead of 1 (fixable → futile repair burn → story defer). A red/timeout CI still exits 1 → `_fix_phase`.
 - `ci-wait.sh`: platform resolved from `_bmad/custom/issue-tracking.yaml` (`git_platform`) so self-hosted GitLab/GitHub instances work; inline YAML comments stripped; glab/gh API or auth failures escalate instead of silently passing as "no pipeline".
 - `story-track`: the trace MR now targets the **PRD branch** (`branch_patterns.prd`) instead of `main`, its title follows the module's convention `Story {epic}.{story}: {title}` instead of `CI: {branch}`, and a re-driven story's trace MR is **re-pointed to the new branch** (GitLab) with the old remote branch deleted — one active trace MR per story, keeping the MR's history.
+- **GitLab nested-group namespaces fixed**: the GitLab API requires the URL-encoded project path (`projects/un%2Fitu%2Fgenie-ai`, not `projects/un/itu/genie-ai`). `common/check-config.yaml` now computes `project_enc` and all `glab api "projects/..."` calls (issue sync, find/create/update issues, labels, board, code-review/dev-story comments, `ci-wait.sh`, `story-track`) use it — projects under group/subgroup namespaces work.
 
 ## [2.3.0] - 2026-08-11
 

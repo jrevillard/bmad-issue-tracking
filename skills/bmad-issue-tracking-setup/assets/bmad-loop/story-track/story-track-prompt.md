@@ -13,7 +13,10 @@ These must succeed — the subsequent CI check depends on them.
 2. **Ensure a trace MR/PR exists** for this branch (CI vehicle + execution
    trace; leave it open — GitLab auto-marks it merged after the merge-back is
    pushed to the target branch):
-   - Resolve `{host}`/`{project}` from `git remote get-url origin`. Resolve the
+   - Resolve `{host}`/`{project}` from `git remote get-url origin`. For every
+     `glab api "projects/..."` call, **URL-encode the project path** (nested
+     groups need it): `projects/{project}` → `projects/{project//\//%2F}` (e.g.
+     `un/itu/genie-ai` → `un%2Fitu%2Fgenie-ai`). Resolve the
      target branch as the **PRD branch** (NOT main): read `branch_patterns.prd`
      from `_bmad/custom/issue-tracking.yaml` (e.g. `feat/{prd_key}/prd`) and
      substitute `prd_key` (read from `prd.md` frontmatter). The trace MR targets

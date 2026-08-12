@@ -12,7 +12,7 @@
 # Requires: host and project in scope (provided by common/check-config via callers)
 
 # Search for existing issue
-- RUN: glab api --paginate "projects/{project}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
+- RUN: glab api --paginate "projects/{project_enc}/issues?search={title}&labels=prd{sep}{prd_key}" --hostname {host}
   STORE: search_result
   PLATFORM: gitlab
 - RUN: gh api "repos/{project}/issues?state=all&per_page=100&labels=prd{sep}{prd_key}" --hostname {host} --paginate
@@ -60,7 +60,7 @@ labels = sys.argv[1].strip().split('\n')
 print(','.join(labels))
 " "{labels}"
   STORE: label_arg
-- RUN: glab api --method POST "projects/{project}/issues" --hostname {host} -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
+- RUN: glab api --method POST "projects/{project_enc}/issues" --hostname {host} -f "title={title}" -F "description=@{description_file}" -f "labels={label_arg}"
   STORE: create_result
   PLATFORM: gitlab
 - RUN: gh issue create --title "{title}" --body-file "{description_file}" --label "{label_arg}" -R "{host}/{project}"
