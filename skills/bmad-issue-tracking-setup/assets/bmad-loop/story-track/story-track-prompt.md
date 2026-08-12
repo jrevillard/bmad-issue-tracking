@@ -33,9 +33,14 @@ These must succeed — the subsequent CI check depends on them.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create
      `gh pr create --base {target} --head {branch} --title "{title}" --body "Trace PR created by bmad-loop story-track." -R "{host}/{project}"`.
 
-3. **Deduplicate trace MRs for this story** (a re-driven story — e.g. after a defer — leaves a stale MR from an earlier run on another branch): after ensuring the current trace MR exists, find every OTHER open MR/PR referencing this story and close it, keeping only the one whose source branch is the CURRENT branch. Search by the story title or key:
-   - GitLab: `glab api "projects/{project}/merge_requests?state=opened&search={title}"` (or `search={story_key}`) → for each result whose `source_branch` is NOT the current branch, `glab mr close {iid} -R "{host}/{project}"`.
-   - GitHub: `gh pr list --state open --search "in:title {title}" -R "{host}/{project}"` → for each whose head ref is not the current branch, `gh pr close {num} -R "{host}/{project}"`.
+3. **One trace MR per story** (a re-driven story — e.g. after a defer — leaves a stale MR from an earlier run on another branch; re-point it instead of stacking duplicates):
+   - Find open MRs/PRs referencing this story (search by title `{title}` or key `{story_key}`):
+     - GitLab: `glab api "projects/{project}/merge_requests?state=opened&search={title}"`.
+     - GitHub: `gh pr list --state open --search "in:title {title}" -R "{host}/{project}"`.
+   - If an MR/PR exists whose source branch is NOT the current branch:
+     - **GitLab — re-point it**: `glab mr update {iid} --source-branch {current_branch} -R "{host}/{project}"` (keeps the MR's history/comments; its diff becomes the re-driven story's). Then **delete the old remote branch**: `git push origin --delete <old_source_branch>` — bmad-loop keeps it locally (keep_failed), so only the remote ref is removed.
+     - **GitHub — no re-point support**: close the old PR (`gh pr close {num}`) and create a new one on the current branch (title `{title}`).
+   - If no MR/PR exists, create one on the current branch (step 2 above).
    This is best-effort — if it fails, report and continue.
 
 ## Best-effort: mirror the story to its issue
