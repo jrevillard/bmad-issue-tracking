@@ -31,20 +31,19 @@ These must succeed — the subsequent CI check depends on them.
      `{title}` from the story spec's `# Story {e}.{n}: <title>` heading (search
      for the story file under the implementation artifacts whose name starts
      with the story key); fall back to the branch slug title-cased.
-   - GitLab: if `glab api "projects/{project}/merge_requests?source_branch={branch}"` is empty, create
+   - GitLab: if `glab api "projects/{project_enc}/merge_requests?source_branch={branch}"` is empty, create
      `glab mr create --source-branch {branch} --target-branch {target} --title "{title}" --description "Trace MR created by bmad-loop story-track." --yes --no-editor -R "{host}/{project}"`.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create
      `gh pr create --base {target} --head {branch} --title "{title}" --body "Trace PR created by bmad-loop story-track." -R "{host}/{project}"`.
 
-3. **One trace MR per story** (a re-driven story — e.g. after a defer — leaves a stale MR from an earlier run on another branch; re-point it instead of stacking duplicates):
+3. **One trace MR per story** (a re-driven story — e.g. after a defer — leaves a stale MR from an earlier run on another branch). The GitLab API does NOT support changing an MR's source branch, so the stale MR is closed and a new one is created on the current branch:
    - Find open MRs/PRs referencing this story (search by title `{title}` or key `{story_key}`):
-     - GitLab: `glab api "projects/{project}/merge_requests?state=opened&search={title}"`.
+     - GitLab: `glab api "projects/{project_enc}/merge_requests?state=opened&search={title}"`.
      - GitHub: `gh pr list --state open --search "in:title {title}" -R "{host}/{project}"`.
    - If an MR/PR exists whose source branch is NOT the current branch:
-     - **GitLab — re-point it** via the API (keeps the MR's history/comments; its diff becomes the re-driven story's):
-       `glab api --method PUT "projects/{project}/merge_requests/{iid}" --hostname {host} -F source_branch={current_branch}`.
-       Then **delete the old remote branch**: `git push origin --delete <old_source_branch>` — bmad-loop keeps it locally (keep_failed), so only the remote ref is removed.
-     - **GitHub — no re-point support**: close the old PR (`gh pr close {num}`) and create a new one on the current branch (title `{title}`).
+     - **GitLab**: close it (`glab mr close {iid} -R "{host}/{project}"`) and create a new one on the current branch (title `{title}`, step 2 above).
+     - **GitHub**: close the old PR (`gh pr close {num}`) and create a new one on the current branch.
+     - In both cases, delete the old remote branch: `git push origin --delete <old_source_branch>` — bmad-loop keeps it locally (keep_failed), so only the remote ref is removed.
    - If no MR/PR exists, create one on the current branch (step 2 above).
    This is best-effort — if it fails, report and continue.
 
