@@ -33,6 +33,11 @@ These must succeed — the subsequent CI check depends on them.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create
      `gh pr create --base {target} --head {branch} --title "{title}" --body "Trace PR created by bmad-loop story-track." -R "{host}/{project}"`.
 
+3. **Deduplicate trace MRs for this story** (a re-driven story — e.g. after a defer — leaves a stale MR from an earlier run on another branch): after ensuring the current trace MR exists, find every OTHER open MR/PR referencing this story and close it, keeping only the one whose source branch is the CURRENT branch. Search by the story title or key:
+   - GitLab: `glab api "projects/{project}/merge_requests?state=opened&search={title}"` (or `search={story_key}`) → for each result whose `source_branch` is NOT the current branch, `glab mr close {iid} -R "{host}/{project}"`.
+   - GitHub: `gh pr list --state open --search "in:title {title}" -R "{host}/{project}"` → for each whose head ref is not the current branch, `gh pr close {num} -R "{host}/{project}"`.
+   This is best-effort — if it fails, report and continue.
+
 ## Best-effort: mirror the story to its issue
 
 Do this after the push + MR. If any step here fails, **report it and continue —
