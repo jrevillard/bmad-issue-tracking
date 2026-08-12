@@ -36,11 +36,16 @@ project="${BMAD_LOOP_SETTING_PROJECT:-}"
 timeout_sec="${BMAD_LOOP_SETTING_TIMEOUT_SEC:-1500}"
 
 log() { echo "[ci-wait] $*"; }
+# The gate itself: red/timeout CI. bmad-loop classifies rc=1 as fixable -> _fix_phase.
 fail() { echo "[ci-wait] FAIL: $*"; exit 1; }
+# Configuration/environment errors (not the story's fault): rc=126 is bmad-loop's
+# env-fault class -> the run ESCALATES (pauses for an environment fix, budget
+# resets) instead of burning the story's repair budget on a futile repair.
+env_fail() { echo "[ci-wait] ENV-FAULT: $*"; exit 126; }
 
 # ------------------------------------------------------------------ settings
 
-[ -n "$branch" ] || fail "not on a git branch (cwd=$worktree)"
+[ -n "$branch" ] || env_fail "not on a git branch (cwd=$worktree)"
 
 # Resolve platform from the module config first — self-hosted instances
 # (opensource.unicc.org, GHE, ...) don't betray their platform in the hostname,
@@ -55,7 +60,7 @@ fi
 # Resolve host/project/platform from the git remote when not configured.
 if [ -z "$host" ] || [ -z "$project" ] || [ -z "$platform" ]; then
   remote="$(git -C "$worktree" remote get-url origin 2>/dev/null || true)"
-  [ -n "$remote" ] || fail "no origin remote and host/project not configured"
+  [ -n "$remote" ] || env_fail "no origin remote and host/project not configured"
   case "$remote" in
     git@*)
       rhost="${remote#git@}"; rhost="${rhost%%:*}"
@@ -71,19 +76,28 @@ if [ -z "$host" ] || [ -z "$project" ] || [ -z "$platform" ]; then
       rproj="$(printf '%s' "$remote" | sed -E 's#^https?://[^/]+/(.*)$#\1#')"
       rproj="${rproj%.git}"
       ;;
-    *) fail "unparseable origin remote: $remote" ;;
+    *) env_fail "unparseable origin remote: $remote" ;;
   esac
-  [ -n "$rhost" ] || fail "could not resolve host from remote"
+  [ -n "$rhost" ] || env_fail "could not resolve host from remote"
   [ -z "$host" ] && host="$rhost"
   [ -z "$project" ] && project="$rproj"
   [ -z "$platform" ] && case "$host" in
     *gitlab*) platform="gitlab" ;;
     *github*) platform="github" ;;
-    *) fail "could not infer platform from host ($host) — set BMAD_LOOP_SETTING_PLATFORM" ;;
+    *) env_fail "could not infer platform from host ($host) — set git_platform in _bmad/custom/issue-tracking.yaml or BMAD_LOOP_SETTING_PLATFORM" ;;
   esac
 fi
-[ -n "$project" ] || fail "could not resolve project from remote"
-[ -n "$platform" ] || fail "platform not resolved (gitlab | github)"
+[ -n "$project" ] || env_fail "could not resolve project from remote"
+[ -n "$platform" ] || env_fail "platform not resolved (gitlab | github)"
+
+# The CI CLI must exist — a missing glab/gh would silently read "no_pipeline"
+# and pass the gate with no CI run at all.
+if [ "$platform" = "gitlab" ] && ! command -v glab >/dev/null 2>&1; then
+  env_fail "glab CLI not found on PATH"
+fi
+if [ "$platform" = "github" ] && ! command -v gh >/dev/null 2>&1; then
+  env_fail "gh CLI not found on PATH"
+fi
 
 # ------------------------------------------------------------------- helpers
 
@@ -135,7 +149,7 @@ else: print("in_progress")' 2>/dev/null \
 # 1. Push the story branch (propagate the current code — including any
 #    _fix_phase repair commits — so the remote CI runs on what we will check).
 if ! git -C "$worktree" push -u origin "$branch" >/dev/null 2>&1; then
-  fail "git push of $branch failed"
+  env_fail "git push of $branch failed (auth/network/remote state)"
 fi
 log "pushed $branch"
 
