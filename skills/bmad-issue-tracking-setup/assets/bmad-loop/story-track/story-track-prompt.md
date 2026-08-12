@@ -38,7 +38,9 @@ These must succeed — the subsequent CI check depends on them.
      - GitLab: `glab api "projects/{project}/merge_requests?state=opened&search={title}"`.
      - GitHub: `gh pr list --state open --search "in:title {title}" -R "{host}/{project}"`.
    - If an MR/PR exists whose source branch is NOT the current branch:
-     - **GitLab — re-point it**: `glab mr update {iid} --source-branch {current_branch} -R "{host}/{project}"` (keeps the MR's history/comments; its diff becomes the re-driven story's). Then **delete the old remote branch**: `git push origin --delete <old_source_branch>` — bmad-loop keeps it locally (keep_failed), so only the remote ref is removed.
+     - **GitLab — re-point it** via the API (keeps the MR's history/comments; its diff becomes the re-driven story's):
+       `glab api --method PUT "projects/{project}/merge_requests/{iid}" --hostname {host} -F source_branch={current_branch}`.
+       Then **delete the old remote branch**: `git push origin --delete <old_source_branch>` — bmad-loop keeps it locally (keep_failed), so only the remote ref is removed.
      - **GitHub — no re-point support**: close the old PR (`gh pr close {num}`) and create a new one on the current branch (title `{title}`).
    - If no MR/PR exists, create one on the current branch (step 2 above).
    This is best-effort — if it fails, report and continue.
