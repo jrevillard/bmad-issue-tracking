@@ -13,8 +13,13 @@ These must succeed — the subsequent CI check depends on them.
 2. **Ensure a trace MR/PR exists** for this branch (CI vehicle + execution
    trace; leave it open — GitLab auto-marks it merged after the merge-back is
    pushed to the target branch):
-   - Resolve `{host}`/`{project}` from `git remote get-url origin`, and the
-     target branch from `git symbolic-ref refs/remotes/origin/HEAD`.
+   - Resolve `{host}`/`{project}` from `git remote get-url origin`. Resolve the
+     target branch as the **PRD branch** (NOT main): read `branch_patterns.prd`
+     from `_bmad/custom/issue-tracking.yaml` (e.g. `feat/{prd_key}/prd`) and
+     substitute `prd_key` (read from `prd.md` frontmatter). The trace MR targets
+     the PRD branch (story → PRD), matching the module's branch model. If
+     `branch_patterns.prd` is absent, fall back to `git symbolic-ref
+     refs/remotes/origin/HEAD`.
    - GitLab: if `glab api "projects/{project}/merge_requests?source_branch={branch}"` is empty, create
      `glab mr create --source-branch {branch} --target-branch {target} --title "CI: {branch}" --description "Trace MR created by bmad-loop story-track." --yes --no-editor -R "{host}/{project}"`.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create

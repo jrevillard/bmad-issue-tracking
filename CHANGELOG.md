@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `ci-wait.sh` (bmad-loop CI gate): configuration/environment errors now exit **126** (bmad-loop's env-fault class → the run escalates/pauses, budget resets) instead of 1 (fixable → futile repair burn → story defer). A red/timeout CI still exits 1 → `_fix_phase`.
+- `ci-wait.sh`: platform resolved from `_bmad/custom/issue-tracking.yaml` (`git_platform`) so self-hosted GitLab/GitHub instances work; inline YAML comments stripped; glab/gh API or auth failures escalate instead of silently passing as "no pipeline".
+- `story-track`: the trace MR now targets the **PRD branch** (`branch_patterns.prd`) instead of `main`.
+
 ## [2.3.0] - 2026-08-11
 
 [compare v2.2.0...v2.3.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.2.0...v2.3.0)
