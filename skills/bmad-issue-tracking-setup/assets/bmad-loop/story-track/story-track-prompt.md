@@ -20,10 +20,18 @@ These must succeed — the subsequent CI check depends on them.
      the PRD branch (story → PRD), matching the module's branch model. If
      `branch_patterns.prd` is absent, fall back to `git symbolic-ref
      refs/remotes/origin/HEAD`.
+   - **MR title follows the module's convention** `Story {epic}.{story}: {title}`
+     (the same title the module uses for the story's issue — see
+     `_bmad/_config/custom/bmad-workflow-lang.md` / CLAUDE.md "Issue title
+     formats"). Derive it: `{epic}.{story}` from the story key (the leading
+     `{epic}-{story}` of the branch slug, e.g. `2-1-...` → `Story 2.1:`), and
+     `{title}` from the story spec's `# Story {e}.{n}: <title>` heading (search
+     for the story file under the implementation artifacts whose name starts
+     with the story key); fall back to the branch slug title-cased.
    - GitLab: if `glab api "projects/{project}/merge_requests?source_branch={branch}"` is empty, create
-     `glab mr create --source-branch {branch} --target-branch {target} --title "CI: {branch}" --description "Trace MR created by bmad-loop story-track." --yes --no-editor -R "{host}/{project}"`.
+     `glab mr create --source-branch {branch} --target-branch {target} --title "{title}" --description "Trace MR created by bmad-loop story-track." --yes --no-editor -R "{host}/{project}"`.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create
-     `gh pr create --base {target} --head {branch} --title "CI: {branch}" --body "Trace PR created by bmad-loop story-track." -R "{host}/{project}"`.
+     `gh pr create --base {target} --head {branch} --title "{title}" --body "Trace PR created by bmad-loop story-track." -R "{host}/{project}"`.
 
 ## Best-effort: mirror the story to its issue
 
