@@ -80,8 +80,12 @@ reconciles the full board.
 
 - **Do NOT modify `sprint-status.yaml`** — the orchestrator owns it and
   reconciles it after you finish.
-- Use the module's deployed workflows under
-  `_bmad/_config/custom/workflows/common/` (`update-issue-status.yaml`,
-  `find-issue.yaml`) as the canonical logic where it helps.
+- **Do NOT rewrite code** — the module provides canonical workflows under
+  `_bmad/_config/custom/workflows/common/` that handle platform differences,
+  pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of
+  writing ad-hoc scripts.
+- For issue/board/label operations, INCLUDE the module's workflows. Use the
+  platform CLI only for operations NOT covered by the workflows (e.g., posting
+  comments, listing MRs/PRs).
 
 Then end your turn following the Completion signal contract below.
