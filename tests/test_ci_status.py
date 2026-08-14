@@ -52,7 +52,7 @@ def test_ci_status_missing_file():
 
 
 def test_ci_status_invalid_json():
-    """ci-status.sh exits 1 when ci-status.json is invalid JSON."""
+    """ci-status.sh exits 126 (ENV_FAULT) when ci-status.json is invalid JSON."""
     with tempfile.TemporaryDirectory() as tmpdir:
         status_file = Path(tmpdir) / "ci-status.json"
         status_file.write_text('not json')
@@ -61,12 +61,12 @@ def test_ci_status_invalid_json():
             cwd=tmpdir,
             capture_output=True
         )
-        assert result.returncode == 1
-        assert "failed to parse" in result.stdout.decode() or "unknown status" in result.stdout.decode()
+        assert result.returncode == 126  # ENV_FAULT, not fixable
+        assert "ENV-FAULT" in result.stdout.decode() or "ENV-FAULT" in result.stderr.decode()
 
 
 def test_ci_status_missing_status_key():
-    """ci-status.sh exits 1 when ci-status.json lacks 'status' key."""
+    """ci-status.sh exits 126 (ENV_FAULT) when ci-status.json lacks 'status' key."""
     with tempfile.TemporaryDirectory() as tmpdir:
         status_file = Path(tmpdir) / "ci-status.json"
         status_file.write_text('{"pipeline_url": "https://..."}')
@@ -75,7 +75,7 @@ def test_ci_status_missing_status_key():
             cwd=tmpdir,
             capture_output=True
         )
-        assert result.returncode == 1
+        assert result.returncode == 126  # ENV_FAULT, not fixable
 
 
 def test_ci_status_unknown_status():
