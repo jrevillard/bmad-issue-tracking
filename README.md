@@ -143,6 +143,15 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 
 **Execution trace:** `story-track` ensures a trace MR/PR exists per story (left open) — a CI vehicle and the story's execution trace. After the local merge-back is pushed to the target branch, GitLab auto-marks it merged, keeping the story's diff and pipeline as a durable record. On GitHub there is no auto-detection of an out-of-band merge, so the trace PR stays open; close it with `gh pr close <number>` when the story is `done` if you want it tidied.
 
+## Migration from ci-wait.sh (if upgrading)
+
+If you're upgrading from a version that used `ci-wait.sh`:
+1. Re-run `/bmad-issue-tracking-setup` — it will deploy `ci-status.sh` and update `policy.toml`
+2. Delete the old `ci-wait.sh`: `rm .bmad-loop/ci-wait.sh`
+3. The `story-track` plugin is updated automatically
+
+The new architecture is simpler: `story-track` (LLM) waits for CI and writes `ci-status.json`, then `ci-status.sh` (verify command) reads the file. No polling or API calls in the shell script.
+
 **Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
 
 ## Platform differences

@@ -54,10 +54,10 @@ After creating the trace MR, you **MUST wait for the CI pipeline to complete** a
 4. **Wait for CI pipeline** — poll the pipeline status until it reaches a terminal state (success/failed). Use the same platform detection as step 2:
    - GitLab: `glab api "projects/{project_enc}/merge_requests/{iid}/pipelines" --hostname {host}` — check the latest pipeline status
    - GitHub: `gh pr checks {num} -R "{host}/{project}"` — check the check suite status
-   - Poll every 30 seconds. No timeout — wait until CI completes (green or red).
-   - If the pipeline has multiple jobs, aggregate: all success = green, any failure = red.
+   - Poll every 30 seconds. **Timeout after 25 minutes (1500 seconds)** — if CI hasn't completed, write ci-status.json with `status: "red"` and `diagnostic: "CI timeout after 25 minutes"`.
+   - If the pipeline has multiple jobs, aggregate: all success = green, any failure = red. Wait until ALL jobs reach terminal state (success/failed/skipped).
 
-5. **Write ci-status.json** — after CI completes, write the result to `{worktree}/ci-status.json`:
+5. **Write ci-status.json** — after CI completes (or timeout), write the result to `{worktree}/ci-status.json`:
    ```json
    // If CI is green:
    {"status": "green"}
@@ -71,6 +71,8 @@ After creating the trace MR, you **MUST wait for the CI pipeline to complete** a
    }
    ```
    For red CI, provide a **rich diagnostic**: pipeline URL, names of failed jobs, error messages, links to logs. This diagnostic will be passed to the repair session.
+
+   **Note on flaky tests:** If you detect a flaky test (e.g., test passes on retry, or known flaky pattern like timeout/connection error), still write `status: "red"` — bmad-loop's repair session will handle the retry. Do not retry flaky tests yourself; let the repair loop manage it.
 
 6. **Complete the workflow** — after writing `ci-status.json`, complete your turn. The `ci-status.sh` verify command will read the file and exit 0 (green) or 1 (red). If red, bmad-loop will trigger a repair session with the diagnostic.
 
