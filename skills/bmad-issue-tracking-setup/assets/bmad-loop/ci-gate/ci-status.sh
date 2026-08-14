@@ -29,7 +29,8 @@ fail() { echo "[ci-status] FAIL: $*"; exit 1; }
 
 # Check if ci-status.json exists
 if [ ! -f "$ci_status_file" ]; then
-  fail "ci-status.json not found — story-track workflow did not write CI status"
+  echo "[ci-status] ENV-FAULT: ci-status.json not found — story-track workflow did not complete"
+  exit 126  # bmad-loop ENV_FAULT_RCS={126,127} -> escalate, reset budget
 fi
 
 # Read status from JSON
