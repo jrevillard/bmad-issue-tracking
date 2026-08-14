@@ -34,7 +34,11 @@ if [ ! -f "$ci_status_file" ]; then
 fi
 
 # Read status from JSON
-status="$(uv run --no-project python -c "import json,sys; print(json.load(open(sys.argv[1]))['status'])" "$ci_status_file" 2>&1)" || fail "failed to parse ci-status.json: $status"
+status="$(uv run --no-project python -c "import json,sys; print(json.load(open(sys.argv[1]))['status'])" "$ci_status_file" 2>&1)"
+if [ $? -ne 0 ]; then
+  echo "[ci-status] ENV-FAULT: failed to parse ci-status.json — story-track wrote invalid JSON: $status"
+  exit 126  # bmad-loop ENV_FAULT_RCS={126,127} -> escalate, reset budget
+fi
 
 case "$status" in
   green)
