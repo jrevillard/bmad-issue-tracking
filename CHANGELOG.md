@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.11.0.
 - `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
 - `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
+- **CI architecture restructured**: `ci-wait.sh` (script shell qui attendait la CI) remplacé par `ci-status.sh` (script shell qui lit `ci-status.json`) + `story-track` workflow LLM (qui attend la CI et écrit le diagnostic). L'intelligence (poll CI, parse logs, retry flaky) est maintenant dans le workflow LLM, le verify command est déterministe et rapide.
 
 ### Added
 

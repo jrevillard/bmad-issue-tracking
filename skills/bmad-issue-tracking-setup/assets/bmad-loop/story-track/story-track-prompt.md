@@ -47,9 +47,36 @@ These must succeed — the subsequent CI check depends on them.
    - If no MR/PR exists, create one on the current branch (step 2 above).
    This is best-effort — if it fails, report and continue.
 
+## Mandatory: CI wait + status file
+
+After creating the trace MR, you **MUST wait for the CI pipeline to complete** and write the result to `ci-status.json` in the worktree root. This file is read by the `ci-status.sh` verify command.
+
+4. **Wait for CI pipeline** — poll the pipeline status until it reaches a terminal state (success/failed). Use the same platform detection as step 2:
+   - GitLab: `glab api "projects/{project_enc}/merge_requests/{iid}/pipelines" --hostname {host}` — check the latest pipeline status
+   - GitHub: `gh pr checks {num} -R "{host}/{project}"` — check the check suite status
+   - Poll every 30 seconds. No timeout — wait until CI completes (green or red).
+   - If the pipeline has multiple jobs, aggregate: all success = green, any failure = red.
+
+5. **Write ci-status.json** — after CI completes, write the result to `{worktree}/ci-status.json`:
+   ```json
+   // If CI is green:
+   {"status": "green"}
+
+   // If CI is red:
+   {
+     "status": "red",
+     "pipeline_url": "https://...",
+     "failed_jobs": ["job-name-1", "job-name-2"],
+     "diagnostic": "Test failed: test_login\nError: assertion failed at line 42\nLogs: https://..."
+   }
+   ```
+   For red CI, provide a **rich diagnostic**: pipeline URL, names of failed jobs, error messages, links to logs. This diagnostic will be passed to the repair session.
+
+6. **Complete the workflow** — after writing `ci-status.json`, complete your turn. The `ci-status.sh` verify command will read the file and exit 0 (green) or 1 (red). If red, bmad-loop will trigger a repair session with the diagnostic.
+
 ## Best-effort: mirror the story to its issue
 
-Do this after the push + MR. If any step here fails, **report it and continue —
+Do this after the CI check. If any step here fails, **report it and continue —
 do not fail the session over tracking**. The post-run `/bmad-bmm-issue-sync`
 reconciles the full board.
 
