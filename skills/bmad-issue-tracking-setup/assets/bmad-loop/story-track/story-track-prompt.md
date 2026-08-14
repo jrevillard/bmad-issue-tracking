@@ -57,7 +57,7 @@ After creating the trace MR, you **MUST wait for the CI pipeline to complete** a
    - Poll every 30 seconds. **No timeout** — wait until CI completes (green or red), no matter how long it takes.
    - If the pipeline has multiple jobs, aggregate: all success = green, any failure = red. Wait until ALL jobs reach terminal state (success/failed/skipped).
 
-5. **Write ci-status.json** — after CI completes (or timeout), write the result to `{worktree}/ci-status.json`:
+5. **Write ci-status.json** — after CI completes, write the result to `{worktree}/ci-status.json`:
    ```json
    // If CI is green:
    {"status": "green"}
@@ -70,6 +70,8 @@ After creating the trace MR, you **MUST wait for the CI pipeline to complete** a
      "diagnostic": "Test failed: test_login\nError: assertion failed at line 42\nLogs: https://..."
    }
    ```
+   **IMPORTANT: Validate the JSON before writing!** Use `python3 -c "import json,sys; json.loads(sys.stdin.read())" < ci-status.json` to validate. If invalid, fix and retry. **Never write invalid JSON** — ci-status.sh will fail to parse it.
+
    For red CI, provide a **rich diagnostic**: pipeline URL, names of failed jobs, error messages, links to logs. This diagnostic will be passed to the repair session.
 
    **Note on flaky tests:** If you detect a flaky test (e.g., test passes on retry, or known flaky pattern like timeout/connection error), still write `status: "red"` — bmad-loop's repair session will handle the retry. Do not retry flaky tests yourself; let the repair loop manage it.
