@@ -2,10 +2,11 @@
 #
 # Injects an LLM session at `post_review_result` (after the story's review, in
 # its worktree, with the final code on disk): pushes the story branch, ensures a
-# trace MR exists (CI vehicle + execution trace), and mirrors the story to its
-# GitLab/GitHub issue. The subsequent `[verify]` ci-wait command then checks the
-# remote pipeline; a red CI is auto-fixed by bmad-loop's feedback-driven repair
-# session.
+# trace MR exists (CI vehicle + execution trace), waits for CI to complete,
+# writes the result to `ci-status.json`, and mirrors the story to its
+# GitLab/GitHub issue. The subsequent `[verify]` ci-status command then reads
+# the file; a red CI is auto-fixed by bmad-loop's feedback-driven repair
+# session with the diagnostic.
 #
 # blocking = true: if this session does not complete (e.g. the push failed), the
 # unit is deferred — the CI gate cannot run without the branch pushed. The issue

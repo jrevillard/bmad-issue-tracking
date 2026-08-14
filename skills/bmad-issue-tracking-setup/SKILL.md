@@ -141,35 +141,35 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
-<step n="3c" goal="Deploy bmad-loop CI gate + story tracking (optional)">
+<step n="3c" goal="Deploy bmad-loop CI status + story tracking (optional)">
 <action>The module ships two pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
 
-- **`ci-wait.sh`** — a `[verify]` command that pushes the story branch (propagating the current code, including deterministic repairs) and waits for the remote CI. It does not create MRs or fix code — a red CI makes the verify command fail, and bmad-loop answers with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
-- **`story-track` plugin** — an LLM workflow session at `post_review_result` that pushes the final story branch, ensures the trace MR exists, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs BEFORE the CI check, so the branch is pushed and the pipeline exists when `ci-wait` polls.
+- **`story-track` plugin** — an LLM workflow session at `post_review_result` that pushes the final story branch, ensures the trace MR exists, waits for the CI pipeline to complete, writes the result to `ci-status.json`, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs BEFORE the CI check, so the branch is pushed, the pipeline exists, and the CI result is captured.
+- **`ci-status.sh`** — a `[verify]` command that reads `ci-status.json` (written by `story-track`). It returns exit 0 if CI is green, exit 1 if red (with diagnostic). bmad-loop answers a red CI with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
 
 The scripts derive branch/host/project/platform from git and their working directory — no environment variables required.</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy `ci-wait.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the `story-track` plugin into `.bmad-loop/plugins/`:</action>
+    <action>Copy `ci-status.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the `story-track` plugin into `.bmad-loop/plugins/`:</action>
     ```bash
     mkdir -p .bmad-loop .bmad-loop/plugins
-    cp -f <path>/bmad-loop/ci-gate/ci-wait.sh .bmad-loop/ci-wait.sh
+    cp -f <path>/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
     cp -rf <path>/bmad-loop/story-track .bmad-loop/plugins/story-track
     ```
     <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
     [scm]
-    worktree_seed = [".bmad-loop/ci-wait.sh"]
+    worktree_seed = [".bmad-loop/ci-status.sh"]
 
     [verify]
-    commands = ["bash .bmad-loop/ci-wait.sh"]
+    commands = ["bash .bmad-loop/ci-status.sh"]
     ```
-    <action>Verify `.bmad-loop/ci-wait.sh` and `.bmad-loop/plugins/story-track/plugin.toml` exist.</action>
-    <action>Note: the `story-track` plugin is declarative (no `[python]` module) — it loads automatically, no trust allowlist. bmad-loop caps each verify command at 30 minutes — keep `TIMEOUT_SEC` below that. Optional overrides (via env when the command is wrapped): `BMAD_LOOP_SETTING_PLATFORM/HOST/PROJECT/TIMEOUT_SEC`.</action>
+    <action>Verify `.bmad-loop/ci-status.sh` and `.bmad-loop/plugins/story-track/plugin.toml` exist.</action>
+    <action>Note: the `story-track` plugin is declarative (no `[python]` module) — it loads automatically, no trust allowlist. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by `story-track` (LLM workflow).</action>
   </true>
   <false>
-    <output>Skipping ci-wait + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+    <output>Skipping ci-status + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
   </false>
 </check>
 </step>

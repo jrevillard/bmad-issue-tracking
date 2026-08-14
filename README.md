@@ -125,8 +125,8 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 **Flow:**
 
 1. `bmad-loop run` — each story is implemented/reviewed/verified in its own worktree and merged back locally. Two module pieces run inside the loop (deployed by `/bmad-issue-tracking-setup`, step 3c):
-   - **`story-track`** (LLM workflow at `post_review_result`): pushes the final story branch, ensures the trace MR exists, and mirrors the story to its issue (status label, result comment, MR link) — per-story tracking **during** the run.
-   - **`ci-wait`** (`[verify]` command): pushes the story branch (propagating the current code, including deterministic repairs) and waits for the remote pipeline. A **red CI fails the verify command**, and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the failing CI output) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover).
+   - **`story-track`** (LLM workflow at `post_review_result`): pushes the final story branch, ensures the trace MR exists, waits for CI to complete, writes `ci-status.json` (green or red with diagnostic), and mirrors the story to its issue — per-story tracking **during** the run.
+   - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by `story-track`. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover).
 2. `/bmad-bmm-issue-sync` — unattended safety net: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
 3. `git push origin main` — the local merge-back is never pushed by bmad-loop.
 
@@ -142,6 +142,15 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 | `done` | `status::done` + issue closed |
 
 **Execution trace:** `story-track` ensures a trace MR/PR exists per story (left open) — a CI vehicle and the story's execution trace. After the local merge-back is pushed to the target branch, GitLab auto-marks it merged, keeping the story's diff and pipeline as a durable record. On GitHub there is no auto-detection of an out-of-band merge, so the trace PR stays open; close it with `gh pr close <number>` when the story is `done` if you want it tidied.
+
+## Migration from ci-wait.sh (if upgrading)
+
+If you're upgrading from a version that used `ci-wait.sh`:
+1. Re-run `/bmad-issue-tracking-setup` — it will deploy `ci-status.sh` and update `policy.toml`
+2. Delete the old `ci-wait.sh`: `rm .bmad-loop/ci-wait.sh`
+3. The `story-track` plugin is updated automatically
+
+The new architecture is simpler: `story-track` (LLM) waits for CI and writes `ci-status.json`, then `ci-status.sh` (verify command) reads the file. No polling or API calls in the shell script.
 
 **Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
 
