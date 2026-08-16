@@ -125,8 +125,9 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 **Flow:**
 
 1. `bmad-loop run` — each story is implemented/reviewed/verified in its own worktree and merged back locally. Two module pieces run inside the loop (deployed by `/bmad-issue-tracking-setup`, step 3c):
-   - **`story-track`** (LLM workflow at `post_review_result`): pushes the final story branch, ensures the trace MR exists, waits for CI to complete, writes `ci-status.json` (green or red with diagnostic), and mirrors the story to its issue — per-story tracking **during** the run.
-   - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by `story-track`. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover).
+   - **`story-track-dev`** (LLM workflow at `post_dev_phase`): pushes the code dev, waits for CI to complete, writes `ci-status.json` (green or red with diagnostic), and creates the trace MR. Runs for **every** story that completes dev, regardless of whether review happens afterward.
+   - **`story-track-review`** (LLM workflow at `post_review_result`): commits review modifications, pushes, waits for CI, writes `ci-status.json`, and mirrors the story to its issue (status label, result comment, MR link). Runs **only** when review completes.
+   - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by the last plugin that ran. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover).
 2. `/bmad-bmm-issue-sync` — unattended safety net: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
 3. `git push origin main` — the local merge-back is never pushed by bmad-loop.
 

@@ -1,0 +1,24 @@
+# story-track-review plugin for bmad-loop.
+#
+# Injects an LLM session at `post_review_result` (after review completes).
+# Commits review modifications, pushes, waits for CI, writes ci-status.json,
+# and mirrors the story to its GitLab/GitHub issue (status label, comment).
+#
+# This runs ONLY when review completes. Stories that skip review don't trigger
+# this plugin (but story-track-dev still runs at post_dev_phase).
+#
+# blocking = false: issue tracking is best-effort. If this session fails, don't
+# defer the story — the code is already pushed and CI already ran.
+
+[plugin]
+name = "story-track-review"
+version = "1.0.0"
+api_version = 1
+description = "Post-review: commit review changes, push, wait CI, track issue. Runs only if review completes."
+author = "bmad-issue-tracking"
+
+[workflows.story-track-review]
+stage = "post_review_result"
+role = "dev"
+prompt = "{scripts}/story-track-review-prompt.md"
+blocking = false

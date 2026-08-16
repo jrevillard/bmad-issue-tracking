@@ -142,20 +142,27 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </step>
 
 <step n="3c" goal="Deploy bmad-loop CI status + story tracking (optional)">
-<action>The module ships two pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
+<action>The module ships three pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
 
-- **`story-track` plugin** — an LLM workflow session at `post_review_result` that pushes the final story branch, ensures the trace MR exists, waits for the CI pipeline to complete, writes the result to `ci-status.json`, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs BEFORE the CI check, so the branch is pushed, the pipeline exists, and the CI result is captured.
-- **`ci-status.sh`** — a `[verify]` command that reads `ci-status.json` (written by `story-track`). It returns exit 0 if CI is green, exit 1 if red (with diagnostic). bmad-loop answers a red CI with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
+- **`story-track-dev` plugin** — an LLM workflow session at `post_dev_phase` that pushes the code dev, waits for the CI pipeline to complete, writes the result to `ci-status.json`, and creates the trace MR. It runs for EVERY story that completes dev, regardless of whether review happens afterward.
+- **`story-track-review` plugin** — an LLM workflow session at `post_review_result` that commits review modifications, pushes, waits for CI, writes `ci-status.json`, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs ONLY when review completes.
+- **`ci-status.sh`** — a `[verify]` command that reads `ci-status.json` (written by the last plugin that ran). It returns exit 0 if CI is green, exit 1 if red (with diagnostic). bmad-loop answers a red CI with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
+
+The two-stage architecture ensures:
+- Stories that complete dev (with or without review) get pushed + CI + MR
+- Stories that complete review get review modifications committed + pushed + CI + issue tracking
+- ci-status.sh reads the latest ci-status.json (after last push)
 
 The scripts derive branch/host/project/platform from git and their working directory — no environment variables required.</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy `ci-status.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the `story-track` plugin into `.bmad-loop/plugins/`:</action>
+    <action>Copy `ci-status.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the two `story-track-*` plugins into `.bmad-loop/plugins/`:</action>
     ```bash
     mkdir -p .bmad-loop .bmad-loop/plugins
     cp -f <path>/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
-    cp -rf <path>/bmad-loop/story-track .bmad-loop/plugins/story-track
+    cp -rf <path>/bmad-loop/story-track-dev .bmad-loop/plugins/story-track-dev
+    cp -rf <path>/bmad-loop/story-track-review .bmad-loop/plugins/story-track-review
     ```
     <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
@@ -165,8 +172,8 @@ The scripts derive branch/host/project/platform from git and their working direc
     [verify]
     commands = ["bash .bmad-loop/ci-status.sh"]
     ```
-    <action>Verify `.bmad-loop/ci-status.sh` and `.bmad-loop/plugins/story-track/plugin.toml` exist.</action>
-    <action>Note: the `story-track` plugin is declarative (no `[python]` module) — it loads automatically, no trust allowlist. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by `story-track` (LLM workflow).</action>
+    <action>Verify `.bmad-loop/ci-status.sh` and `.bmad-loop/plugins/story-track-*/plugin.toml` exist.</action>
+    <action>Note: the `story-track-*` plugins are declarative (no `[python]` module) — they load automatically, no trust allowlist. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by the LLM workflows.</action>
   </true>
   <false>
     <output>Skipping ci-status + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>

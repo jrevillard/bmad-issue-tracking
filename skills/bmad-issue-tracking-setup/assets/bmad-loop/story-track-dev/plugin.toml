@@ -1,0 +1,24 @@
+# story-track-dev plugin for bmad-loop.
+#
+# Injects an LLM session at `post_dev_phase` (after dev completes, before review).
+# Pushes the story branch, waits for CI, writes ci-status.json, and creates the
+# trace MR. Does NOT track issues (that's story-track-review at post_review_result).
+#
+# This runs for EVERY story that completes dev, regardless of whether review
+# happens afterward. Ensures code is pushed and CI runs even if review is skipped.
+#
+# blocking = true: if this session does not complete (push failed, CI timeout),
+# the unit is deferred.
+
+[plugin]
+name = "story-track-dev"
+version = "1.0.0"
+api_version = 1
+description = "Post-dev: push code, wait CI, create MR. Runs for every completed story."
+author = "bmad-issue-tracking"
+
+[workflows.story-track-dev]
+stage = "post_dev_phase"
+role = "dev"
+prompt = "{scripts}/story-track-dev-prompt.md"
+blocking = true
