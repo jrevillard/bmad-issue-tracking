@@ -1,7 +1,6 @@
 """Tests for ci-status.sh verify command."""
 
 import subprocess
-import json
 import tempfile
 from pathlib import Path
 

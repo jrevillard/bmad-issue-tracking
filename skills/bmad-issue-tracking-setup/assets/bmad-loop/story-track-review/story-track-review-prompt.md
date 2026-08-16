@@ -2,6 +2,8 @@ You are the story-track-review step of a bmad-loop run, executing after review
 completes. Your job: commit review modifications, push, wait for CI, and mirror
 the story to its issue.
 
+**Context**: You are running in the story's worktree (current working directory). All file operations should use relative paths or `$PWD`.
+
 ## Mandatory: commit + push + CI
 
 These must succeed — the issue tracking depends on the final CI result.
@@ -35,7 +37,7 @@ These must succeed — the issue tracking depends on the final CI result.
      "diagnostic": "Test failed: test_login\nError: assertion failed at line 42\nLogs: https://..."
    }
    ```
-   **IMPORTANT: Validate the JSON before writing!** Use `python3 -c "import json,sys; json.loads(sys.stdin.read())" < ci-status.json` to validate. If invalid, fix and retry. **Never write invalid JSON** — ci-status.sh will fail to parse it.
+   **IMPORTANT: Validate the JSON before writing!** Use `uv run --no-project python -c "import json,sys; json.loads(sys.stdin.read())" < ci-status.json` to validate. If invalid, fix and retry. **Never write invalid JSON** — ci-status.sh will fail to parse it.
 
    For red CI, provide a **rich diagnostic**: pipeline URL, names of failed jobs, error messages, links to logs. This diagnostic will be passed to the repair session.
 
@@ -69,6 +71,14 @@ reconciles the full board.
 
 - **Do NOT modify `sprint-status.yaml`** — the orchestrator owns it and
   reconciles it after you finish.
+- **Do NOT rewrite code** — the module provides canonical workflows under
+  `_bmad/_config/custom/workflows/common/` that handle platform differences,
+  pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of
+  writing ad-hoc scripts.
+- For issue/board/label operations, INCLUDE the module's workflows:
+  - `update-issue-status.yaml`
+  - `find-issue.yaml`
+  - `create-issue.yaml` (if needed)
 - Use the module's deployed workflows under
   `_bmad/_config/custom/workflows/common/` (`update-issue-status.yaml`,
   `find-issue.yaml`) as the canonical logic where it helps.

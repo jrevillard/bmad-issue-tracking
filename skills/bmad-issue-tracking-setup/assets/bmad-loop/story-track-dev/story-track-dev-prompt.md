@@ -2,6 +2,8 @@ You are the story-track-dev step of a bmad-loop run, executing after dev complet
 and before review starts. Your job: push the code, wait for CI, and create the
 trace MR.
 
+**Context**: You are running in the story's worktree (current working directory). All file operations should use relative paths or `$PWD`.
+
 ## Mandatory: push + CI + MR
 
 These must succeed — the subsequent CI check and review depend on them.
@@ -29,7 +31,7 @@ These must succeed — the subsequent CI check and review depend on them.
      "diagnostic": "Test failed: test_login\nError: assertion failed at line 42\nLogs: https://..."
    }
    ```
-   **IMPORTANT: Validate the JSON before writing!** Use `python3 -c "import json,sys; json.loads(sys.stdin.read())" < ci-status.json` to validate. If invalid, fix and retry. **Never write invalid JSON** — ci-status.sh will fail to parse it.
+   **IMPORTANT: Validate the JSON before writing!** Use `uv run --no-project python -c "import json,sys; json.loads(sys.stdin.read())" < ci-status.json` to validate. If invalid, fix and retry. **Never write invalid JSON** — ci-status.sh will fail to parse it.
 
    For red CI, provide a **rich diagnostic**: pipeline URL, names of failed jobs, error messages, links to logs. This diagnostic will be passed to the repair session.
 
@@ -54,6 +56,9 @@ These must succeed — the subsequent CI check and review depend on them.
      `{title}` from the story spec's `# Story {e}.{n}: <title>` heading (search
      for the story file under the implementation artifacts whose name starts
      with the story key); fall back to the branch slug title-cased.
+   - **Clean up stale MRs** (a re-driven story — e.g., after a defer — may leave a stale MR from an earlier run on another branch). The GitLab API does NOT support changing an MR's source branch, so the stale MR must be closed:
+     - Find open MRs/PRs referencing this story (search by title `{title}` or key `{story_key}`)
+     - If an MR exists whose source branch is NOT the current branch: close it and delete the old remote branch
    - GitLab: if `glab api "projects/{project_enc}/merge_requests?source_branch={branch}"` is empty, create
      `glab mr create --source-branch {branch} --target-branch {target} --title "{title}" --description "Trace MR created by bmad-loop story-track." --yes --no-editor -R "{host}/{project}"`.
    - GitHub: if `gh pr list --head {branch} -R "{host}/{project}"` is empty, create
