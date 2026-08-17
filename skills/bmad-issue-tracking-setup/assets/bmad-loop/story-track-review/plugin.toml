@@ -7,8 +7,8 @@
 # This runs ONLY when review completes. Stories that skip review don't trigger
 # this plugin (but story-track-dev still runs at post_dev_phase).
 #
-# blocking = false: issue tracking is best-effort. If this session fails, don't
-# defer the story — the code is already pushed and CI already ran.
+# blocking = true: if this session does not complete (push failed, CI timeout),
+# the unit is deferred — review changes must be pushed and CI-verified.
 
 [plugin]
 name = "story-track-review"
@@ -21,4 +21,18 @@ author = "bmad-issue-tracking"
 stage = "post_review_result"
 role = "dev"
 prompt = "{scripts}/story-track-review-prompt.md"
-blocking = false
+blocking = true
+
+[[settings]]
+key = "story_track_review_enabled"
+type = "bool"
+default = true
+label = "Enable story-track-review"
+help = "Run the post-review workflow: commit, push, wait CI, track issue."
+
+[[settings]]
+key = "story_track_review_blocking"
+type = "bool"
+default = true
+label = "Block on failure"
+help = "If true, defer the story when story-track-review fails."
