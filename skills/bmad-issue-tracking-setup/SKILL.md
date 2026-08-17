@@ -171,9 +171,12 @@ The scripts derive branch/host/project/platform from git and their working direc
 
     [verify]
     commands = ["bash .bmad-loop/ci-status.sh"]
+
+    [plugins]
+    enabled = ["story-track-dev", "story-track-review"]
     ```
-    <action>Verify `.bmad-loop/ci-status.sh` and `.bmad-loop/plugins/story-track-*/plugin.toml` exist.</action>
-    <action>Note: the `story-track-*` plugins are declarative (no `[python]` module) — they load automatically, no trust allowlist. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by the LLM workflows.</action>
+    <action>Verify `.bmad-loop/ci-status.sh`, `.bmad-loop/plugins/story-track-*/plugin.toml` exist, and `.bmad-loop/policy.toml` has both plugins in `enabled`.</action>
+    <action>Note: the `story-track-*` plugins are enabled in `[plugins] enabled` so their workflow sessions run at `post_dev_phase` and `post_review_result`. Each plugin has settings (`<name>_enabled`, `<name>_blocking`) that appear as toggles in the bmad-loop settings TUI. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by the LLM workflows.</action>
   </true>
   <false>
     <output>Skipping ci-status + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
