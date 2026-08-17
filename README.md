@@ -149,9 +149,9 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 If you're upgrading from a version that used `ci-wait.sh`:
 1. Re-run `/bmad-issue-tracking-setup` — it will deploy `ci-status.sh` and update `policy.toml`
 2. Delete the old `ci-wait.sh`: `rm .bmad-loop/ci-wait.sh`
-3. The `story-track` plugin is updated automatically
+3. The `story-track-dev` and `story-track-review` plugins are deployed automatically
 
-The new architecture is simpler: `story-track` (LLM) waits for CI and writes `ci-status.json`, then `ci-status.sh` (verify command) reads the file. No polling or API calls in the shell script.
+The two-stage architecture is simpler: `story-track-dev` (LLM) pushes code + waits CI + writes `ci-status.json` + creates MR, then `story-track-review` (LLM) commits review changes + waits CI + writes `ci-status.json` + tracks issue. `ci-status.sh` (verify command) reads the latest `ci-status.json`. No polling or API calls in the shell script.
 
 **Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
 

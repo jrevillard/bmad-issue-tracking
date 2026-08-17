@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **bmad-loop integration** (unattended dev loop): the module now mirrors sprint-status maintained by `bmad-loop` (single writer of `sprint-status.yaml`, compatible status values).
 - **Two-stage story tracking**: `story-track-dev` (at `post_dev_phase`) pushes code + waits CI + creates MR for every completed story; `story-track-review` (at `post_review_result`) commits review changes + waits CI + tracks issue only when review completes. Fixes bug where stories that skip review weren't pushed.
-- **`ci-status.sh`** bmad-loop `[verify]` command (`assets/bmad-loop/ci-gate/ci-status.sh`, deployed by setup step 3c): pushes current code (including repairs), reads `ci-status.json`, exits 0 (green) or 1 (red with diagnostic). Replaces old `ci-wait.sh` (238 lines → 57 lines).
+- **`ci-status.sh`** bmad-loop `[verify]` command (`assets/bmad-loop/ci-gate/ci-status.sh`, deployed by setup step 3c): reads `ci-status.json` (written by story-track-dev or story-track-review), exits 0 (green) or 1 (red with diagnostic). Replaces old `ci-wait.sh` (238 lines → 57 lines).
 - `/bmad-bmm-issue-sync` is now **unattended**: new `common/find-prd-key.yaml` resolves `prd_key` from `prd.md` without a PRD worktree or prompts (fails closed); `common/mark-mr-ready.yaml` is a no-op when no MR exists. Run it after `bmad-loop run`, then `git push origin main`.
 - `awaiting-operator` status support (bmad-loop): `status::awaiting-operator` label created and the issue stays **open** (external action pending, confirmed via `bmad-loop confirm`).
 

@@ -71,11 +71,7 @@ reconciles the full board.
 
 - **Do NOT modify `sprint-status.yaml`** — the orchestrator owns it and
   reconciles it after you finish.
-- **Do NOT rewrite code** — the module provides canonical workflows under
-  `_bmad/_config/custom/workflows/common/` that handle platform differences,
-  pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of
-  writing ad-hoc scripts.
-- For issue/board/label operations, INCLUDE the module's workflows:
+- **Do NOT rewrite code** — the module provides canonical workflows under `_bmad/_config/custom/workflows/common/` that handle platform differences, pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of writing ad-hoc scripts. For issue/board/label operations, INCLUDE:
   - `update-issue-status.yaml`
   - `find-issue.yaml`
   - `create-issue.yaml` (if needed)
