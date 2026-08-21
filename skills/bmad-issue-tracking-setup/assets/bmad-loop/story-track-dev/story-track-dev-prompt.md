@@ -68,12 +68,33 @@ These must succeed — the subsequent CI check and review depend on them.
    complete your turn. The `ci-status.sh` verify command will read the file and
    exit 0 (green) or 1 (red).
 
-**IMPORTANT**: Do NOT track issues here. Issue tracking happens at post_review_result (story-track-review).
+## Best-effort: set issue status to in-progress
+
+After the MR is created, optionally update the story's issue to reflect that dev
+is underway. Use the module's YAML workflows — do NOT write inline API calls.
+
+1. Read `_bmad/custom/issue-tracking.yaml` for `platform`, `host`, `project`,
+   `git_platform`. URL-encode the project path for GitLab API calls (replace `/`
+   with `%2F`) and store as `project_enc`. Resolve `{sep}` — `::` for gitlab,
+   `:` for github. Read `prd_key` from the PRD frontmatter.
+
+2. Find the story's issue — INCLUDE `common/find-issue.yaml` (set `search_text`
+   to `{story_key}` and `prd_key` to the resolved prd_key — without `prd_key`
+   the search is unscoped and parallel PRDs collide on story keys). If
+   `issue_id` comes back empty, skip (post-run sync will create it).
+
+3. Set status to in-progress — INCLUDE `common/update-issue-status.yaml` with
+   `issue_id`, `new_status: "in-progress"`, `close: "false"`. Skip this step
+   if the story is currently `awaiting-operator` (a parked story should not
+   be overwritten with `in-progress` — the post-run sync handles parked stories).
+
+If any step fails, skip silently — this is best-effort.
 
 ## Constraints
 
 - **Do NOT modify `sprint-status.yaml`** — the orchestrator owns it.
-- **Do NOT track issues** — that's story-track-review's job at post_review_result.
-- Use the module's deployed workflows under `_bmad/_config/custom/workflows/common/` as the canonical logic where it helps.
+- Use the module's deployed workflows under `_bmad/_config/custom/workflows/common/`
+  (`find-issue.yaml`, `update-issue-status.yaml`) as the canonical logic where
+  it helps. Do NOT write inline glab/gh API calls for issue operations.
 
 Then end your turn following the Completion signal contract below.

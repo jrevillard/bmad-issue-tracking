@@ -7,7 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `common/post-issue-comment.yaml` extracted helper: posts a comment to a GitLab or GitHub issue via `glab api` / `gh issue comment`. Reuses the input contract (`issue_id`, `comment_file`, `host`, `project`, `project_enc`) common to other `common/` workflows. `EXPECT_EXIT: any` — callers handle non-zero exit as a soft failure (best-effort).
+
 ### Changed
+
+- **Requires BMM 6.11.0+** (was 6.4.0+): targets the 6.11.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
+- All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.11.0 makes `uv` a real requirement and stops assuming a system Python).
+- `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.11.0.
+- `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
+- `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
+- **CI architecture restructured**: `ci-wait.sh` (shell script that waited for CI) replaced by `ci-status.sh` (shell script that reads `ci-status.json`) + two LLM workflows (`story-track-dev` at `post_dev_phase` + `story-track-review` at `post_review_result`). The two-stage architecture ensures every story that completes dev gets pushed + CI + MR, and stories that complete review get review modifications committed + pushed + CI + issue tracking.
+- `code-review/complete.yaml` and `dev-story/complete.yaml` now `INCLUDE common/post-issue-comment` instead of inlining platform-specific glab/gh comment steps — single source of truth for comment posting logic.
+- `story-track-dev` (bmad-loop plugin, `post_dev_phase`) now sets the story issue to `status::in-progress` after the trace MR is created. Uses `common/find-issue.yaml` + `common/update-issue-status.yaml` (no inline glab/gh calls). Skips silently on any failure. Skipped when the story is `awaiting-operator`. The "Do NOT track issues" constraint is removed.
+- `story-track-review` (bmad-loop plugin, `post_review_result`) now references `common/find-issue.yaml`, `common/update-issue-status.yaml`, and `common/post-issue-comment.yaml` instead of inlining platform-specific API calls. CI green → `status::done` + close; CI red → `status::in-progress` + keep open + comment with failure details; issue not found → OUTPUT message + skip; comment fails → best-effort + OUTPUT message + continue.
+
+### Fixed
+
+- **GitLab nested-group namespaces fixed**: the GitLab API requires the URL-encoded project path (`projects/un%2Fitu%2Fgenie-ai`, not `projects/un/itu/genie-ai`). `common/check-config.yaml` now computes `project_enc` and all `glab api "projects/..."` calls (issue sync, find/create/update issues, labels, board, code-review/dev-story comments, `ci-wait.sh`, `story-track`) use it — projects under group/subgroup namespaces work.
+- `ci-wait.sh` (bmad-loop CI gate): configuration/environment errors now exit **126** (bmad-loop's env-fault class → the run escalates/pauses, budget resets) instead of 1 (fixable → futile repair burn → story defer). A red/timeout CI still exits 1 → `_fix_phase`.
+- `ci-wait.sh`: platform resolved from `_bmad/custom/issue-tracking.yaml` (`git_platform`) so self-hosted GitLab/GitHub instances work; inline YAML comments stripped; glab/gh API or auth failures escalate instead of silently passing as "no pipeline".
+- `story-track`: the trace MR now targets the **PRD branch** (`branch_patterns.prd`) instead of `main`, its title follows the module's convention `Story {epic}.{story}: {title}` instead of `CI: {branch}`, and a re-driven story's stale trace MR is **closed with a new one created on the current branch** (the GitLab API does not support changing an MR's source branch) — one active trace MR per story.
+- `ensure-board.yaml`: added missing `--paginate` to `glab api projects/{project}/labels` — projects with >20 labels would miss status labels beyond the first page, causing board columns to not be created
+- `find-issue.yaml`: added missing `--paginate` to GitHub `gh api search/issues` — could miss issue matches beyond the first 100 results
+- `sync-issues.yaml`: four `uv run python` blocks referenced `sys.argv` without `import sys` (NameError at runtime) — added the missing imports
+- All Python invocations use `uv run --no-project python -c` so `uv run` does not create `.venv`/`uv.lock` in consuming projects with a `pyproject.toml` (which `git add .` would otherwise commit into worktrees)
+- `story-track-dev` and `story-track-review` now pass `prd_key` to `common/find-issue.yaml` — without it the search is unscoped and parallel PRDs collide on story keys (`1-3-login-form` in two PRDs would otherwise update the wrong issue).
+- `dev-story/complete.yaml`: the `test -f /tmp/dev-story-comment.md` check now has a FALSE branch that skips the comment INCLUDE — if the user dismisses the implementation-summary prompt, the workflow no longer halts mid-execution.
+
+### Removed
+
+- `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.11.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.
 
 - **Requires BMM 6.11.0+** (was 6.4.0+): targets the 6.11.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
 - All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.11.0 makes `uv` a real requirement and stops assuming a system Python).

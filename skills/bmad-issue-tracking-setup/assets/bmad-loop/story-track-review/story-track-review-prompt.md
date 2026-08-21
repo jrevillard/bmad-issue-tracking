@@ -51,32 +51,43 @@ reconciles the full board.
 
 1. Read `_bmad/custom/issue-tracking.yaml` for `git_platform` (git remote
    platform — `gitlab` or `github`; self-hosted GitLab instances have a custom
-   host but `git_platform: gitlab`), `host`, `project`. Read `prd_key` from the
-   PRD frontmatter: find `prd.md` under the planning artifacts (path from
-   `_bmad/bmm/config.yaml` `planning_artifacts`, or search the repo for
-   `prd.md`) and read its `prd_key` frontmatter.
+   host but `git_platform: gitlab`), `host`, `project`, `platform` (issue tracker
+   platform). URL-encode the project path for GitLab API calls: replace `/` with
+   `%2F` and store as `project_enc`. Read `prd_key` from the PRD frontmatter:
+   find `prd.md` under the planning artifacts (path from `_bmad/bmm/config.yaml`
+   `planning_artifacts`, or search the repo for `prd.md`) and read its
+   `prd_key` frontmatter.
 
-2. Find the story's issue by its sprint key `{story_key}`, scoped by the prd label:
-   - GitLab: `glab api "projects/{project_enc}/issues?search={story_key}&labels=prd::{prd_key}" --hostname {host}`
-   - GitHub: `gh api "search/issues?q={story_key}+repo:{project}+label:prd:{prd_key}" --hostname {host}`
+2. Find the story's issue by its sprint key — INCLUDE
+   `common/find-issue.yaml` (set `search_text` to `{story_key}` and `prd_key`
+   to the resolved prd_key before the INCLUDE — without `prd_key` the search
+   is unscoped and parallel PRDs collide on story keys). If `issue_id` comes
+   back empty, OUTPUT "Issue not found, post-run sync will create it" and skip
+   the remaining steps in this section.
 
-3. If found, read ci-status.json (just written) and update the issue:
-   - Status label: `green` → `status::{sep}done` (close issue), `red` → `status::{sep}in-progress` (keep open)
-     (`{sep}` is `::` on GitLab, `:` on GitHub)
-   - Post a comment: the trace MR link + CI result (green/red) + brief summary.
+3. Read `ci-status.json` (just written) and update the issue — INCLUDE
+   `common/update-issue-status.yaml` (set `issue_id`, `new_status`, `close`
+   before the INCLUDE):
+   - CI green → `new_status: "done"`, `close: "true"`
+   - CI red → `new_status: "in-progress"`, `close: "false"`
 
-4. If the issue is not found, skip (the post-run sync will create it).
+4. Post a comment (trace MR link + CI result + brief summary) — write the
+   comment body to `/tmp/story-track-review-comment.md`, set `comment_file` to
+   that path, then INCLUDE `common/post-issue-comment.yaml`. If the comment
+   fails, skip it (best-effort) — OUTPUT a message reporting the failure and
+   continue. Clean up the temp file afterward.
 
 ## Constraints
 
 - **Do NOT modify `sprint-status.yaml`** — the orchestrator owns it and
   reconciles it after you finish.
-- **Do NOT rewrite code** — the module provides canonical workflows under `_bmad/_config/custom/workflows/common/` that handle platform differences, pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of writing ad-hoc scripts. For issue/board/label operations, INCLUDE:
-  - `update-issue-status.yaml`
+- **Do NOT rewrite code** — the module provides canonical workflows under
+  `_bmad/_config/custom/workflows/common/` that handle platform differences,
+  pagination, URL encoding, and API specifics. Use them (INCLUDE) instead of
+  writing ad-hoc scripts. For issue/board/label operations, INCLUDE:
   - `find-issue.yaml`
+  - `update-issue-status.yaml`
+  - `post-issue-comment.yaml`
   - `create-issue.yaml` (if needed)
-- Use the module's deployed workflows under
-  `_bmad/_config/custom/workflows/common/` (`update-issue-status.yaml`,
-  `find-issue.yaml`) as the canonical logic where it helps.
 
 Then end your turn following the Completion signal contract below.

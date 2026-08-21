@@ -1,0 +1,20 @@
+# common/post-issue-comment.yaml
+#
+# Purpose: Posts a comment on an issue. Extracted for reuse across workflows
+#           (code-review, dev-story, bmad-loop plugins).
+# Input variables:
+#   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub)
+#   - comment_file: path to a temp file containing the comment body
+#   - host: the issue tracker host
+#   - project: the issue tracker project path (owner/repo for GitHub)
+#   - project_enc: URL-encoded project path (for GitLab API)
+# Output variables: (none)
+# Side effects: posts a comment on the issue via glab/gh (best-effort: callers
+#               handle non-zero exit as a soft failure, not a halt)
+
+- RUN: glab api --method POST "projects/{project_enc}/issues/{issue_id}/notes" --hostname {host} -F "body=@{comment_file}"
+  PLATFORM: gitlab
+  EXPECT_EXIT: any
+- RUN: gh issue comment {issue_id} --body-file "{comment_file}" -R "{host}/{project}"
+  PLATFORM: github
+  EXPECT_EXIT: any

@@ -52,17 +52,16 @@ else:
     - INCLUDE: common/set-story-status
     - OUTPUT:
         message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
-    - RUN: test -f /tmp/dev-story-comment.md
-      EXPECT_EXIT: 0
-    - CHECK: empty issue_id
-      FALSE:
-        - RUN: glab api --method POST "projects/{project_enc}/issues/{issue_id}/notes" --hostname {host} -F "body=@/tmp/dev-story-comment.md"
-          PLATFORM: gitlab
-          EXPECT_EXIT: 0
-        - RUN: gh issue comment {issue_id} --body-file "/tmp/dev-story-comment.md" -R "{host}/{project}"
-          PLATFORM: github
-          EXPECT_EXIT: 0
-    - RUN: rm -f /tmp/dev-story-comment.md
+    - RUN: test -f /tmp/dev-story-comment.md && echo "yes" || echo "no"
+      STORE: comment_file_exists
+      EXPECT_EXIT: any
+    - CHECK: comment_file_exists eq "yes"
+      TRUE:
+        - CHECK: empty issue_id
+          FALSE:
+            - SET: { variable: comment_file, value: "/tmp/dev-story-comment.md" }
+            - INCLUDE: common/post-issue-comment
+        - RUN: rm -f /tmp/dev-story-comment.md
 - CHECK: story_status eq "done"
   TRUE:
     - SET: { variable: new_status, value: "done" }
