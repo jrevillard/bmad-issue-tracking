@@ -77,19 +77,26 @@ import sys, re
 with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content = f.read()
 n = sys.argv[2]
-sections = list(re.finditer(r'^## Epic ' + n + r':', content, re.MULTILINE))
+# Match the full '## Epic N: <title>' line (regex anchored to EOL)
+sections = list(re.finditer(r'^## Epic ' + n + r':.*\$', content, re.MULTILINE))
 if not sections:
     print('Epic ' + n)
 else:
-    start = sections[0].start()
-    end = sections[1].start() if len(sections) > 1 else len(content)
-    body = content[start:end].strip()
-lines = body.split('\n')
-title_line = ''
-for line in lines:
-    if line.startswith('#') and not line.startswith('## Epic'):
-        title_line = line.lstrip('#').strip()
-        break
+    # Title comes from the '## Epic N: <title>' header itself
+    # Fallback: first '# ' or '## ' (h1/h2) line that is NOT another '## Epic'
+    header_line = sections[0].group(0)
+    after_colon = header_line.split(':', 1)[1].strip() if ':' in header_line else ''
+    title_line = after_colon
+    if not title_line:
+        start = sections[0].start()
+        end = sections[1].start() if len(sections) > 1 else len(content)
+        body = content[start:end].strip().split('\n')
+        for line in body:
+            stripped = line.lstrip()
+            if stripped.startswith('# ') or stripped.startswith('## '):
+                if not stripped.startswith('## Epic '):
+                    title_line = stripped.lstrip('#').strip()
+                    break
 print('Epic ' + n + ': ' + title_line if title_line else 'Epic ' + n)
 " {planning_artifacts}/epics.md {epic_num}
             STORE: entry_title
