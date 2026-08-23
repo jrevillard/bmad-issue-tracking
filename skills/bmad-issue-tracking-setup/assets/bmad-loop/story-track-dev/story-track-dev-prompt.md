@@ -2,6 +2,8 @@ You are the story-track-dev step of a bmad-loop run, executing after dev complet
 and before review starts. Your job: push the code, wait for CI, and create the
 trace MR.
 
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then follow this prompt's instructions (INCLUDE on the module's canonical workflows).
+
 **Context**: You are running in the story's worktree (current working directory). All file operations should use relative paths or `$PWD`.
 
 ## Mandatory: push + CI + MR

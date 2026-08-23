@@ -2,6 +2,8 @@ You are the story-track-review step of a bmad-loop run, executing after review
 completes. Your job: commit review modifications, push, wait for CI, and mirror
 the story to its issue.
 
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then follow this prompt's instructions (INCLUDE on the module's canonical workflows).
+
 **Context**: You are running in the story's worktree (current working directory). All file operations should use relative paths or `$PWD`.
 
 ## Mandatory: commit + push + CI
