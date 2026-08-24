@@ -1,4 +1,12 @@
-"""Tests for ci-status.sh verify command."""
+"""Tests for ci-status.sh verify command.
+
+Exit contract (after v2):
+  - rc=0  -> CI green, proceed
+  - rc=1  -> CI red OR ci-status.json missing/invalid, fixable: bmad-loop runs a
+              repair session with the diagnostic as feedback
+  - (no rc=126: missing/invalid ci-status.json is treated as fixable, NOT env-fault,
+     because the bmad-build-auto on_complete hook is expected to write it)
+"""
 
 import subprocess
 import tempfile
@@ -39,19 +47,21 @@ def test_ci_status_red():
 
 
 def test_ci_status_missing_file():
-    """ci-status.sh exits 126 (ENV_FAULT) when ci-status.json is missing."""
+    """ci-status.sh exits 1 (fixable) when ci-status.json is missing — on_complete hook did not write it."""
     with tempfile.TemporaryDirectory() as tmpdir:
         result = subprocess.run(
             ["bash", str(CI_STATUS_SCRIPT)],
             cwd=tmpdir,
             capture_output=True
         )
-        assert result.returncode == 126
-        assert "ENV-FAULT" in result.stderr.decode() or "ENV-FAULT" in result.stdout.decode()
+        assert result.returncode == 1
+        output = (result.stderr.decode() + result.stdout.decode()).lower()
+        assert "ci-status.json" in output
+        assert "on_complete" in output
 
 
 def test_ci_status_invalid_json():
-    """ci-status.sh exits 126 (ENV_FAULT) when ci-status.json is invalid JSON."""
+    """ci-status.sh exits 1 (fixable) when ci-status.json is invalid JSON."""
     with tempfile.TemporaryDirectory() as tmpdir:
         status_file = Path(tmpdir) / "ci-status.json"
         status_file.write_text('not json')
@@ -60,12 +70,13 @@ def test_ci_status_invalid_json():
             cwd=tmpdir,
             capture_output=True
         )
-        assert result.returncode == 126  # ENV_FAULT, not fixable
-        assert "ENV-FAULT" in result.stdout.decode() or "ENV-FAULT" in result.stderr.decode()
+        assert result.returncode == 1  # fixable, NOT env-fault
+        output = (result.stderr.decode() + result.stdout.decode()).lower()
+        assert "invalid" in output or "parse" in output
 
 
 def test_ci_status_missing_status_key():
-    """ci-status.sh exits 126 (ENV_FAULT) when ci-status.json lacks 'status' key."""
+    """ci-status.sh exits 1 (fixable) when ci-status.json lacks 'status' key."""
     with tempfile.TemporaryDirectory() as tmpdir:
         status_file = Path(tmpdir) / "ci-status.json"
         status_file.write_text('{"pipeline_url": "https://..."}')
@@ -74,7 +85,7 @@ def test_ci_status_missing_status_key():
             cwd=tmpdir,
             capture_output=True
         )
-        assert result.returncode == 126  # ENV_FAULT, not fixable
+        assert result.returncode == 1
 
 
 def test_ci_status_unknown_status():

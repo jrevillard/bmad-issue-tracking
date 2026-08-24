@@ -1,0 +1,44 @@
+# common/write-ci-status.yaml
+#
+# Purpose: Writes {worktree}/ci-status.json from the ci_status + pipeline_info
+#          variables set by common/wait-for-green-ci. This is the contract read
+#          by ci-status.sh (bmad-loop [verify] command). Reused by the dev-finish
+#          and review-finish phases of post-dev-complete.
+# Input variables:
+#   - ci_status: "passed" | "failed" | "timeout" | "no_ci" | "no_mr" (from wait-for-green-ci)
+#   - pipeline_info: diagnostic string on failure (from wait-for-green-ci)
+#   - worktree: the worktree root (ci-status.json is written there)
+# Output variables: (none)
+# Side effects: writes {worktree}/ci-status.json
+
+# passed / no_ci / no_mr -> green (no CI configured = no gate); failed / timeout -> red
+- CHECK: ci_status eq "passed"
+  TRUE:
+    - WRITE:
+        file: {worktree}/ci-status.json
+        content: '{"status": "green"}'
+        mode: overwrite
+- CHECK: ci_status eq "no_ci"
+  TRUE:
+    - WRITE:
+        file: {worktree}/ci-status.json
+        content: '{"status": "green"}'
+        mode: overwrite
+- CHECK: ci_status eq "no_mr"
+  TRUE:
+    - WRITE:
+        file: {worktree}/ci-status.json
+        content: '{"status": "green"}'
+        mode: overwrite
+- CHECK: ci_status eq "failed"
+  TRUE:
+    - WRITE:
+        file: {worktree}/ci-status.json
+        content: '{"status": "red", "diagnostic": "{pipeline_info}"}'
+        mode: overwrite
+- CHECK: ci_status eq "timeout"
+  TRUE:
+    - WRITE:
+        file: {worktree}/ci-status.json
+        content: '{"status": "red", "diagnostic": "CI timeout after 30 minutes"}'
+        mode: overwrite

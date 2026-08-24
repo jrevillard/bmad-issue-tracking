@@ -1,0 +1,85 @@
+# common/ensure-mr.yaml
+#
+# Purpose: Ensures a trace MR/PR exists for the story branch — finds it by source
+#          branch, creates it if missing with the issue reference. Reused by
+#          post-dev-complete phases (create-story and dev-finish).
+# Input variables:
+#   - story_branch: the story branch name (source)
+#   - prd_branch: the target branch (PRD branch)
+#   - issue_id: the issue ID (IID for GitLab, number for GitHub) — for the reference
+#   - epic_num, story_num, prd_key, story_key: for the MR title/description
+# Output variables: (none)
+# Side effects: creates the MR/PR on the tracker if not found
+
+# Derive story_title from the story spec file (for the MR title, matching the
+# module's `Story N.N: Title` convention)
+- RUN: uv run --no-project python -c "
+import sys, re
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    for line in f:
+        if line.startswith('# '):
+            heading = line[2:].strip()
+            m = re.match(r'Story\s+\d+\.\d+\s*:\s*(.+)', heading)
+            print(m.group(1).strip() if m else heading)
+            break
+" {implementation_artifacts}/{story_key}.md
+  STORE: story_title
+
+# Resolve the repo reference (same-platform vs cross-platform git remote)
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
+      FALSE:
+        - READ: _bmad/custom/issue-tracking.yaml
+          EXTRACT:
+            git_host: issue_tracking.git_host
+            git_project: issue_tracking.git_project
+        - RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+          STORE: git_owner
+        - RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+          STORE: git_repo
+        - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
+# Build the issue reference (same-platform -> #id, cross-platform -> full URL)
+- CHECK: git_platform eq platform
+  TRUE:
+    - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to #{issue_id}" }
+  FALSE:
+    - CHECK: platform eq "gitlab"
+      TRUE:
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/-/issues/{issue_id}" }
+      FALSE:
+        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/issues/{issue_id}" }
+# Check if an MR/PR already exists for this source branch
+- CHECK: git_platform eq "gitlab"
+  TRUE:
+    - RUN: glab api "projects/{project_enc}/merge_requests?source_branch={story_branch}" --hostname {host} --paginate | uv run --no-project python -c "import json,sys; print('yes' if json.load(sys.stdin) else '')"
+      STORE: existing_mr
+      PLATFORM: gitlab
+  FALSE:
+    - RUN: gh pr list --head {story_branch} -R "{mr_repo}" --json number
+      STORE: existing_mr
+      PLATFORM: github
+- CHECK: empty existing_mr
+  TRUE:
+    # No MR exists — create the trace MR (story branch -> PRD branch)
+    - CHECK: git_platform eq "gitlab"
+      TRUE:
+        - RUN: glab mr create --title "Story {epic_num}.{story_num}: {story_title}" --description "{issue_ref}" --target-branch {prd_branch} --source-branch {story_branch} -R "{mr_repo}"
+      FALSE:
+        - RUN: gh pr create --title "Story {epic_num}.{story_num}: {story_title}" --body "{issue_ref}" --base {prd_branch} --head {story_branch} -R "{mr_repo}"

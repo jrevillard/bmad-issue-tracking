@@ -124,10 +124,10 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 
 **Flow:**
 
-1. `bmad-loop run` — each story is implemented/reviewed/verified in its own worktree and merged back locally. Two module pieces run inside the loop (deployed by `/bmad-issue-tracking-setup`, step 3c):
-   - **`story-track-dev`** (LLM workflow at `post_dev_phase`): pushes the code dev, waits for CI to complete, writes `ci-status.json` (green or red with diagnostic), and creates the trace MR. Runs for **every** story that completes dev, regardless of whether review happens afterward.
-   - **`story-track-review`** (LLM workflow at `post_review_result`): commits review modifications, pushes, waits for CI, writes `ci-status.json`, and mirrors the story to its issue (status label, result comment, MR link). Runs **only** when review completes.
-   - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by the last plugin that ran. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover).
+1. `bmad-loop run` — each story is implemented/reviewed/verified in its own worktree and merged back locally. At the end of every `bmad-build-auto` session, the skill executes its `on_complete` hook (from `bmad-build-auto.toml`), which runs `common/post-build-dispatch.yaml` → `common/post-dev-complete.yaml`. This unified workflow handles the full lifecycle for the story:
+   - **dev-finish phase** (spec status `in-review` / `in-progress`): pushes the code, waits for CI (`common/wait-for-green-ci.yaml`), writes `ci-status.json` (`common/write-ci-status.yaml`), ensures the issue + trace MR exist (`common/ensure-issue.yaml` / `common/ensure-mr.yaml`), and updates the issue status.
+   - **review-finish phase** (spec status `done`): commits review modifications, pushes, waits for CI, writes `ci-status.json`, posts the review findings comment, and mirrors the story to its issue (status label, result comment, MR link).
+   - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by the unified workflow. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. A **missing `ci-status.json` also fails** (fixable) — the on_complete hook did not write it. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover). No bmad-loop plugins are needed — the `on_complete` hook drives everything.
 2. `/bmad-bmm-issue-sync` — unattended safety net: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
 3. `git push origin main` — the local merge-back is never pushed by bmad-loop.
 
@@ -142,18 +142,18 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
 | `awaiting-operator` | `status::awaiting-operator` (issue stays **open** — external action pending, confirm with `bmad-loop confirm`) |
 | `done` | `status::done` + issue closed |
 
-**Execution trace:** `story-track` ensures a trace MR/PR exists per story (left open) — a CI vehicle and the story's execution trace. After the local merge-back is pushed to the target branch, GitLab auto-marks it merged, keeping the story's diff and pipeline as a durable record. On GitHub there is no auto-detection of an out-of-band merge, so the trace PR stays open; close it with `gh pr close <number>` when the story is `done` if you want it tidied.
+**Execution trace:** the unified workflow's `ensure-mr.yaml` ensures a trace MR/PR exists per story (left open) — a CI vehicle and the story's execution trace. After the local merge-back is pushed to the target branch, GitLab auto-marks it merged, keeping the story's diff and pipeline as a durable record. On GitHub there is no auto-detection of an out-of-band merge, so the trace PR stays open; close it with `gh pr close <number>` when the story is `done` if you want it tidied.
 
 ## Migration from ci-wait.sh (if upgrading)
 
 If you're upgrading from a version that used `ci-wait.sh`:
 1. Re-run `/bmad-issue-tracking-setup` — it will deploy `ci-status.sh` and update `policy.toml`
 2. Delete the old `ci-wait.sh`: `rm .bmad-loop/ci-wait.sh`
-3. The `story-track-dev` and `story-track-review` plugins are deployed automatically
+3. If you previously installed the `story-track-dev` / `story-track-review` bmad-loop plugins (now removed — superseded by the `bmad-build-auto.toml` `on_complete` hook): delete them with `rm -rf .bmad-loop/plugins/story-track-dev .bmad-loop/plugins/story-track-review` and remove them from `[plugins] enabled` in `.bmad-loop/policy.toml`.
 
-The two-stage architecture is simpler: `story-track-dev` (LLM) pushes code + waits CI + writes `ci-status.json` + creates MR, then `story-track-review` (LLM) commits review changes + waits CI + writes `ci-status.json` + tracks issue. `ci-status.sh` (verify command) reads the latest `ci-status.json`. No polling or API calls in the shell script.
+The architecture is simpler: at the end of every `bmad-build-auto` session, the skill's `on_complete` hook (from `bmad-build-auto.toml`) runs `common/post-build-dispatch.yaml` → `common/post-dev-complete.yaml` (dev-finish / review-finish), which pushes code + waits CI + writes `ci-status.json` + ensures issue/MR + tracks issue. `ci-status.sh` (verify command) reads the latest `ci-status.json`. No polling or API calls in the shell script — the workflow does the polling via `common/wait-for-green-ci.yaml`.
 
-**Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready`/`wait-for-green-ci` are not used in this flow.
+**Limits (by design):** no MR discussion threads (the MR is a CI vehicle + trace, not a review conversation); `mark-mr-ready` is not used in this flow.
 
 ## Platform differences
 

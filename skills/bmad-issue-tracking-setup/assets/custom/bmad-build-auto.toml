@@ -1,0 +1,16 @@
+# Issue Tracking override for bmad-build-auto (bmad-loop flow — unattended)
+# Routes the on_complete hook to the non-interactive dispatcher, which reads the
+# spec status and dispatches to the right phase of post-dev-complete (push + wait
+# CI + write ci-status.json + update issue + post comment). Never prompts for a
+# merge (allow_merge stays unset/false). bmad-build (manual) uses the interactive
+# dispatcher (post-build-dispatch-interactive.yaml).
+
+[workflow]
+
+# Scalar: executed when the workflow reaches its final step,
+# after the story implementation is complete and status is updated. Override wins.
+# Leave empty for no custom post-completion behavior.
+
+on_complete = """
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml`.
+"""

@@ -55,13 +55,15 @@ cp -f <path>/*.toml _bmad/custom/
 <action>Remove any `bmad-*.toml` files in `_bmad/custom/` that no longer exist in the source (files may have been renamed or removed in a new version).</action>
 
 <action>The following TOML files should now exist in `_bmad/custom/`:</action>
-- `bmad-code-review.toml` (requires BMM 6.11.0+)
+- `bmad-build.toml` (requires BMM 6.11.0+; manual one-shot flow — push + wait CI + update issue + post comment on completion)
+- `bmad-build-auto.toml` (requires BMM 6.11.0+; bmad-loop flow — same unified dispatch as bmad-build)
+- `bmad-code-review.toml` (requires BMM 6.11.0+; delegates to common/post-dev-complete-review-finish.yaml)
 - `bmad-correct-course.toml` (requires BMM 6.11.0+)
 - `bmad-create-architecture.toml` (requires BMM 6.11.0+)
 - `bmad-create-epics-and-stories.toml` (requires BMM 6.11.0+)
 - `bmad-create-prd.toml` (requires BMM 6.11.0+, superseded by bmad-prd.toml)
-- `bmad-create-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path)
-- `bmad-dev-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path)
+- `bmad-create-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path. Delegates to common/post-dev-complete-create-story.yaml)
+- `bmad-dev-story.toml` (requires BMM 6.11.0+; shim — deprecated upstream, bmad-build is the official path. Delegates to common/post-dev-complete-dev-finish.yaml)
 - `bmad-edit-prd.toml` (requires BMM 6.11.0+, superseded by bmad-prd.toml)
 - `bmad-prd.toml` (requires BMM 6.11.0+; unified PRD override)
 - `bmad-retrospective.toml` (requires BMM 6.11.0+)
@@ -100,18 +102,27 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/common/create-label.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-board.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-dynamic-labels.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-issue.yaml`
+- `_bmad/_config/custom/workflows/common/ensure-mr.yaml`
 - `_bmad/_config/custom/workflows/common/ensure-labels.yaml`
 - `_bmad/_config/custom/workflows/common/find-issue.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd.yaml`
 - `_bmad/_config/custom/workflows/common/find-prd-key.yaml`
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
 - `_bmad/_config/custom/workflows/common/mark-mr-ready.yaml`
+- `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml`
+- `_bmad/_config/custom/workflows/common/post-build-dispatch-interactive.yaml`
+- `_bmad/_config/custom/workflows/common/post-dev-complete.yaml`
+- `_bmad/_config/custom/workflows/common/post-dev-complete-create-story.yaml`
+- `_bmad/_config/custom/workflows/common/post-dev-complete-dev-finish.yaml`
+- `_bmad/_config/custom/workflows/common/post-dev-complete-review-finish.yaml`
 - `_bmad/_config/custom/workflows/common/post-issue-comment.yaml`
 - `_bmad/_config/custom/workflows/common/set-story-status.yaml`
 - `_bmad/_config/custom/workflows/common/sync-issues.yaml`
 - `_bmad/_config/custom/workflows/common/update-issue-description.yaml`
 - `_bmad/_config/custom/workflows/common/update-issue-status.yaml`
 - `_bmad/_config/custom/workflows/common/wait-for-green-ci.yaml`
+- `_bmad/_config/custom/workflows/common/write-ci-status.yaml`
 - `_bmad/_config/custom/workflows/issue-sync/prepare.yaml`
 - `_bmad/_config/custom/workflows/issue-sync/sync.yaml`
 - `_bmad/_config/custom/workflows/bmad-prd/activation.yaml`
@@ -119,7 +130,6 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/bmad-ux/activation.yaml`
 - `_bmad/_config/custom/workflows/bmad-ux/complete.yaml`
 - `_bmad/_config/custom/workflows/code-review/activation.yaml`
-- `_bmad/_config/custom/workflows/code-review/complete.yaml`
 - `_bmad/_config/custom/workflows/correct-course/activation.yaml`
 - `_bmad/_config/custom/workflows/correct-course/complete.yaml`
 - `_bmad/_config/custom/workflows/create-architecture/activation.yaml`
@@ -129,9 +139,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/create-prd/activation.yaml`
 - `_bmad/_config/custom/workflows/create-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/create-story/activation.yaml`
-- `_bmad/_config/custom/workflows/create-story/complete.yaml`
 - `_bmad/_config/custom/workflows/dev-story/activation.yaml`
-- `_bmad/_config/custom/workflows/dev-story/complete.yaml`
 - `_bmad/_config/custom/workflows/edit-prd/activation.yaml`
 - `_bmad/_config/custom/workflows/edit-prd/complete.yaml`
 - `_bmad/_config/custom/workflows/retrospective/activation.yaml`
@@ -142,28 +150,15 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
-<step n="3c" goal="Deploy bmad-loop CI status + story tracking (optional)">
-<action>The module ships three pieces for bmad-loop, deployed only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`):
-
-- **`story-track-dev` plugin** — an LLM workflow session at `post_dev_phase` that pushes the code dev, waits for the CI pipeline to complete, writes the result to `ci-status.json`, and creates the trace MR. It runs for EVERY story that completes dev, regardless of whether review happens afterward.
-- **`story-track-review` plugin** — an LLM workflow session at `post_review_result` that commits review modifications, pushes, waits for CI, writes `ci-status.json`, and mirrors the story to its GitLab/GitHub issue (status label, result comment, MR link). It runs ONLY when review completes.
-- **`ci-status.sh`** — a `[verify]` command that reads `ci-status.json` (written by the last plugin that ran). It returns exit 0 if CI is green, exit 1 if red (with diagnostic). bmad-loop answers a red CI with a feedback-driven repair session (re-runs `bmad-build-auto` with the failing output) — the auto-fix loop.
-
-The two-stage architecture ensures:
-- Stories that complete dev (with or without review) get pushed + CI + MR
-- Stories that complete review get review modifications committed + pushed + CI + issue tracking
-- ci-status.sh reads the latest ci-status.json (after last push)
-
-The scripts derive branch/host/project/platform from git and their working directory — no environment variables required.</action>
+<step n="3c" goal="Deploy bmad-loop CI status gate (optional)">
+<action>Deploy `ci-status.sh` only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`). No bmad-loop plugins are needed — the `bmad-build-auto.toml` `on_complete` hook drives the issue tracking + CI write.</action>
 
 <check if=".bmad-loop/ directory exists">
   <true>
-    <action>Copy `ci-status.sh` to the repo root and register it in `[verify] commands` + `[scm] worktree_seed` (verify commands run inside each story worktree, so the script must be seeded into worktrees); copy the two `story-track-*` plugins into `.bmad-loop/plugins/`:</action>
+    <action>Copy `ci-status.sh` to the repo root:</action>
     ```bash
-    mkdir -p .bmad-loop .bmad-loop/plugins
+    mkdir -p .bmad-loop
     cp -f <path>/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
-    cp -rf <path>/bmad-loop/story-track-dev .bmad-loop/plugins/story-track-dev
-    cp -rf <path>/bmad-loop/story-track-review .bmad-loop/plugins/story-track-review
     ```
     <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
@@ -172,15 +167,12 @@ The scripts derive branch/host/project/platform from git and their working direc
 
     [verify]
     commands = ["bash .bmad-loop/ci-status.sh"]
-
-    [plugins]
-    enabled = ["story-track-dev", "story-track-review"]
     ```
-    <action>Verify `.bmad-loop/ci-status.sh`, `.bmad-loop/plugins/story-track-*/plugin.toml` exist, and `.bmad-loop/policy.toml` has both plugins in `enabled`.</action>
-    <action>Note: the `story-track-*` plugins are enabled in `[plugins] enabled` so their workflow sessions run at `post_dev_phase` and `post_review_result`. Each plugin has settings (`<name>_enabled`, `<name>_blocking`) that appear as toggles in the bmad-loop settings TUI. The `ci-status.sh` script is deterministic and fast — it just reads a file. The intelligent work (polling CI, parsing logs) is done by the LLM workflows.</action>
+    <action>Verify `.bmad-loop/ci-status.sh` exists and `.bmad-loop/policy.toml` has the `[verify] commands` + `[scm] worktree_seed` entries.</action>
+    <action>If `.bmad-loop/plugins/story-track-dev` or `.bmad-loop/plugins/story-track-review` exist, remove them and delete their `[plugins] enabled` entries from `.bmad-loop/policy.toml` (superseded by the `on_complete` hook).</action>
   </true>
   <false>
-    <output>Skipping ci-status + story-track — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+    <output>Skipping ci-status — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
   </false>
 </check>
 </step>

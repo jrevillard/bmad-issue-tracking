@@ -1,0 +1,48 @@
+# common/ensure-issue.yaml
+#
+# Purpose: Ensures the story's issue exists on the tracker — finds it by title
+#          (scoped by prd label), creates it if missing with the story spec body,
+#          sprint key, epic and prd context. Reused by post-dev-complete phases.
+# Input variables:
+#   - story_key: the story key (e.g. 1-3-login-form) — must be set
+#   - epic_num: the epic number (first dash segment of story_key)
+#   - story_num: the story number (second dash segment)
+#   - prd_key: the PRD key (from scope)
+#   - story_branch: the story branch name (for reference)
+# Output variables:
+#   - issue_id: the issue IID (GitLab) or number (GitHub); empty if story file missing
+# Side effects: creates the issue on the tracker if not found; writes /tmp/issue-desc.md
+
+# Derive story title and body from the story spec file
+- RUN: cat {implementation_artifacts}/{story_key}.md 2>/dev/null
+  STORE: story_body
+- CHECK: empty story_body
+  TRUE:
+    - SET: { variable: issue_id, value: "" }
+    - OUTPUT:
+        message: "Story file not found at {implementation_artifacts}/{story_key}.md — cannot create issue"
+  FALSE:
+    - RUN: uv run --no-project python -c "
+import sys, re
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    for line in f:
+        if line.startswith('# '):
+            heading = line[2:].strip()
+            m = re.match(r'Story\s+\d+\.\d+\s*:\s*(.+)', heading)
+            print(m.group(1).strip() if m else heading)
+            break
+" {implementation_artifacts}/{story_key}.md
+      STORE: story_title
+    - WRITE:
+        file: /tmp/issue-desc.md
+        content: "**Sprint Key:** `{story_key}`\n**Epic:** {epic_num}\n**PRD:** {prd_key}\n\n---\n\n{story_body}"
+        mode: overwrite
+    - SET: { variable: title, value: "Story {epic_num}.{story_num}: {story_title}" }
+    - SET: { variable: labels, value: "type{sep}story\nstatus{sep}ready-for-dev\nprd{sep}{prd_key}\n{prd_key}{sep}epic-{epic_num}" }
+    - SET: { variable: description_file, value: "/tmp/issue-desc.md" }
+    - SET: { variable: search_text, value: "{story_key}" }
+    - INCLUDE: common/find-issue
+    - CHECK: empty issue_id
+      TRUE:
+        - INCLUDE: common/create-issue
+    - RUN: rm -f /tmp/issue-desc.md

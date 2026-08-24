@@ -1,7 +1,6 @@
-# Issue Tracking override for bmad-create-story
-# Creates an issue (GitLab or GitHub) when a story file is created.
-# Overrides merge: scalars win, arrays append.
-# Requires BMM 6.4.0+ (customize.toml support for this skill).
+# Issue Tracking override for bmad-create-story (legacy shim, deprecated upstream).
+# Delegates to common/post-dev-complete-create-story.yaml.
+# Superseded by bmad-build + bmad-build-auto overrides — kept for retrocompat.
 
 [workflow]
 
@@ -10,5 +9,5 @@ activation_steps_append = [
 ]
 
 on_complete = """
-Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/create-story/complete.yaml`.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-dev-complete-create-story.yaml`.
 """

@@ -1,0 +1,266 @@
+# common/post-dev-complete.yaml
+#
+# Purpose: Unified post-completion workflow handling the full issue tracking lifecycle
+#          for a story: push code, wait CI, update issue status, post comments, create MR.
+# Dispatched by phase:
+#   - "create-story": spec just created, no code yet — create issue + commit + push + create MR draft
+#   - "dev-finish":    dev session done — push + wait CI + write ci-status.json + update issue + post dev comment
+#   - "review-finish": review session done — push + wait CI + post review findings + update issue final + optional merge
+# Input variables:
+#   - phase: "create-story" | "dev-finish" | "review-finish" (set by dispatcher or caller)
+#   - ci_status: set by common/wait-for-green-ci (dev-finish, review-finish) — maps to ci-status.json
+#   - pipeline_info: set by common/wait-for-green-ci on failure — carried into ci-status.json diagnostic
+# Output variables:
+#   - issue_id: the issue IID (GitLab) or number (GitHub)
+# Side effects: pushes branch, writes {worktree}/ci-status.json (dev-finish), creates/updates issues on tracker, creates/merges MR
+
+- INCLUDE: common/check-config
+- INCLUDE: common/find-prd-key
+# Capture worktree root (ci-status.json is written here for bmad-loop's verify command)
+- RUN: pwd
+  STORE: worktree
+# Derive issue metadata from current branch and spec
+- READ: {planning_artifacts}/prd.md
+  EXTRACT:
+    prd_key: frontmatter.prd_key
+- RUN: git branch --show-current
+  STORE: current_branch
+- RUN: uv run --no-project python -c "
+import sys
+branch = sys.argv[1]
+parts = branch.rstrip().split('/')
+if len(parts) >= 3:
+    print(parts[-1])
+else:
+    print(branch)
+" {current_branch}
+  STORE: story_key
+- CHECK: empty story_key
+  TRUE:
+    - OUTPUT:
+        message: "Could not determine story_key from branch '{current_branch}'."
+        stop: true
+- RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('-')
+print(parts[0])
+" {story_key}
+  STORE: epic_num
+- RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('-')
+print(parts[1])
+" {story_key}
+  STORE: story_num
+- READ: _bmad/custom/issue-tracking.yaml
+  EXTRACT:
+    prd_pattern: issue_tracking.branch_patterns.prd
+    story_pattern: issue_tracking.branch_patterns.story
+- RUN: uv run --no-project python -c "
+import sys
+print(sys.argv[1].replace('{prd_key}', sys.argv[2]))
+" {prd_pattern} {prd_key}
+  STORE: prd_branch
+- RUN: uv run --no-project python -c "
+import sys
+pattern = sys.argv[1]
+key = sys.argv[2]
+pk = sys.argv[3]
+print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
+" {story_pattern} {story_key} {prd_key}
+  STORE: story_branch
+# =============================================================================
+# PHASE 1: create-story — spec just created, no code yet
+# =============================================================================
+- CHECK: phase eq "create-story"
+  TRUE:
+    # Ensure issue exists (find or create) with the story spec body
+    - INCLUDE: common/ensure-issue
+    # Commit and push
+    - RUN: git add .
+    - RUN: git commit -m "create story {story_key}"
+    - RUN: git push -u origin {story_branch}
+    # Ensure trace MR exists (create if missing, with issue reference)
+    - INCLUDE: common/ensure-mr
+    - OUTPUT:
+        message: "Story {story_key} issue created and MR ready."
+# =============================================================================
+# PHASE 2: dev-finish — dev session done, code pushed, CI run
+# =============================================================================
+- CHECK: phase eq "dev-finish"
+  TRUE:
+    # Read sprint-status to determine the target status for this story
+    - READ: {implementation_artifacts}/sprint-status.yaml
+      EXTRACT:
+        entries: development_status
+    - FILTER:
+        source: entries
+        select: value
+        where: key eq "{story_key}"
+        store: story_status
+    # Push any remaining local commits
+    - RUN: git add .
+    - RUN: git commit --allow-empty -m "dev {story_key}" 2>/dev/null || true
+    - RUN: git push
+    # Wait CI + write ci-status.json (contract for ci-status.sh)
+    - INCLUDE: common/wait-for-green-ci
+    - INCLUDE: common/write-ci-status
+    # Ensure issue exists (find or create)
+    - INCLUDE: common/ensure-issue
+    # Ensure trace MR exists (create if missing)
+    - INCLUDE: common/ensure-mr
+    # Update issue status based on sprint-status
+    - CHECK: story_status eq "review"
+      TRUE:
+        - SET: { variable: new_status, value: "review" }
+        - SET: { variable: close, value: "false" }
+        - INCLUDE: common/update-issue-status
+        - OUTPUT:
+            message: "Provide a brief implementation summary for the review comment (what was implemented, key changes, notes for the reviewer). Write the full comment body to /tmp/dev-story-comment.md using markdown format."
+        - RUN: test -f /tmp/dev-story-comment.md && echo "yes" || echo "no"
+          STORE: comment_file_exists
+          EXPECT_EXIT: any
+        - CHECK: comment_file_exists eq "yes"
+          TRUE:
+            - CHECK: empty issue_id
+              FALSE:
+                - SET: { variable: comment_file, value: "/tmp/dev-story-comment.md" }
+                - INCLUDE: common/post-issue-comment
+            - RUN: rm -f /tmp/dev-story-comment.md
+    - CHECK: story_status eq "done"
+      TRUE:
+        - SET: { variable: new_status, value: "done" }
+        - SET: { variable: close, value: "true" }
+        - INCLUDE: common/update-issue-status
+    - CHECK: story_status ne "review"
+      TRUE:
+        - CHECK: story_status ne "done"
+          TRUE:
+            - SET: { variable: new_status, value: "in-progress" }
+            - SET: { variable: close, value: "false" }
+            - INCLUDE: common/update-issue-status
+    - OUTPUT:
+        message: "Story {story_key} dev-finish complete."
+# =============================================================================
+# PHASE 3: review-finish — review session done, post findings + update final
+# =============================================================================
+- CHECK: phase eq "review-finish"
+  TRUE:
+    # Read sprint-status to determine the review verdict
+    - READ: {implementation_artifacts}/sprint-status.yaml
+      EXTRACT:
+        review_status: development_status.{story_key}
+    # Commit and push any review modifications
+    - RUN: git add .
+    - RUN: git commit --allow-empty -m "code review {story_key}" 2>/dev/null || true
+    - RUN: git push
+    # Find issue
+    - SET: { variable: search_text, value: "{story_key}" }
+    - INCLUDE: common/find-issue
+    # Update issue status based on review verdict
+    - CHECK: review_status eq "done"
+      TRUE:
+        - SET: { variable: new_status, value: "done" }
+        - SET: { variable: close, value: "true" }
+        - INCLUDE: common/update-issue-status
+      FALSE:
+        - SET: { variable: new_status, value: "in-progress" }
+        - SET: { variable: close, value: "false" }
+        - INCLUDE: common/update-issue-status
+    # Post review findings as comment on issue
+    - CHECK: empty issue_id
+      FALSE:
+        - RUN: uv run --no-project python -c "
+import sys, re
+with open(sys.argv[1]) as f:
+    content = f.read()
+match = re.search(r'(### Review Findings.*?)(?=\n## |\Z)', content, re.DOTALL)
+if match:
+    print(match.group(1).strip())
+else:
+    print('')
+" {implementation_artifacts}/{story_key}.md
+          STORE: review_section
+        - CHECK: empty review_section
+          FALSE:
+            - WRITE:
+                file: /tmp/review-findings.md
+                content: "{review_section}"
+            - SET: { variable: comment_file, value: "/tmp/review-findings.md" }
+            - INCLUDE: common/post-issue-comment
+            - RUN: rm -f /tmp/review-findings.md
+    # CI gate before merge + write ci-status.json (contract for ci-status.sh)
+    - CHECK: review_status eq "done"
+      TRUE:
+        - INCLUDE: common/wait-for-green-ci
+        - INCLUDE: common/write-ci-status
+    # Optional merge — only in interactive flows (bmad-build manual), never in unattended (bmad-build-auto)
+    - CHECK: allow_merge eq "true"
+      TRUE:
+        - OUTPUT:
+            message: "Merge the story MR now? (yes/no)"
+            store: do_merge
+        - CHECK: do_merge eq "yes"
+          TRUE:
+            - CHECK: git_platform eq "gitlab"
+              TRUE:
+                - CHECK: git_platform eq platform
+                  TRUE:
+                    - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{host}/{project}"
+                      EXPECT_EXIT: 0
+                  FALSE:
+                    - READ: _bmad/custom/issue-tracking.yaml
+                      EXTRACT:
+                        git_host: issue_tracking.git_host
+                        git_project: issue_tracking.git_project
+                    - RUN: glab mr merge --source-branch {current_branch} --target-branch {prd_branch} --remove-source-branch -R "{git_host}/{git_project}"
+                      EXPECT_EXIT: 0
+              FALSE:
+                - CHECK: git_platform eq platform
+                  TRUE:
+                    - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{host}/{project}"
+                      STORE: pr_list
+                    - CHECK: empty pr_list
+                      FALSE:
+                        - FILTER:
+                            source: pr_list
+                            select: number
+                            store: pr_number
+                        - RUN: gh pr merge {pr_number} --delete-branch -R "{host}/{project}"
+                          EXPECT_EXIT: 0
+                      TRUE:
+                        - OUTPUT:
+                            message: "No PR found for this story branch. Cannot merge."
+                  FALSE:
+                    - READ: _bmad/custom/issue-tracking.yaml
+                      EXTRACT:
+                        git_host: issue_tracking.git_host
+                        git_project: issue_tracking.git_project
+                    - RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[0])
+" {git_project}
+                      STORE: git_owner
+                    - RUN: uv run --no-project python -c "
+import sys
+parts = sys.argv[1].split('/')
+print(parts[1])
+" {git_project}
+                      STORE: git_repo
+                    - RUN: gh pr list --head {current_branch} --base {prd_branch} --json number -R "{git_host}/{git_owner}/{git_repo}"
+                      STORE: pr_list
+                    - CHECK: empty pr_list
+                      FALSE:
+                        - FILTER:
+                            source: pr_list
+                            select: number
+                            store: pr_number
+                        - RUN: gh pr merge {pr_number} --delete-branch -R "{git_host}/{git_owner}/{git_repo}"
+                          EXPECT_EXIT: 0
+                      TRUE:
+                        - OUTPUT:
+                            message: "No PR found for this story branch. Cannot merge."
+            - RUN: git worktree remove .
+    - OUTPUT:
+        message: "Story {story_key} review-finish complete."

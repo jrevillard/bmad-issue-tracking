@@ -1,0 +1,41 @@
+# common/post-build-dispatch.yaml
+#
+# Purpose: Dispatcher — reads the spec status set by the last step of bmad-build
+#          or bmad-build-auto, and routes to the right phase of post-dev-complete.
+#          Invoked from the on_complete hook of bmad-build and bmad-build-auto.
+# Input variables: (none — dispatcher reads spec itself)
+# Output variables: (none)
+# Side effects: dispatches to common/post-dev-complete with phase set
+
+- INCLUDE: common/check-config
+- READ: {spec_file}
+  EXTRACT:
+    status: frontmatter.status
+- CHECK: status eq "ready-for-dev"
+  TRUE:
+    - SET: { variable: phase, value: "create-story" }
+    - INCLUDE: common/post-dev-complete
+- CHECK: status eq "in-review"
+  TRUE:
+    - SET: { variable: phase, value: "dev-finish" }
+    - INCLUDE: common/post-dev-complete
+- CHECK: status eq "in-progress"
+  TRUE:
+    - SET: { variable: phase, value: "dev-finish" }
+    - INCLUDE: common/post-dev-complete
+- CHECK: status eq "done"
+  TRUE:
+    - SET: { variable: phase, value: "review-finish" }
+    - INCLUDE: common/post-dev-complete
+- CHECK: status eq "blocked"
+  TRUE:
+    - OUTPUT:
+        message: "Spec status is 'blocked' — skipping CI/issue sync (escalation handled by bmad-loop or operator)"
+- CHECK: status eq "awaiting-operator"
+  TRUE:
+    - OUTPUT:
+        message: "Spec status is 'awaiting-operator' — skipping CI/issue sync (operator action required)"
+- CHECK: status eq "draft"
+  TRUE:
+    - OUTPUT:
+        message: "Spec status is 'draft' — plan not yet complete, skipping"

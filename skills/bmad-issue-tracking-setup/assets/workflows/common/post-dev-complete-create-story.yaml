@@ -1,0 +1,9 @@
+# common/post-dev-complete-create-story.yaml
+#
+# Purpose: Wrapper — sets phase=create-story then INCLUDEs the unified workflow.
+# Input variables: (none — phase is set by this wrapper)
+# Output variables: (none)
+# Side effects: dispatches to common/post-dev-complete with phase=create-story
+
+- SET: { variable: phase, value: "create-story" }
+- INCLUDE: common/post-dev-complete

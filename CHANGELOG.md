@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `common/post-issue-comment.yaml` extracted helper: posts a comment to a GitLab or GitHub issue via `glab api` / `gh issue comment`. Reuses the input contract (`issue_id`, `comment_file`, `host`, `project`, `project_enc`) common to other `common/` workflows. `EXPECT_EXIT: any` — callers handle non-zero exit as a soft failure (best-effort).
+- `common/post-dev-complete.yaml` unified workflow: handles the full post-completion lifecycle (push, wait CI, write `ci-status.json`, update issue status, post comment, create MR) for three phases dispatched via `phase` variable — `create-story` (issue + MR draft), `dev-finish` (push + wait CI + update issue + comment + ci-status.json), `review-finish` (push + wait CI + post review findings + update issue final + optional merge).
+- `common/post-build-dispatch.yaml` dispatcher: reads spec status (`ready-for-dev` / `in-review` / `in-progress` / `done` / `blocked` / `awaiting-operator` / `draft`) and routes to the right phase of `post-dev-complete.yaml`. Non-interactive (no merge prompt) — used by `bmad-build-auto.toml` `on_complete` (bmad-loop flow, unattended).
+- `common/post-build-dispatch-interactive.yaml` dispatcher: same routing but sets `allow_merge=true` so `review-finish` offers the optional MR merge prompt. Used by `bmad-build.toml` `on_complete` (manual flow). `bmad-build-auto` never prompts — the merge is handled by bmad-loop's merge-back or manually.
+- `common/post-dev-complete-{create-story,dev-finish,review-finish}.yaml` wrappers: thin wrappers that set the `phase` variable then INCLUDE the unified workflow. Used by the legacy skill overrides (`bmad-create-story`, `bmad-dev-story`, `bmad-code-review`).
+- `common/write-ci-status.yaml` reusable workflow: writes `{worktree}/ci-status.json` from the `ci_status` + `pipeline_info` variables set by `wait-for-green-ci`. Used by `dev-finish` and `review-finish` phases.
+- `common/ensure-issue.yaml` reusable workflow: finds the story's issue by title (scoped by prd label) and creates it if missing, with the story spec body, sprint key, epic and prd context. Used by `create-story` and `dev-finish` phases.
+- `common/ensure-mr.yaml` reusable workflow: finds the story's trace MR/PR by source branch and creates it if missing, with the issue reference (same-platform `#id`, cross-platform full URL). Used by `create-story` and `dev-finish` phases.
+- `bmad-build.toml` and `bmad-build-auto.toml` workflow overrides: route the `on_complete` hook to `common/post-build-dispatch.yaml`. Both flows (manual `/bmad-build` and bmad-loop `/bmad-build-auto`) now share the same unified post-completion logic.
+
+### Changed
+
+- `bmad-create-story.toml`, `bmad-dev-story.toml`, `bmad-code-review.toml`: `on_complete` hooks now delegate to the unified wrapper workflows instead of running the post-completion logic inline. Single source of truth for the issue-tracking lifecycle.
+- Removed the `story-track-dev` and `story-track-review` bmad-loop plugins. They were redundant: the `bmad-build-auto.toml` `on_complete` hook (which the bmad-build-auto skill executes at the end of every session — including when bmad-loop invokes it) already drives the unified workflow. The setup step 3c now deploys only `ci-status.sh`; no `[plugins] enabled` entries are needed.
+- `ci-status.sh`: missing or invalid `ci-status.json` now exits `1` (fixable) instead of `126` (env-fault). The bmad-loop verify classification changes accordingly: missing ci-status.json triggers a repair session instead of a CRITICAL escalation, so the bmad-loop run can self-heal across multiple stories.
+
 
 ### Changed
 
