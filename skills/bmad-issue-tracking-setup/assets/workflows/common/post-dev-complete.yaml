@@ -77,8 +77,8 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
     # Ensure issue exists (find or create) with the story spec body
     - INCLUDE: common/ensure-issue
     # Commit and push
-    - RUN: git add .
-    - RUN: git commit -m "create story {story_key}"
+    
+    - RUN: git commit --allow-empty -m "create story {story_key}" 2>/dev/null || true
     - RUN: git push -u origin {story_branch}
     # Ensure trace MR exists (create if missing, with issue reference)
     - INCLUDE: common/ensure-mr
@@ -99,7 +99,7 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
         where: key eq "{story_key}"
         store: story_status
     # Push any remaining local commits
-    - RUN: git add .
+    
     - RUN: git commit --allow-empty -m "dev {story_key}" 2>/dev/null || true
     - RUN: git push
     # Wait CI + write ci-status.json (contract for ci-status.sh)
@@ -151,7 +151,7 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
       EXTRACT:
         review_status: development_status.{story_key}
     # Commit and push any review modifications
-    - RUN: git add .
+    
     - RUN: git commit --allow-empty -m "code review {story_key}" 2>/dev/null || true
     - RUN: git push
     # Find issue
