@@ -1,14 +1,13 @@
 # Issue Tracking override for bmad-build-auto (bmad-loop flow — unattended)
 # Routes the on_complete hook to the non-interactive dispatcher, which reads the
 # spec status and dispatches to the right phase of post-dev-complete (push + wait
-# CI + write ci-status.json + update issue + post comment). Never prompts for a
-# merge (allow_merge stays unset/false). bmad-build (manual) uses the interactive
-# dispatcher (post-build-dispatch-interactive.yaml).
+# CI + write ci-status.json + update issue + post comment + create MR). Never
+# prompts for a merge (allow_merge stays unset/false). bmad-build (manual) uses
+# the interactive dispatcher (post-build-dispatch-interactive.yaml).
 #
 # IMPORTANT: the worktree may contain dirty files that the orchestrator owns
 # (sprint-status.yaml, deferred-work.md). Do NOT stage them (no `git add .`).
-# The on_complete workflow only pushes the story branch and writes ci-status.json —
-# the dev session has already committed the code changes.
+# post-dev-complete.yaml handles pushing without staging dirty files.
 
 [workflow]
 
@@ -17,5 +16,5 @@
 # Leave empty for no custom post-completion behavior.
 
 on_complete = """
-Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml`. Do NOT run `git add .` — only push the existing story branch and write ci-status.json. The worktree may have orchestrator-owned files (sprint-status.yaml, deferred-work.md) that must not be staged.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml` IN FULL (the dispatch will route to the correct phase of `common/post-dev-complete.yaml` based on the spec status). Do NOT run `git add .` — the worktree may have orchestrator-owned files (sprint-status.yaml, deferred-work.md) that must not be staged. post-dev-complete.yaml handles pushing safely without staging dirty files.
 """
