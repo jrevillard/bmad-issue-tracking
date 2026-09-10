@@ -1,29 +1,43 @@
 # BMAD Issue Tracking
 
-BMAD extension module that mirrors sprint tracking to GitLab Issues or GitHub Issues. Supports both cloud and self-hosted instances via their respective CLIs (`glab` / `gh`).
+BMAD module that mirrors sprint tracking to GitLab Issues or GitHub Issues. Supports both cloud and self-hosted instances via their respective CLIs (`glab` / `gh`).
 
-Uses BMAD's native TOML customization for all workflow integrations.
+Uses native BMad TOML customization for workflow integrations. Ships as a Skills-as-modules module (manifest declares `module = "issue-tracking"`).
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.4.0+ installed in your project
+- BMAD Method module (BMM) 6.11.0+ installed in your project
 - `glab` CLI (GitLab) or `gh` CLI (GitHub) installed and authenticated
 - Repository with Issues enabled
+- `uv` (mandatory from BMM 6.11.0+)
 
 ## Installation
 
-### 1. Install the module via BMAD installer
+### 1. Install BMad core first (one-time per project)
+
+The issue-tracking module extends a project that already has BMad set up:
 
 ```bash
-# Latest version (main branch)
-npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking
-
-# Specific version (e.g. 1.0.1)
-npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking@1.0.1
+npx skills add bmad-code-org/BMAD-METHOD
 ```
 
-This registers two skills as slash commands:
-- `/bmad-bmm-issue-sync` — Sync sprint status to issues
+Then open your coding tool in the project and ask the `bmad` skill to run `bmad setup` (this materializes `_bmad/` in your project, including `bmm` ≥ 6.11.0).
+
+### 2. Add the issue-tracking module
+
+From the project root:
+
+```bash
+# Latest (main branch)
+npx skills add jrevillard/bmad-issue-tracking
+
+# Pinned to a release
+npx skills add jrevillard/bmad-issue-tracking@v3.0.0
+```
+
+The installer reads each `skills/<name>/module-manifest.toml`; both declare `module = "issue-tracking"`. After install, two slash commands become available:
+
+- `/bmad-issue-tracking-sync` — Sync sprint status to issues
 - `/bmad-issue-tracking-setup` — Deploy TOML overrides and shared tasks (run once)
 
 ### 2. Run the setup skill
@@ -49,7 +63,7 @@ Registered as slash commands in your IDE.
 
 | Skill | Command | Purpose |
 |---|---|---|
-| Sync Issues | `/bmad-bmm-issue-sync` | Sync `sprint-status.yaml` to issues, mark draft PR ready |
+| Sync Issues | `/bmad-issue-tracking-sync` | Sync `sprint-status.yaml` to issues, mark draft PR ready |
 | Setup | `/bmad-issue-tracking-setup` | One-time integration setup |
 
 ### TOML overrides (via setup)
@@ -86,7 +100,7 @@ Copied to `_bmad/_config/custom/` — referenced by TOML `on_complete` hooks.
 ### Sync sprint status to issues
 
 ```
-/bmad-bmm-issue-sync
+/bmad-issue-tracking-sync
 ```
 
 Creates/updates issues for all sprint entries, manages labels, reconciles statuses, marks draft PR ready when all epics are done.
@@ -128,7 +142,7 @@ The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bma
    - **dev-finish phase** (spec status `in-review` / `in-progress`): pushes the code, waits for CI (`common/wait-for-green-ci.yaml`), writes `ci-status.json` (`common/write-ci-status.yaml`), ensures the issue + trace MR exist (`common/ensure-issue.yaml` / `common/ensure-mr.yaml`), and updates the issue status.
    - **review-finish phase** (spec status `done`): commits review modifications, pushes, waits for CI, writes `ci-status.json`, posts the review findings comment, and mirrors the story to its issue (status label, result comment, MR link).
    - **`ci-status.sh`** (`[verify]` command): reads `ci-status.json` written by the unified workflow. A **red CI fails the verify command** (with rich diagnostic), and bmad-loop runs a feedback-driven repair session (re-invoking `bmad-build-auto` with the diagnostic as feedback) — the story is **auto-fixed and re-verified**, up to `max_dev_attempts`, before the merge-back. A **missing `ci-status.json` also fails** (fixable) — the on_complete hook did not write it. Only a budget-exhausted CI defers the story (`bmad-loop resolve` to recover). No bmad-loop plugins are needed — the `on_complete` hook drives everything.
-2. `/bmad-bmm-issue-sync` — unattended safety net: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
+2. `/bmad-issue-tracking-sync` — unattended safety net: mirrors the updated `sprint-status.yaml` to issues (labels, statuses, close `done`), no worktree required, no prompts.
 3. `git push origin main` — the local merge-back is never pushed by bmad-loop.
 
 **Status mapping** (bmad-loop values → module labels):
@@ -169,8 +183,8 @@ The architecture is simpler: at the end of every `bmad-build-auto` session, the 
 
 ## After BMM updates
 
-- **Skills** — update via `npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking`
-- **TOML overrides** — no action needed (survive BMM updates)
+- **Skills** — update with `npx skills update`, then run `bmad` skill → `bmad doctor` (verifies the runtime). Re-run `/bmad-issue-tracking-setup` to refresh the deployed TOML/YAML assets in your `_bmad/custom/` and `_bmad/_config/custom/workflows/` trees.
+- **TOML overrides** — no action needed (survive BMM updates unless we rename a workflow).
 - **Shared tasks** — no action needed
 
 ## Disabling

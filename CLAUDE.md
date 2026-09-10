@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-BMAD extension module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and skills deployed into consuming BMAD projects via the BMAD installer (`npx bmad-method install`).
+BMAD module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and Skills-as-modules folders consumed by the new BMad installer (each `<skill>/module-manifest.toml` declares `module = "issue-tracking"`).
 
 Requires BMM 6.11.0+ (uniform customize.toml support across all BMM workflows; targets the 6.11.0 skill set — `bmad-ux`, consolidated sprint-planning, `uv`-based tooling).
 
 ## Architecture
 
-Two concepts that must stay aligned:
+Two Skills-as-modules folders, each with its own manifest declaring the same module key:
 
-- **Standalone skill** (`skills/bmad-bmm-issue-sync/SKILL.md`) — the user-facing slash command (`/bmad-bmm-issue-sync`), delegates to `issue-sync/prepare.yaml` + `issue-sync/sync.yaml`
-- **Deployed copy** — during setup, this file is copied to `_bmad/_config/custom/bmad-bmm-issue-sync.md` in the consuming project. TOML `on_complete` hooks reference this deployed path.
+- `skills/bmad-issue-tracking-sync/` — the user-facing `/bmad-issue-tracking-sync` command. Manifest: `module = "issue-tracking"`, `knowledge = "references/help.md in the bmad-issue-tracking-sync skill"`.
+- `skills/bmad-issue-tracking-setup/` — one-time deploy. Manifest: same module key, plus `scripts = [...]` listing the bmad-loop integration Python + shell files.
 
-The standalone skill IS the source. If you edit it, the deployed copy in consuming projects won't update automatically — users must re-run `/bmad-issue-tracking-setup`.
+Assets that get pushed into a consumer project live under `skills/bmad-issue-tracking-setup/assets/custom/` (TOML pointers), `assets/workflows/` (YAML bodies), and `assets/bmad-workflow-lang.md`. The standalone sync SKILL.md never gets copied into a consumer project — only `assets/` payloads do, via the setup skill.
 
 ### Issue sync workflow split
 
@@ -27,7 +27,7 @@ The sync task is split into two phases so callers can skip redundant setup:
 Callers:
 - `sprint-planning/complete.yaml` → `INCLUDE: issue-sync/sync` (steps 4-6 only, prepare ran during sprint planning)
 - `sprint-status/complete.yaml` → `INCLUDE: issue-sync/sync` (steps 4-6 only, prepare ran during sprint status)
-- `/bmad-bmm-issue-sync` standalone → `INCLUDE: issue-sync/prepare` then `INCLUDE: issue-sync/sync`
+- `/bmad-issue-tracking-sync` standalone → `INCLUDE: issue-sync/prepare` then `INCLUDE: issue-sync/sync`
 
 ## TOML override semantics
 
@@ -86,9 +86,9 @@ Branch setup happens in activation (before BMM workflow runs). The BMM workflow 
 
 Projects using [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) bypass the manual branch/MR flow: bmad-loop drives `bmad-build-auto` per story in isolated worktrees, is the single writer of `sprint-status.yaml`, and merges each story back locally (never pushes). The module's role shrinks to mirroring:
 
-- `common/find-prd-key.yaml` — silent `prd_key` resolution (no PRD worktree, no prompt); used by `issue-sync/prepare.yaml` + `sync.yaml` so `/bmad-bmm-issue-sync` runs unattended after a bmad-loop run.
+- `common/find-prd-key.yaml` — silent `prd_key` resolution (no PRD worktree, no prompt); used by `issue-sync/prepare.yaml` + `sync.yaml` so `/bmad-issue-tracking-sync` runs unattended after a bmad-loop run.
 - `common/mark-mr-ready.yaml` — no-op when no MR exists (bmad-loop has none); the MR-based CI gates (`check-mr-ci`, `wait-for-green-ci`) are not used in this flow.
-- `assets/bmad-loop/ci-gate/ci-status.sh` — bmad-loop `[verify]` command deployed to `.bmad-loop/ci-status.sh` (setup step 3c): reads `ci-status.json` (written by the `dev-finish` / `review-finish` phases of `common/post-dev-complete.yaml` via `common/write-ci-status.yaml`) and returns exit 0 if CI is green, exit 1 if red (fixable), exit 1 if the file is missing. The intelligent work (polling CI, parsing logs) is done by the `on_complete` workflow.
+- `scripts/bmad-loop/ci-gate/ci-status.sh` (declared in the setup skill's `module-manifest.toml` `scripts = [...]`) — bmad-loop `[verify]` command deployed to `.bmad-loop/ci-status.sh` (setup step 3c): reads `ci-status.json` (written by the `dev-finish` / `review-finish` phases of `common/post-dev-complete.yaml` via `common/write-ci-status.yaml`) and returns exit 0 if CI is green, exit 1 if red (fixable), exit 1 if the file is missing. The intelligent work (polling CI, parsing logs) is done by the `on_complete` workflow.
 - `custom/bmad-build-auto.toml` — routes the `bmad-build-auto` `on_complete` hook to `common/post-build-dispatch.yaml` (non-interactive dispatcher). The bmad-build-auto skill executes this hook at the end of EVERY session — including when bmad-loop invokes it — so issue tracking + CI write happen without any bmad-loop plugins. `bmad-build.toml` uses the interactive dispatcher (`post-build-dispatch-interactive.yaml`) with the optional MR merge prompt.
 - `awaiting-operator` — bmad-loop status for a story parked on external action; mapped to `status{sep}awaiting-operator` and the issue stays open.
 
@@ -107,7 +107,7 @@ Projects using [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) bypass 
 3. Add the TOML file to the list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3)
 4. Add the YAML files to the list in `skills/bmad-issue-tracking-setup/SKILL.md` (step 3b)
 5. Add a row to the override table in `README.md`
-6. Update `module-help.csv` if the workflow has a standalone skill
+6. If the workflow has a standalone skill, create or update its `references/help.md` and bump `version` in `<skill>/module-manifest.toml` (manifest is now the source of truth — `module-help.csv` no longer exists)
 
 ## Python environment
 
@@ -121,6 +121,6 @@ python3 -m venv .venv && source .venv/bin/activate && pip install pytest pyyaml
 When working on a branch, add functional changes to the `[Unreleased]` section of `CHANGELOG.md` following Keep a Changelog format (Added, Changed, Fixed, etc.) — one entry per logical change, not per commit.
 
 When cutting a release:
-1. Update version in `module.yaml` and `.claude-plugin/marketplace.json` (must match)
-2. Update `CHANGELOG.md` — replace `[Unreleased]` with the version and date, add comparison link
-3. Create a git tag `v{version}` on the version bump commit and push it (`git push origin --tags`)
+1. Bump `version` in every `skills/*/module-manifest.toml` so all skills declare the same release version (manifest is now the source of truth — `module.yaml` and `marketplace.json` no longer exist).
+2. Update `CHANGELOG.md` — replace `[Unreleased]` with the version and date, add comparison link.
+3. Create a git tag `v{version}` on the version bump commit and push it (`git push origin --tags`).

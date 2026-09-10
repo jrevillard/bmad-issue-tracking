@@ -1,0 +1,117 @@
+# close-trace-mr — auto-close the trace MR/PR after bmad-loop's local merge.
+#
+# bmad-loop creates a per-story worktree, runs the dev+review pipeline, then
+# merges the story branch into the target branch LOCALLY via `_merge_unit_into_target`
+# (`src/bmad_loop/worktree_flow.py:2300`). The trace MR/PR — created earlier in
+# the flow by `bmad-issue-tracking`'s `common/ensure-mr.yaml` workflow — points
+# `source_branch=<story branch>` at `target_branch=<PRD branch>`. Once the local
+# merge lands, that MR/PR is redundant; close it so it does not stack up in the
+# project's MR list with an outdated diff.
+#
+# ----- Hook stage contract ----------------------------------------------------
+# Stage:    `post_merge` (fires AFTER `unit-merged` is journalled; fires before
+#           `close_unit_workspace` tears the worktree down).
+# Source:   `bmad-loop/src/bmad_loop/worktree_flow.py:2300`
+# Bus:      `src/bmad_loop/plugins/bus.py::HookBus.emit`
+#           → fan-out is per-plugin; with this folder present, this hook fires.
+#           The bus does NOT poll for marker files — the journal line
+#           `plugin-hook plugin=close-trace-mr stage=post_merge rc=<n>` is the
+#           authoritative record of the run. The marker file we write
+#           (`post-merge-<story_key>.md`) is a human-observable side effect.
+#
+# ----- Env vars consumed (set by `_hook_env`, src/bmad_loop/plugins/bus.py:85) -
+#   BMAD_LOOP_STAGE                always "post_merge"
+#   BMAD_LOOP_BRANCH               the story branch that was just merged
+#                                   (source branch of the trace MR)
+#   BMAD_LOOP_STORY_KEY            the story key (used to name the marker file)
+#   BMAD_LOOP_RUN_DIR              bmad-loop's run dir (where the marker lands)
+#   BMAD_LOOP_REPO_ROOT            the consuming project's repo root
+#                                   (where `_bmad/custom/issue-tracking.yaml` lives)
+#   BMAD_LOOP_PLUGIN               always "close-trace-mr"
+#   BMAD_LOOP_SETTING_CLOSE_TRACE_MR  "true"|"false" — operator opt-out
+#   BMAD_LOOP_SETTING_PLATFORM     override for issue-tracking platform
+#   BMAD_LOOP_SETTING_HOST         override for tracker host
+#   BMAD_LOOP_SETTING_PROJECT      override for tracker project path
+#
+# ----- Failure contract -------------------------------------------------------
+# `blocking = false` and `fail_closed = false` (defaults):
+#   * a non-zero exit is logged `plugin-hook` and the run continues;
+#   * a timeout or missing-interpreter is logged `plugin-hook-error` and the
+#     run continues.
+# Rationale: the merge has already succeeded by the time this hook fires —
+# failing to close the trace MR must NOT defer an already-merged unit. Operators
+# see the journal line if anything went wrong and can clean up by hand.
+#
+# ----- Idempotency ------------------------------------------------------------
+# Re-running on an already-closed MR is safe:
+#   * `glab api .../state_event=close` on a closed MR → 409 (HTTP) wrapped as a
+#     non-zero exit; our script detects that and treats it as success (the
+#     MR is closed, that was the goal).
+#   * `gh pr close <n>` on a closed PR → "already closed" message; same handling.
+# A multi-MR defensive sweep is included: if the source_branch somehow resolves
+# to 2+ open MRs (e.g. a prior duplicate), every open MR is closed.
+#
+# ----- Squash vs merge-commit -------------------------------------------------
+# Independent of bmad-loop's local merge strategy (`scm.merge_strategy ∈
+# {merge, squash, fast_forward, replay}`). The trace MR lives on the REMOTE
+# (GitLab/GitHub), and the local merge is a separate operation — the MR close
+# is always by `state_event=close` (GitLab) or `gh pr close` (GitHub), with no
+# relation to the local commit shape. A squash-merged local branch and a
+# merge-commit-merged local branch both produce identical MR-closed outcomes.
+
+[plugin]
+name = "close-trace-mr"
+version = "1.0.0"
+api_version = 1
+description = "Auto-close the trace MR/PR (created by bmad-issue-tracking) after bmad-loop's local merge."
+author = "bmad-issue-tracking"
+
+# Declarative out-of-process hook — no [python] module, so this plugin runs in
+# the declarative trust tier (auto-activates when discovered). Operators opt out
+# by either deleting the folder or setting `close_trace_mr = false` below.
+# The cmd template expands `{scripts}` to this folder's own path so the hook
+# can sit alongside the script it invokes (see PluginManifest.render, model.py:182).
+[hooks.post_merge]
+cmd = 'bash "{scripts}/close-trace-mr.sh"'
+timeout_sec = 30
+blocking = false
+fail_closed = false
+
+# ----- Settings --------------------------------------------------------------
+# Each setting is exposed to the hook as `BMAD_LOOP_SETTING_<KEY>` (uppercased),
+# already resolved with `[plugins.close-trace-mr]` overlay. See
+# docs/plugin-authoring-guide.md "Settings".
+
+# Master switch. False = hook exits 0 immediately without doing anything.
+[[settings]]
+key = "close_trace_mr"
+type = "bool"
+default = true
+label = "Close trace MR on post_merge"
+help = "When true, post_merge closes any open MR/PR with source_branch = the merged story branch. Set false to keep MRs open after a local merge."
+
+# Optional platform override. Empty = auto-detect from
+# `_bmad/custom/issue-tracking.yaml::issue_tracking.platform`, then fall back
+# to nothing (hook no-ops with a warning).
+[[settings]]
+key = "platform"
+type = "str"
+default = ""
+label = "Platform override"
+help = "Force the tracker platform: 'gitlab' or 'github'. Empty = auto-detect from _bmad/custom/issue-tracking.yaml."
+
+# Optional host override. Empty = auto-detect from issue-tracking.yaml.
+[[settings]]
+key = "host"
+type = "str"
+default = ""
+label = "Tracker host"
+help = "Force the tracker host (e.g. gitlab.example.com or github.com). Empty = auto-detect."
+
+# Optional project path override. Empty = auto-detect from issue-tracking.yaml.
+[[settings]]
+key = "project"
+type = "str"
+default = ""
+label = "Tracker project path"
+help = "Force the tracker project path (e.g. group/subgroup/repo or owner/repo). Empty = auto-detect."

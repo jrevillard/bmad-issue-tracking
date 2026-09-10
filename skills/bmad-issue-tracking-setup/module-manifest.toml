@@ -1,0 +1,11 @@
+module = "issue-tracking"
+version = "3.0.0"
+update_source = "github:jrevillard/bmad-issue-tracking/skills"
+knowledge = "`references/help.md` in the `bmad-issue-tracking-setup` skill"
+
+scripts = [
+  "scripts/bmad-loop/ci-gate/ci-status.sh",
+  "scripts/close-trace-mr/close-trace-mr.sh",
+  "scripts/close-trace-mr/close_trace_mr.py",
+  "scripts/close-trace-mr/tests/test_close_trace_mr.py",
+]

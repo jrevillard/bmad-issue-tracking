@@ -11,7 +11,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 
 - BMAD Method module (BMM) 6.11.0+ installed
 - `uv` available (required by BMM 6.11.0+ skills; the workflow YAMLs invoke Python via `uv run python`)
-- This module installed via `npx bmad-method install --custom-source https://github.com/jrevillard/bmad-issue-tracking`
+- This module installed via the new Skills-as-modules installer (manifest `module = "issue-tracking"`, version ≥3.0.0).
 
 ## Instructions
 
@@ -28,12 +28,12 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 </step>
 
 <step n="2" goal="Remove obsolete sync task file">
-<action>The sync logic has been converted to workflow YAML files. The old markdown file `bmad-bmm-issue-sync.md` is no longer needed.</action>
+<action>The sync logic has been converted to workflow YAML files. The old markdown file `bmad-issue-tracking-sync.md` is no longer needed.</action>
 
 <action>Remove the file if it exists in the consuming project:</action>
 
 ```bash
-rm -f _bmad/_config/custom/bmad-bmm-issue-sync.md
+rm -f _bmad/_config/custom/bmad-issue-tracking-sync.md
 ```
 
 <action>Confirm that the file no longer exists.</action>
@@ -158,7 +158,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     <action>Copy `ci-status.sh` to the repo root:</action>
     ```bash
     mkdir -p .bmad-loop
-    cp -f <path>/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
+    cp -f <path>/scripts/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
     ```
     <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
     ```toml
@@ -173,6 +173,54 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
   </true>
   <false>
     <output>Skipping ci-status — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+  </false>
+</check>
+</step>
+
+<step n="3d" goal="Deploy bmad-loop close-trace-mr plugin (optional)">
+<action>Deploy the `close-trace-mr` bmad-loop plugin only when the project uses both `bmad-loop` AND `bmad-issue-tracking`. The plugin auto-closes the trace MR/PR opened by `common/ensure-mr.yaml` after `bmad-loop`'s local merge — without it, the trace MR stays open in the project list with an outdated diff.</action>
+
+<check if=".bmad-loop/ directory exists AND _bmad/custom/issue-tracking.yaml exists">
+  <true>
+    <action>Locate the plugin source. Check these locations in order:</action>
+    1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/scripts/close-trace-mr/`
+    2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
+
+    <action>Copy the plugin into the project's bmad-loop plugins directory:</action>
+    ```bash
+    mkdir -p .bmad-loop/plugins
+    cp -rf <path>/scripts/close-trace-mr .bmad-loop/plugins/
+    chmod +x .bmad-loop/plugins/close-trace-mr/close-trace-mr.sh
+    ```
+
+    <action>Verify the following files exist:</action>
+    - `.bmad-loop/plugins/close-trace-mr/plugin.toml`
+    - `.bmad-loop/plugins/close-trace-mr/close-trace-mr.sh` (executable)
+    - `.bmad-loop/plugins/close-trace-mr/close_trace_mr.py`
+    - `.bmad-loop/plugins/close-trace-mr/README.md`
+
+    <action>Plugin discovery is automatic on the next bmad-loop run (bmad-loop walks `.bmad-loop/plugins/*` and parses each `plugin.toml`). To opt out without removing the files, add to `.bmad-loop/policy.toml`:</action>
+    ```toml
+    [plugins.close-trace-mr.settings]
+    close_trace_mr = false
+    ```
+
+    <action>Per-platform overrides are also available — use them when the same repo is configured against both gitlab and github, or when a CI runner needs a different host from a developer laptop:</action>
+    ```toml
+    [plugins.close-trace-mr.settings]
+    platform = "gitlab"        # "gitlab" or "github"; empty = auto-detect
+    host = "opensource.unicc.org"  # empty = auto-detect from issue-tracking.yaml
+    project = "un/itu/genie-ai"   # empty = auto-detect
+    ```
+
+    <action>Run the plugin's tests to confirm the deployment is healthy:</action>
+    ```bash
+    uv run --no-project --directory .bmad-loop/plugins/close-trace-mr \
+        python -m pytest tests/ -v
+    ```
+  </true>
+  <false>
+    <output>Skipping close-trace-mr — project needs BOTH `.bmad-loop/` AND `_bmad/custom/issue-tracking.yaml` to benefit. The plugin no-ops cleanly otherwise.</output>
   </false>
 </check>
 </step>

@@ -58,7 +58,7 @@ Inserts all steps from the referenced sub-workflow at this position. Execution c
 
 ```yaml
 - INCLUDE: common/check-config
-- INCLUDE: bmad-bmm-issue-sync
+- INCLUDE: issue-sync/sync
 ```
 
 The first INCLUDE executes the check-config sub-workflow. The second INCLUDE reads the sync task markdown and follows its prose instructions.

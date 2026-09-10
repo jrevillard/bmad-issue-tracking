@@ -7,7 +7,7 @@
 # Side effects: creates labels on the issue tracker
 #
 # NOTE: || true suppresses ALL errors (not just "already exists"), including auth/network
-# failures. The sync task (/bmad-bmm-issue-sync) handles additional dynamic/extended labels.
+# failures. The sync skill (/bmad-issue-tracking-sync) handles additional dynamic/extended labels.
 
 # Type labels
 - SET: { variable: label_name, value: "type{sep}prd" }

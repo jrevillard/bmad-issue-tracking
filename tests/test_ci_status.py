@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 
-CI_STATUS_SCRIPT = Path(__file__).parent.parent / "skills/bmad-issue-tracking-setup/assets/bmad-loop/ci-gate/ci-status.sh"
+CI_STATUS_SCRIPT = Path(__file__).parent.parent / "skills/bmad-issue-tracking-setup/scripts/bmad-loop/ci-gate/ci-status.sh"
 
 
 def test_ci_status_green():

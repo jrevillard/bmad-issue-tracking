@@ -9,3 +9,10 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# BMad runtime (consumer install artifact)
+_bmad/
+_bmad-output/
+
+# BMad auto-generated lockfile
+skills-lock.json

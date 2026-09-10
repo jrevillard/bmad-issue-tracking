@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Install mechanism migrated to Skills-as-modules.** Each skill folder now ships its own `module-manifest.toml` declaring `module = "issue-tracking"`. The legacy `module.yaml`, `.claude-plugin/marketplace.json`, `module-help.csv`, and auto-generated `skills-lock.json` are removed. The new installer reads each `<skill>/module-manifest.toml` instead of the old `--custom-source` flow.
+- Renamed skill `bmad-bmm-issue-sync` → `bmad-issue-tracking-sync` (dropped the `bmm-` prefix; the module is no longer a BMM extension, just a flat BMad module).
+- Moved bmad-loop integration scripts from `skills/bmad-issue-tracking-setup/assets/bmad-loop/` to `skills/bmad-issue-tracking-setup/scripts/bmad-loop/` and `skills/bmad-issue-tracking-setup/scripts/close-trace-mr/`. The setup skill's `module-manifest.toml` declares these in its `scripts = [...]` field so the new installer publishes them.
+- TOML overrides (`assets/custom/bmad-*.toml`), workflow YAMLs (`assets/workflows/**`), and `assets/bmad-workflow-lang.md` keep their current locations — they remain consumer-deployed `cp` payloads driven by the setup skill.
+- Version bumped to **3.0.0** (major: install mechanism change is not backward-compatible).
+
 ### Added
 
 - `common/post-issue-comment.yaml` extracted helper: posts a comment to a GitLab or GitHub issue via `glab api` / `gh issue comment`. Reuses the input contract (`issue_id`, `comment_file`, `host`, `project`, `project_enc`) common to other `common/` workflows. `EXPECT_EXIT: any` — callers handle non-zero exit as a soft failure (best-effort).
