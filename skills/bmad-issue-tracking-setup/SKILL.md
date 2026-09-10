@@ -62,7 +62,7 @@ cp -f <path>/*.toml _bmad/custom/
 - `bmad-sprint-status.toml` (requires BMM 6.11.0+; consolidated into bmad-sprint-planning, retained as shim alias)
 - `bmad-ux.toml` (requires BMM 6.11.0+; replaces bmad-create-ux-design, removed in 6.11.0)
 
-<action>Note: All TOML files are in pointer format — they reference workflow YAML files deployed in step 3b.</action>
+<action>Note: All TOML files are in pointer format — they reference workflow YAML files deployed in step 3.</action>
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
 </step>
 
@@ -163,7 +163,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     # Append to .gitignore idempotently
     grep -qxF '.bmad-loop/ci-status.sh' .gitignore || echo '.bmad-loop/ci-status.sh' >> .gitignore
     ```
-    <action>Also gitignore the close-trace-mr plugin directory (step 3d deploys it) so it gets seeded into worktrees too:</action>
+    <action>Also gitignore the close-trace-mr plugin directory (step 5 deploys it) so it gets seeded into worktrees too:</action>
     ```bash
     grep -qxF '.bmad-loop/plugins/close-trace-mr/' .gitignore || echo '.bmad-loop/plugins/close-trace-mr/' >> .gitignore
     ```
@@ -201,7 +201,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     chmod +x .bmad-loop/plugins/close-trace-mr/close-trace-mr.sh
     ```
 
-    <action>The plugin directory is already gitignored (`.bmad-loop/plugins/close-trace-mr/`) and listed in `worktree_seed` (set by step 3c). bmad-loop copies the whole directory into each new worktree at run start, so the plugin is available regardless of which branch a story was cut from. Confirm both via `git check-ignore .bmad-loop/plugins/close-trace-mr/` (exit 0) and the policy.toml `worktree_seed` entry.</action>
+    <action>The plugin directory is already gitignored (`.bmad-loop/plugins/close-trace-mr/`) and listed in `worktree_seed` (set by step 4). bmad-loop copies the whole directory into each new worktree at run start, so the plugin is available regardless of which branch a story was cut from. Confirm both via `git check-ignore .bmad-loop/plugins/close-trace-mr/` (exit 0) and the policy.toml `worktree_seed` entry.</action>
 
     <action>Verify the following files exist in the main checkout (they will be present — copied above; bmad-loop re-copies them per worktree at run time):</action>
     - `.bmad-loop/plugins/close-trace-mr/plugin.toml`

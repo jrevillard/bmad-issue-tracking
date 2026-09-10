@@ -4,10 +4,10 @@
 # Input variables: (none)
 # Output variables:
 #   - platform: the configured platform ("gitlab" or "github")
-#   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 5)
+#   - git_platform: the git remote platform (required — set by /bmad-issue-tracking-setup step 7)
 #   - host: the issue tracker hostname
 #   - project: the issue tracker project path (group/project or owner/repo)
-#   - worktree_base: base directory for worktrees (required — set by /bmad-issue-tracking-setup step 4)
+#   - worktree_base: base directory for worktrees (required — set by /bmad-issue-tracking-setup step 6)
 #   - branch_patterns: the configured branch patterns object
 # Side effects: none
 
@@ -28,27 +28,27 @@
 - CHECK: exists platform
   FALSE:
     - OUTPUT:
-        message: "Issue tracking not configured. Open a new session and run /bmad-issue-tracking-setup (step 5) to configure the platform."
+        message: "Issue tracking not configured. Open a new session and run /bmad-issue-tracking-setup (step 7) to configure the platform."
         stop: true
 - CHECK: exists branch_patterns
   FALSE:
     - OUTPUT:
-        message: "Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 6b) to configure branch patterns."
+        message: "Branch strategy not configured. Open a new session and run /bmad-issue-tracking-setup (step 9) to configure branch patterns."
         stop: true
 - CHECK: exists git_platform
   FALSE:
     - OUTPUT:
-        message: "git_platform not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
+        message: "git_platform not configured. Run /bmad-issue-tracking-setup (step 7) to configure."
         stop: true
 - CHECK: exists worktree_base
   FALSE:
     - OUTPUT:
-        message: "worktree_base not configured. Run /bmad-issue-tracking-setup (step 4) to configure."
+        message: "worktree_base not configured. Run /bmad-issue-tracking-setup (step 6) to configure."
         stop: true
 - CHECK: exists project
   FALSE:
     - OUTPUT:
-        message: "project not configured. Run /bmad-issue-tracking-setup (step 5) to configure."
+        message: "project not configured. Run /bmad-issue-tracking-setup (step 7) to configure."
         stop: true
 # GitLab API requires the URL-encoded namespace path for nested groups
 # (`projects/un%2Fitu%2Fgenie-ai`, not `projects/un/itu/genie-ai`).

@@ -279,7 +279,7 @@ Conditional branching. Evaluates a condition and executes the corresponding bran
 - CHECK: exists platform
   FALSE:
     - OUTPUT:
-        message: "Issue tracking not configured. Open a new session and run /bmad-issue-tracking-setup (step 5) to configure the platform."
+        message: "Issue tracking not configured. Open a new session and run /bmad-issue-tracking-setup (step 7) to configure the platform."
         stop: true
 ```
 
