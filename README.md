@@ -6,10 +6,10 @@ Uses native BMad TOML customization for workflow integrations. Ships as a Skills
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.11.0+ installed in your project
+- BMAD Method module (BMM) 6.12.0+ installed in your project
 - `glab` CLI (GitLab) or `gh` CLI (GitHub) installed and authenticated
 - Repository with Issues enabled
-- `uv` (mandatory from BMM 6.11.0+)
+- `uv` (mandatory from BMM 6.12.0+)
 
 ## Installation
 

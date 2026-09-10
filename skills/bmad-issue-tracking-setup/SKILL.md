@@ -9,8 +9,8 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 
 ## Prerequisites
 
-- BMAD Method module (BMM) 6.11.0+ installed
-- `uv` available (required by BMM 6.11.0+ skills; the workflow YAMLs invoke Python via `uv run python`)
+- BMAD Method module (BMM) 6.12.0+ installed
+- `uv` available (required by BMM 6.12.0+ skills; the workflow YAMLs invoke Python via `uv run python`)
 - This module installed via the new Skills-as-modules installer (manifest `module = "issue-tracking"`, version ≥3.0.0).
 
 ## Instructions
@@ -22,12 +22,12 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <action>Detect the BMM version. Try the legacy path first, then fall back to the new Skills-as-modules layout:</action>
 <action>1. **Legacy install** — read the `# Version:` header in `_bmad/bmm/config.yaml` (single-file BMM ≤ 6.11.0).</action>
 <action>2. **New install (Skills-as-modules)** — read the `version` field in `.agents/skills/bmad-sprint-planning/module-manifest.toml` (per-skill BMM 6.13.0-next and later). If that skill is not installed, scan the first manifest under `.agents/skills/bmad-*/module-manifest.toml` whose `module = "method"`.</action>
-<action>Extract the semver. Accept it only if ≥ 6.11.0.</action>
-<check if="version < 6.11.0 or not found">
-  <output>ERROR: BMM 6.11.0+ required. This module targets the 6.11.0 skill set (bmad-ux, consolidated sprint-planning, uv-based tooling). Run `npx skills add bmad-code-org/BMAD-METHOD` and ask the `bmad` skill to run `bmad setup` first.</output>
+<action>Extract the semver. Accept it only if ≥ 6.12.0.</action>
+<check if="version < 6.12.0 or not found">
+  <output>ERROR: BMM 6.12.0+ required. BMad adopted the flat per-skill Skills-as-modules install format in 6.12.0 (replacing the legacy `_bmad/{bmm,bmb,cis,core}/` subdirectory layout). BMM ≤ 6.11.0 cannot consume this module's `scripts/`-declared binaries or the flat `_bmad/{method,toolbox}/` deploy targets. Run `npx skills add bmad-code-org/BMAD-METHOD` first.</output>
   <action>Stop here</action>
 </check>
-<action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.11.0 requirement (`uv` is mandatory for BMM 6.11.0+ skills).</action>
+<action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.12.0 requirement (`uv` is mandatory for BMM 6.12.0+ skills).</action>
 </step>
 
 <step n="2" goal="Remove obsolete sync task file">

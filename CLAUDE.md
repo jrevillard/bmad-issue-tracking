@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BMAD module that integrates sprint tracking with GitLab/GitHub Issues. It's not a runnable application — it's a set of TOML overrides and Skills-as-modules folders consumed by the new BMad installer (each `<skill>/module-manifest.toml` declares `module = "issue-tracking"`).
 
-Requires BMM 6.11.0+ (uniform customize.toml support across all BMM workflows; targets the 6.11.0 skill set — `bmad-ux`, consolidated sprint-planning, `uv`-based tooling).
+Requires BMM 6.12.0+ (the flat per-skill install layout `_bmad/{method,toolbox,...}/` replaces the legacy `_bmad/{bmm,bmb,cis,core}/` subdirectories from 6.12.0 onward; BMad adopted the Skills-as-modules format with this version).
 
 ## Architecture
 
