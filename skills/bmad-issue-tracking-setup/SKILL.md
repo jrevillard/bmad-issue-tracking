@@ -156,26 +156,43 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 <step n="3c" goal="Deploy bmad-loop CI status gate (optional)">
 <action>Deploy `ci-status.sh` only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`). No bmad-loop plugins are needed — the `bmad-build-auto.toml` `on_complete` hook drives the issue tracking + CI write.</action>
 
+<action>**Worktree isolation is required.** Our CI gate and close-trace-mr plugin only function when bmad-loop runs with `[scm] isolation = "worktree"`. Without it, the verify command runs in the main checkout where it can't reliably find inputs, and close-trace-mr never executes (the plugin isn't seeded into worktrees). Confirm `[scm] isolation = "worktree"` in `.bmad-loop/policy.toml`; if absent or set to anything else, set it to `"worktree"`. Warn the user — changing this also affects merge-back behavior (`target_branch`, `delete_branch`); they may want to review those in the same edit.</action>
+
+<action>**`worktree_seed` copies gitignored paths only.** bmad-loop docs: "A git worktree checks out tracked files only". For the CI gate to land in every story worktree, our files MUST be gitignored AND listed in `worktree_seed`. Otherwise the verify command fails with "No such file or directory" on the first story.</action>
+
 <check if=".bmad-loop/ directory exists">
   <true>
     <action>Copy `ci-status.sh` to the repo root:</action>
     ```bash
     mkdir -p .bmad-loop
     cp -f <path>/scripts/bmad-loop/ci-gate/ci-status.sh .bmad-loop/ci-status.sh
+    chmod +x .bmad-loop/ci-status.sh
     ```
-    <action>Edit `.bmad-loop/policy.toml` (preserve existing keys):</action>
+    <action>Make the file gitignored so bmad-loop's `worktree_seed` will copy it into each worktree:</action>
+    ```bash
+    # Untrack if previously committed (file stays on disk)
+    git rm --cached .bmad-loop/ci-status.sh 2>/dev/null || true
+    # Append to .gitignore idempotently
+    grep -qxF '.bmad-loop/ci-status.sh' .gitignore || echo '.bmad-loop/ci-status.sh' >> .gitignore
+    ```
+    <action>Also gitignore the close-trace-mr plugin directory (step 3d deploys it) so it gets seeded into worktrees too:</action>
+    ```bash
+    grep -qxF '.bmad-loop/plugins/close-trace-mr/' .gitignore || echo '.bmad-loop/plugins/close-trace-mr/' >> .gitignore
+    ```
+    <action>Edit `.bmad-loop/policy.toml` (preserve existing keys). Set `[scm] isolation = "worktree"` if not already, and ensure `worktree_seed` lists both our paths:</action>
     ```toml
     [scm]
-    worktree_seed = [".bmad-loop/ci-status.sh"]
+    isolation = "worktree"               # REQUIRED by our integration
+    worktree_seed = [".bmad-loop/ci-status.sh", ".bmad-loop/plugins/close-trace-mr"]
 
     [verify]
     commands = ["bash .bmad-loop/ci-status.sh"]
     ```
-    <action>Verify `.bmad-loop/ci-status.sh` exists and `.bmad-loop/policy.toml` has the `[verify] commands` + `[scm] worktree_seed` entries.</action>
+    <action>Verify: `.bmad-loop/ci-status.sh` exists and is executable; `git check-ignore .bmad-loop/ci-status.sh` exits 0 (gitignored); `.bmad-loop/plugins/close-trace-mr/` is gitignored; `.bmad-loop/policy.toml` has the `[verify] commands`, `[scm] isolation = "worktree"`, and `[scm] worktree_seed` entries (with both paths listed).</action>
     <action>If `.bmad-loop/plugins/story-track-dev` or `.bmad-loop/plugins/story-track-review` exist, remove them and delete their `[plugins] enabled` entries from `.bmad-loop/policy.toml` (superseded by the `on_complete` hook).</action>
   </true>
   <false>
-    <output>Skipping ci-status — project does not use bmad-loop (no `.bmad-loop/` directory).</output>
+    <output>Skipping ci-status — project does not use bmad-loop (no `.bmad-loop/` directory). Without bmad-loop, the integration has nowhere to live.</output>
   </false>
 </check>
 </step>
@@ -196,7 +213,9 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     chmod +x .bmad-loop/plugins/close-trace-mr/close-trace-mr.sh
     ```
 
-    <action>Verify the following files exist:</action>
+    <action>The plugin directory is already gitignored (`.bmad-loop/plugins/close-trace-mr/`) and listed in `worktree_seed` (set by step 3c). bmad-loop copies the whole directory into each new worktree at run start, so the plugin is available regardless of which branch a story was cut from. Confirm both via `git check-ignore .bmad-loop/plugins/close-trace-mr/` (exit 0) and the policy.toml `worktree_seed` entry.</action>
+
+    <action>Verify the following files exist in the main checkout (they will be present — copied above; bmad-loop re-copies them per worktree at run time):</action>
     - `.bmad-loop/plugins/close-trace-mr/plugin.toml`
     - `.bmad-loop/plugins/close-trace-mr/close-trace-mr.sh` (executable)
     - `.bmad-loop/plugins/close-trace-mr/close_trace_mr.py`
