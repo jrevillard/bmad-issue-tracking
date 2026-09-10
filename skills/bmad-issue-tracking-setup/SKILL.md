@@ -209,18 +209,10 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
     - `.bmad-loop/plugins/close-trace-mr/close_trace_mr.py`
     - `.bmad-loop/plugins/close-trace-mr/README.md`
 
-    <action>Plugin discovery is automatic on the next bmad-loop run (bmad-loop walks `.bmad-loop/plugins/*` and parses each `plugin.toml`). To opt out without removing the files, add to `.bmad-loop/policy.toml`:</action>
+    <action>Plugin discovery is automatic on the next bmad-loop run (bmad-loop walks `.bmad-loop/plugins/*` and parses each `plugin.toml`). The plugin auto-detects `platform`, `host`, `project` from `_bmad/custom/issue-tracking.yaml` (the single source of truth, written by steps 6 and 7). For env-specific overrides (CI runner vs developer laptop, multi-platform repos), use the plugin's env var overrides (`CLOSE_TRACE_MR_PLATFORM_OVERRIDE`, `CLOSE_TRACE_MR_HOST_OVERRIDE`, `CLOSE_TRACE_MR_PROJECT_OVERRIDE`) instead of duplicating values in policy.toml. To opt out without removing the files, add to `.bmad-loop/policy.toml`:</action>
     ```toml
     [plugins.close-trace-mr.settings]
     close_trace_mr = false
-    ```
-
-    <action>Per-platform overrides are also available — use them when the same repo is configured against both gitlab and github, or when a CI runner needs a different host from a developer laptop:</action>
-    ```toml
-    [plugins.close-trace-mr.settings]
-    platform = "gitlab"        # "gitlab" or "github"; empty = auto-detect
-    host = "opensource.unicc.org"  # empty = auto-detect from issue-tracking.yaml
-    project = "un/itu/genie-ai"   # empty = auto-detect
     ```
 
     <action>Run the plugin's tests to confirm the deployment is healthy:</action>
