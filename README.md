@@ -56,7 +56,7 @@ This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/c
 
 ## Development install
 
-For contributors testing branches or local edits before a release is tagged. The skills CLI accepts two non-default forms in addition to `owner/repo`:
+For contributors testing branches or local edits before a release is tagged. The skills CLI accepts two non-default forms in addition to `owner/repo`. Both forms ship only the skill folders — to actually deploy TOML overrides, workflow YAMLs, and the bmad-loop plugin into your project's `_bmad/`, you must still run `/bmad-issue-tracking-setup` afterwards (same as the production flow, see step 3 above).
 
 ### Install from a GitHub branch
 
