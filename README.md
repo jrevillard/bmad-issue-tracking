@@ -28,11 +28,8 @@ Then open your coding tool in the project and ask the `bmad` skill to run `bmad 
 From the project root:
 
 ```bash
-# Latest (main branch)
+# Latest (default branch)
 npx skills add jrevillard/bmad-issue-tracking
-
-# Pinned to a release
-npx skills add jrevillard/bmad-issue-tracking@v3.0.0
 ```
 
 The installer reads each `skills/<name>/module-manifest.toml`; both declare `module = "issue-tracking"`. After install, two slash commands become available:
@@ -40,7 +37,9 @@ The installer reads each `skills/<name>/module-manifest.toml`; both declare `mod
 - `/bmad-issue-tracking-sync` — Sync sprint status to issues
 - `/bmad-issue-tracking-setup` — Deploy TOML overrides and shared tasks (run once)
 
-### 2. Run the setup skill
+> **Pinning to a release:** the skills CLI treats `@<ref>` after the package name as a *skill name filter*, not a git ref — `npx skills add jrevillard/bmad-issue-tracking@v3.0.0` looks for a skill *named* `v3.0.0`. For release-tag installs, the GitHub URL form is the only reliable syntax (see [Development install](#development-install)).
+
+### 3. Run the setup skill
 
 ```
 /bmad-issue-tracking-setup
@@ -54,6 +53,35 @@ This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/c
 ### 3. PRD key
 
 `prd_key` is captured automatically when running `/bmad-create-prd` (via `activation_steps_append`). No manual configuration needed.
+
+## Development install
+
+For contributors testing branches or local edits before a release is tagged. The skills CLI accepts two non-default forms in addition to `owner/repo`:
+
+### Install from a GitHub branch
+
+Use the GitHub URL form with `/tree/<branch>`:
+
+```bash
+npx skills add https://github.com/jrevillard/bmad-issue-tracking/tree/skills-as-modules
+```
+
+The CLI clones the branch (not the default branch), so each `<skill>/module-manifest.toml` is read from that ref. Useful to validate a release-candidate branch before tagging.
+
+### Install from a local clone
+
+Point the CLI at an absolute path on disk. No commit or push required — the CLI reads whatever is currently on the filesystem:
+
+```bash
+npx skills add /absolute/path/to/bmad-issue-tracking
+```
+
+Handy when iterating on `<skill>/module-manifest.toml`, `references/help.md`, or `scripts/`. Re-run after each edit so the symlinked `.agents/skills/<skill>/` reflects the latest state.
+
+### Caveats for both dev installs
+
+- `npx skills update` won't roll either form forward to a tagged release — you'll need to remove the dev install (`npx skills remove`) and reinstall via the production command.
+- The `bmad setup` doctor's `state: "blocked"` for the `issue-tracking` module is *expected* until you publish a tag matching the manifest's `version`. The install itself is healthy — only the release comparability check fails.
 
 ## What gets installed
 
