@@ -19,9 +19,12 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <action>IMPORTANT: When a step asks you to configure a value with a default, you MUST present the default as a suggestion and wait for the user's answer before writing anything. Never silently apply a default.</action>
 
 <step n="1" goal="Verify BMM installation">
-<action>Check that `_bmad/bmm/config.yaml` exists and contains `# Version:` header with version 6.11.0+.</action>
+<action>Detect the BMM version. Try the legacy path first, then fall back to the new Skills-as-modules layout:</action>
+<action>1. **Legacy install** — read the `# Version:` header in `_bmad/bmm/config.yaml` (single-file BMM ≤ 6.11.0).</action>
+<action>2. **New install (Skills-as-modules)** — read the `version` field in `.agents/skills/bmad-sprint-planning/module-manifest.toml` (per-skill BMM 6.13.0-next and later). If that skill is not installed, scan the first manifest under `.agents/skills/bmad-*/module-manifest.toml` whose `module = "method"`.</action>
+<action>Extract the semver. Accept it only if ≥ 6.11.0.</action>
 <check if="version < 6.11.0 or not found">
-  <output>ERROR: BMM 6.11.0+ required. This module targets the 6.11.0 skill set (bmad-ux, consolidated sprint-planning, uv-based tooling).</output>
+  <output>ERROR: BMM 6.11.0+ required. This module targets the 6.11.0 skill set (bmad-ux, consolidated sprint-planning, uv-based tooling). Run `npx skills add bmad-code-org/BMAD-METHOD` and ask the `bmad` skill to run `bmad setup` first.</output>
   <action>Stop here</action>
 </check>
 <action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.11.0 requirement (`uv` is mandatory for BMM 6.11.0+ skills).</action>
