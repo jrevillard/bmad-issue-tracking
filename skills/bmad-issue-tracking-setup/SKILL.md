@@ -30,7 +30,7 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.12.0 requirement (`uv` is mandatory for BMM 6.12.0+ skills).</action>
 </step>
 
-<step n="3" goal="Deploy TOML overrides">
+<step n="2" goal="Deploy TOML overrides">
 <action>Locate the TOML overrides. Check these locations in order:</action>
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/custom/`
 2. Ask the user for the path to the cloned `bmad-issue-tracking` repo
@@ -66,7 +66,7 @@ cp -f <path>/*.toml _bmad/custom/
 <action>Verify each TOML file is valid by checking it contains a `[workflow]` section and at least one hook key (`on_complete`, `activation_steps_append`, etc.).</action>
 </step>
 
-<step n="3b" goal="Deploy workflow language files">
+<step n="3" goal="Deploy workflow language files">
 <action>The TOML overrides reference workflow language YAML files. These are deployed separately to keep the TOML files as simple pointers.</action>
 
 <action>Locate the workflow language files. They are siblings of the `custom/` directory (in the same `assets/` parent):</action>
@@ -141,7 +141,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/sprint-status/complete.yaml`
 </step>
 
-<step n="3c" goal="Deploy bmad-loop CI status gate (optional)">
+<step n="4" goal="Deploy bmad-loop CI status gate (optional)">
 <action>Deploy `ci-status.sh` only if the consuming project uses bmad-loop (has a `.bmad-loop/` directory after `bmad-loop init`). No bmad-loop plugins are needed — the `bmad-build-auto.toml` `on_complete` hook drives the issue tracking + CI write.</action>
 
 <action>**Worktree isolation is required.** Our CI gate and close-trace-mr plugin only function when bmad-loop runs with `[scm] isolation = "worktree"`. Without it, the verify command runs in the main checkout where it can't reliably find inputs, and close-trace-mr never executes (the plugin isn't seeded into worktrees). Confirm `[scm] isolation = "worktree"` in `.bmad-loop/policy.toml`; if absent or set to anything else, set it to `"worktree"`. Warn the user — changing this also affects merge-back behavior (`target_branch`, `delete_branch`); they may want to review those in the same edit.</action>
@@ -185,7 +185,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </check>
 </step>
 
-<step n="3d" goal="Deploy bmad-loop close-trace-mr plugin (optional)">
+<step n="5" goal="Deploy bmad-loop close-trace-mr plugin (optional)">
 <action>Deploy the `close-trace-mr` bmad-loop plugin only when the project uses both `bmad-loop` AND `bmad-issue-tracking`. The plugin auto-closes the trace MR/PR opened by `common/ensure-mr.yaml` after `bmad-loop`'s local merge — without it, the trace MR stays open in the project list with an outdated diff.</action>
 
 <check if=".bmad-loop/ directory exists AND _bmad/custom/issue-tracking.yaml exists">
@@ -235,7 +235,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </check>
 </step>
 
-<step n="4" goal="Configure issue_tracking">
+<step n="6" goal="Configure issue_tracking">
 <action>Check if `_bmad/custom/issue-tracking.yaml` already exists.</action>
 <check if="config file exists">
   <false>
@@ -261,7 +261,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 <action>Ensure the worktree base directory is in `.gitignore`. Read the configured `worktree_base` value and check if it is listed. If not, append it.</action>
 </step>
 
-<step n="5" goal="Configure platform and connection">
+<step n="7" goal="Configure platform and connection">
 <action>Detect the git remote by running `git remote get-url origin`.</action>
 <action>Determine the git remote platform from the remote URL (gitlab.com → gitlab, github.com → github, GHE/GitLab self-hosted → ask user).</action>
 <action>Extract `git_host` (hostname) and `git_project` (group/project or owner/repo) from the remote URL.</action>
@@ -330,7 +330,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </check>
 </step>
 
-<step n="6" goal="Verify CLI connectivity">
+<step n="8" goal="Verify CLI connectivity">
 <action>Run the platform auth check (use `--hostname {host}` for self-hosted instances):</action>
 - GitLab: `glab auth status --hostname {host}`
 - GitHub: `gh auth status --hostname {host}`
@@ -340,7 +340,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 </check>
 </step>
 
-<step n="6b" goal="Configure branch patterns">
+<step n="9" goal="Configure branch patterns">
 <action>Explain: "Branch patterns control automatic branch and MR/PR creation when developing PRD stories. Placeholders: `{prd_key}` (e.g. `auth-refactor`), `{story_key}` (e.g. `3-4-automatic-department-routing`)."</action>
 
 <action>Ask the user for their PRD branch pattern. Default: `feat/{prd_key}/prd`</action>
