@@ -30,18 +30,6 @@ One-time setup for BMAD Issue Tracking integration. Deploys TOML overrides to `_
 <action>Verify `uv` is available by running `uv --version`. If missing, report the BMM 6.12.0 requirement (`uv` is mandatory for BMM 6.12.0+ skills).</action>
 </step>
 
-<step n="2" goal="Remove obsolete sync task file">
-<action>The sync logic has been converted to workflow YAML files. The old markdown file `bmad-issue-tracking-sync.md` is no longer needed.</action>
-
-<action>Remove the file if it exists in the consuming project:</action>
-
-```bash
-rm -f _bmad/_config/custom/bmad-issue-tracking-sync.md
-```
-
-<action>Confirm that the file no longer exists.</action>
-</step>
-
 <step n="3" goal="Deploy TOML overrides">
 <action>Locate the TOML overrides. Check these locations in order:</action>
 1. `~/.bmad/cache/custom-modules/github.com/jrevillard/bmad-issue-tracking/skills/bmad-issue-tracking-setup/assets/custom/`
