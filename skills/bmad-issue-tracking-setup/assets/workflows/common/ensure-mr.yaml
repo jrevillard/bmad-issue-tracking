@@ -65,21 +65,15 @@ print(parts[1])
         - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/-/issues/{issue_id}" }
       FALSE:
         - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/issues/{issue_id}" }
-# Check if an MR/PR already exists for this source branch
-- CHECK: git_platform eq "gitlab"
-  TRUE:
-    - RUN: glab api "projects/{project_enc}/merge_requests?source_branch={story_branch}" --hostname {host} --paginate | uv run --no-project python -c "import json,sys; print('yes' if json.load(sys.stdin) else '')"
-      STORE: existing_mr
-      PLATFORM: gitlab
-  FALSE:
-    - RUN: gh pr list --head {story_branch} -R "{mr_repo}" --json number
-      STORE: existing_mr
-      PLATFORM: github
-- CHECK: empty existing_mr
+# Check if an MR/PR already exists for this source branch (via atomic find-mr)
+- INCLUDE: common/find-mr
+- CHECK: empty mr_iid
   TRUE:
     # No MR exists — create the trace MR (story branch -> PRD branch)
     - CHECK: git_platform eq "gitlab"
       TRUE:
-        - RUN: glab mr create --title "Story {epic_num}.{story_num}: {story_title}" --description "{issue_ref}" --target-branch {prd_branch} --source-branch {story_branch} -R "{mr_repo}"
+        - RUN: glab mr create --title "Story {epic_num}.{story_num}: {story_title}" --description "{issue_ref}" --target-branch {prd_branch} --source-branch {story_branch} -R "{mr_repo}" 2>&1 | tee /dev/stderr | grep -oE 'https://[^ ]+' | head -1
+          STORE: mr_url
       FALSE:
-        - RUN: gh pr create --title "Story {epic_num}.{story_num}: {story_title}" --body "{issue_ref}" --base {prd_branch} --head {story_branch} -R "{mr_repo}"
+        - RUN: gh pr create --title "Story {epic_num}.{story_num}: {story_title}" --body "{issue_ref}" --base {prd_branch} --head {story_branch} -R "{mr_repo}" 2>&1 | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -1
+          STORE: mr_url
