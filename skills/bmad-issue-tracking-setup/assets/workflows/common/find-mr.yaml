@@ -1,0 +1,19 @@
+# common/find-mr.yaml
+#
+# Purpose: Find existing MR by source branch. Returns mr_iid (empty if none).
+# Input variables: mr_repo (full repo path: gitlab "host/group/project"; github "host/owner/project"), source_branch
+# Output variables: mr_iid (string, empty string if no MR exists)
+
+# GitLab: list MRs filtered by source branch, extract first iid
+- RUN: glab mr list --source-branch {source_branch} -R "{mr_repo}" --output json | uv run --no-project python -c "
+import json, sys
+ms = json.load(sys.stdin)
+print(str(ms[0]['iid']) if ms else '')
+"
+  STORE: mr_iid
+  PLATFORM: gitlab
+
+# GitHub: list PRs filtered by head branch, extract first number
+- RUN: gh pr list --head {source_branch} -R "{mr_repo}" --json number --jq '.[0].number // empty'
+  STORE: mr_iid
+  PLATFORM: github
