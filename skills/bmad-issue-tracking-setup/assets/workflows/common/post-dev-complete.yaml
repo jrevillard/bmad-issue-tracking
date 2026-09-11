@@ -81,8 +81,21 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
     
     - RUN: git commit --allow-empty -m "create story {story_key}" 2>/dev/null || true
     - RUN: git push -u origin {story_branch}
+    # Translate caller scope into the new INPUT contract (the atomic no longer reads
+    # story_key / story_title / story_num / epic_num / issue_id — caller must supply).
+    - SET: { variable: source_branch, value: "{story_branch}" }
+    - SET: { variable: target_branch, value: "{prd_branch}" }
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
+    - SET: { variable: mr_title, value: "Story {epic_num}.{story_num}: {story_key}" }
+    - WRITE:
+        file: /tmp/ensure-mr-desc.md
+        content: "Sprint key: {story_key}\n\nRelated to #{issue_id}"
+        mode: overwrite
+    - SET: { variable: mr_description_file, value: "/tmp/ensure-mr-desc.md" }
+    - SET: { variable: mr_draft, value: "false" }
     # Ensure trace MR exists (create if missing, with issue reference)
     - INCLUDE: common/ensure-mr
+    - RUN: rm -f /tmp/ensure-mr-desc.md
     - OUTPUT:
         message: "Story {story_key} issue created and MR ready."
 # =============================================================================
@@ -108,8 +121,21 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
     - INCLUDE: common/write-ci-status
     # Ensure issue exists (find or create)
     - INCLUDE: common/ensure-issue
+    # Translate caller scope into the new INPUT contract (the atomic no longer reads
+    # story_key / story_title / story_num / epic_num / issue_id — caller must supply).
+    - SET: { variable: source_branch, value: "{story_branch}" }
+    - SET: { variable: target_branch, value: "{prd_branch}" }
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
+    - SET: { variable: mr_title, value: "Story {epic_num}.{story_num}: {story_key}" }
+    - WRITE:
+        file: /tmp/ensure-mr-desc.md
+        content: "Sprint key: {story_key}\n\nRelated to #{issue_id}"
+        mode: overwrite
+    - SET: { variable: mr_description_file, value: "/tmp/ensure-mr-desc.md" }
+    - SET: { variable: mr_draft, value: "false" }
     # Ensure trace MR exists (create if missing)
     - INCLUDE: common/ensure-mr
+    - RUN: rm -f /tmp/ensure-mr-desc.md
     # Update issue status based on sprint-status
     - CHECK: story_status eq "review"
       TRUE:
