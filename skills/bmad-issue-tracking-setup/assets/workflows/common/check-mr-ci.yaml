@@ -14,93 +14,42 @@
 # Resolve MR/PR repo (handles cross-platform: git remote may differ from issue tracker)
 - CHECK: git_platform eq platform
   TRUE:
-    - SET: { variable: mr_host, value: "{host}" }
-    - SET: { variable: mr_project, value: "{project}" }
+    - SET: { variable: mr_repo, value: "{host}/{project}" }
   FALSE:
     - READ: _bmad/custom/issue-tracking.yaml
       EXTRACT:
         git_host: issue_tracking.git_host
         git_project: issue_tracking.git_project
-    - SET: { variable: mr_host, value: "{git_host}" }
-    - SET: { variable: mr_project, value: "{git_project}" }
-# --- GitLab: find MR and check pipeline ---
-- CHECK: git_platform eq "gitlab"
+    - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
+# Find the MR + fetch its latest pipeline. Atomics self-route via PLATFORM.
+# Note: get-mr-pipeline's GitHub side uses `gh run list` (workflow-run-level) rather
+# than the previous `gh pr checks` (per-check aggregation) — a known semantic shift
+# acknowledged in the plan's out-of-scope section ("both coexist" as concepts).
+- SET: { variable: source_branch, value: "{current_branch}" }
+- INCLUDE: common/find-mr
+- INCLUDE: common/get-mr-pipeline
+# Map atomic outputs to the unified ci_status enum (preserves original behavior):
+# empty mr_iid -> no_mr; empty pipeline_id -> no_ci; raw pipeline_status -> enum.
+- CHECK: empty mr_iid
   TRUE:
-    - RUN: glab mr list --source-branch {current_branch} -R "{mr_host}/{mr_project}" --output json
-      STORE: mr_list
-      PLATFORM: gitlab
-    - CHECK: empty mr_list
+    - SET: { variable: ci_status, value: "no_mr" }
+  FALSE:
+    - CHECK: empty pipeline_id
       TRUE:
-        - SET: { variable: ci_status, value: "no_mr" }
+        - SET: { variable: ci_status, value: "no_ci" }
       FALSE:
-        - FILTER:
-            source: mr_list
-            select: iid
-            store: mr_iid
-        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} | uv run --no-project python -c "
-import json, sys
-data = json.load(sys.stdin)
-pipeline = data.get('pipeline')
-if not pipeline:
-    print('no_ci')
-else:
-    status = pipeline.get('status', 'unknown')
-    if status == 'success':
-        print('passed')
-    elif status == 'failed':
-        print('failed')
-    elif status in ('running', 'pending'):
-        print('running')
-    else:
-        print('no_ci')
-"
-          STORE: ci_status
-          PLATFORM: gitlab
-# --- GitHub: find PR and check status checks ---
-- CHECK: git_platform eq "github"
-  TRUE:
-    - RUN: uv run --no-project python -c "
-import sys
-parts = sys.argv[1].split('/')
-print(parts[0])
-" {mr_project}
-        STORE: mr_owner
-    - RUN: uv run --no-project python -c "
-import sys
-parts = sys.argv[1].split('/')
-print(parts[1])
-" {mr_project}
-        STORE: mr_repo
-    - RUN: gh pr list --head {current_branch} --json number -R "{mr_host}/{mr_owner}/{mr_repo}"
-      STORE: pr_list
-      PLATFORM: github
-    - CHECK: empty pr_list
-      TRUE:
-        - SET: { variable: ci_status, value: "no_mr" }
-      FALSE:
-        - FILTER:
-            source: pr_list
-            select: number
-            store: pr_number
-        - RUN: gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]"
-          STORE: pr_checks
-          PLATFORM: github
         - RUN: uv run --no-project python -c "
-import json, sys
-raw = sys.argv[1].strip()
-checks = json.loads(raw) if raw else []
-if not checks:
-    print('no_ci')
+import sys
+ps = sys.argv[1].strip() if len(sys.argv) > 1 else ''
+# GitLab pipeline.status: success/failed/running/pending/canceled/skipped/created/manual
+# GitHub conclusion/status: success/failure/cancelled/skipped/timed_out/queued/in_progress/...
+if ps == 'success':
+    print('passed')
+elif ps in ('failed', 'failure'):
+    print('failed')
+elif ps in ('running', 'pending', 'queued', 'in_progress'):
+    print('running')
 else:
-    conclusions = [c.get('conclusion', '') for c in checks]
-    statuses = [c.get('status', '') for c in checks]
-    if all(c == 'success' for c in conclusions):
-        print('passed')
-    elif any(c == 'failure' for c in conclusions):
-        print('failed')
-    elif any(s in ('queued', 'in_progress') for s in statuses):
-        print('running')
-    else:
-        print('no_ci')
-" {pr_checks}
+    print('no_ci')
+" {pipeline_status}
           STORE: ci_status
