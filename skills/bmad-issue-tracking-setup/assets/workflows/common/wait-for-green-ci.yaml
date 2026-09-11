@@ -1,19 +1,23 @@
 # common/wait-for-green-ci.yaml
 #
 # Purpose: Waits for CI to pass on the current branch's MR/PR.
-#          On failure, instructs the agent to fix, commit, push, and retry.
+#          On failure, fetches failed-job diagnostics and instructs the agent to fix.
 # Input variables:
 #   - current_branch: the source branch to check
 #   - git_platform: "gitlab" or "github" (from check-config)
 #   - platform: issue tracker platform (from check-config)
 #   - host: issue tracker host (from check-config)
 #   - project: issue tracker project (from check-config)
+#   - project_enc: URL-encoded project path (from check-config)
+#   - mr_repo: resolved MR repo (set by check-mr-ci)
+#   - source_branch: source branch (set by check-mr-ci, defaults to current_branch)
 # Output variables:
-#   - ci_status: "passed", "no_ci", or "no_mr" (terminal green states)
-# Side effects: polls CI every 30s while running; on failure, expects agent to
-#               fix, commit, push, then re-run this workflow
+#   - ci_status: "passed", "no_ci", "no_mr", "running", "failed", "timeout"
+#   - pipeline_id: id of the failed pipeline (set on failure-path, passed to get-failed-jobs)
+#   - jobs: failed-job diagnostics from get-failed-jobs (TSV on gitlab, raw text on github)
+# Side effects: polls CI every 30s while running; on failure, fetches failed-job traces
 
-# Initial check
+# Initial check (atomic; produces mr_iid + pipeline_id + pipeline_status + ci_status)
 - INCLUDE: common/check-mr-ci
 # Already green or no CI — proceed
 - CHECK: ci_status eq "passed"
@@ -25,7 +29,12 @@
 - CHECK: ci_status eq "no_mr"
   TRUE:
     - STOP
-# CI running — poll until terminal state (timeout: 30 min)
+# CI running — poll until terminal state (timeout: 30 min).
+# The polling wrapper stays as bash (the workflow language has no WHILE primitive);
+# inside each iteration we replicate the SAME logic that common/get-mr-pipeline
+# encodes — that atomic remains the canonical source for the single-fetch case
+# (e.g. check-mr-ci initial check). mr_iid is reused from the initial check-mr-ci
+# INCLUDE above (preserves original behavior — the MR is not re-resolved per poll).
 - CHECK: ci_status eq "running"
   TRUE:
     - CHECK: git_platform eq "gitlab"
@@ -36,19 +45,25 @@
             while [ $attempt -lt $max_attempts ]; do
               sleep 30
               attempt=$((attempt + 1))
-              STATUS=$(glab api "projects/{mr_project}/merge_requests/{mr_iid}" --hostname {mr_host} 2>/dev/null | uv run --no-project python -c "
+              # get-mr-pipeline equivalent: fetch latest pipeline for the existing mr_iid
+              raw=$(glab api "projects/{project_enc}/merge_requests/{mr_iid}/pipelines" --hostname {host} --paginate 2>/dev/null)
+              pipeline_status=$(echo "$raw" | uv run --no-project python -c "
 import json, sys
-data = json.load(sys.stdin)
-p = data.get('pipeline')
-if not p:
-    print('no_ci')
-else:
-    s = p.get('status', 'unknown')
-    if s == 'success': print('passed')
-    elif s == 'failed': print('failed')
-    elif s in ('running', 'pending'): print('running')
-    else: print('no_ci')
+ps = json.load(sys.stdin)
+print(ps[0]['status'] if ps else 'none')
 " 2>/dev/null)
+              # Map atomic pipeline_status → ci_status enum (mirrors check-mr-ci L41-54)
+              STATUS=$(uv run --no-project python -c "
+ps = sys.argv[1].strip() if len(sys.argv) > 1 else ''
+if ps == 'success':
+    print('passed')
+elif ps in ('failed', 'failure'):
+    print('failed')
+elif ps in ('running', 'pending', 'queued', 'in_progress'):
+    print('running')
+else:
+    print('no_ci')
+" "$pipeline_status" 2>/dev/null)
               if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ] || [ "$STATUS" = "no_ci" ]; then
                 echo "$STATUS"
                 break
@@ -68,19 +83,25 @@ else:
                 while [ $attempt -lt $max_attempts ]; do
                   sleep 30
                   attempt=$((attempt + 1))
-                  CHECKS=$(gh pr checks {pr_number} --json name,status,conclusion -R "{mr_host}/{mr_owner}/{mr_repo}" 2>/dev/null || echo "[]")
-                  STATUS=$(uv run --no-project python -c "
+                  # get-mr-pipeline equivalent: fetch latest workflow run for the existing mr_iid
+                  raw=$(gh run list --limit 1 -R "{mr_repo}" --json databaseId,status,conclusion 2>/dev/null)
+                  pipeline_status=$(echo "$raw" | uv run --no-project python -c "
 import json, sys
-checks = json.loads(sys.argv[1].strip()) if sys.argv[1].strip() else []
-if not checks: print('no_ci')
+rs = json.load(sys.stdin)
+print((rs[0]['conclusion'] or rs[0]['status'] or 'unknown') if rs else 'none')
+" 2>/dev/null)
+                  # Map atomic pipeline_status → ci_status enum (mirrors check-mr-ci L41-54)
+                  STATUS=$(uv run --no-project python -c "
+ps = sys.argv[1].strip() if len(sys.argv) > 1 else ''
+if ps == 'success':
+    print('passed')
+elif ps in ('failed', 'failure'):
+    print('failed')
+elif ps in ('running', 'pending', 'queued', 'in_progress'):
+    print('running')
 else:
-    conclusions = [c.get('conclusion', '') for c in checks]
-    statuses = [c.get('status', '') for c in checks]
-    if all(c == 'success' for c in conclusions): print('passed')
-    elif any(c == 'failure' for c in conclusions): print('failed')
-    elif any(s in ('queued', 'in_progress') for s in statuses): print('running')
-    else: print('no_ci')
-" "$CHECKS" 2>/dev/null)
+    print('no_ci')
+" "$pipeline_status" 2>/dev/null)
                   if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ] || [ "$STATUS" = "no_ci" ]; then
                     echo "$STATUS"
                     break
@@ -104,24 +125,28 @@ else:
     - OUTPUT:
         message: "CI did not reach a terminal state after 30 minutes. Check the pipeline manually and re-run this workflow when resolved."
         stop: true
-# CI failed — agent must fix
+# CI failed — fetch pipeline_id then INCLUDE the get-failed-jobs atomic for diagnostics.
+# The jobs output is TSV on gitlab (name\texit_code\ttrace_tail per line) and raw
+# `gh run view --log-failed` text on github — we display it as-is without parsing.
 - CHECK: ci_status eq "failed"
   TRUE:
     - CHECK: git_platform eq "gitlab"
       TRUE:
-        - RUN: glab api "projects/{mr_project}/merge_requests/{mr_iid}/pipelines" --hostname {mr_host} --paginate | uv run --no-project python -c "
+        - RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}/pipelines" --hostname {host} --paginate | uv run --no-project python -c "
 import json, sys
-pipelines = json.load(sys.stdin)
-if pipelines:
-    p = pipelines[0]
-    print('Pipeline ' + str(p.get('id', '')) + ': ' + p.get('status', ''))
-    print(p.get('web_url', ''))
+ps = json.load(sys.stdin)
+print(str(ps[0]['id']) if ps else '')
 "
           PLATFORM: gitlab
-          STORE: pipeline_info
+          STORE: pipeline_id
       FALSE:
-        - RUN: gh run list --branch {current_branch} -R "{mr_host}/{mr_owner}/{mr_repo}" --limit 1 --json databaseId,status,conclusion,url
+        - RUN: gh run list --limit 1 -R "{mr_repo}" --json databaseId | uv run --no-project python -c "
+import json, sys
+rs = json.load(sys.stdin)
+print(str(rs[0]['databaseId']) if rs else '')
+"
           PLATFORM: github
-          STORE: pipeline_info
+          STORE: pipeline_id
+    - INCLUDE: common/get-failed-jobs
     - OUTPUT:
-        message: "CI failed. {pipeline_info}\n\nRead the CI logs, fix the issue, then:\n1. git add .\n2. git commit -m \"fix: ci failure\"\n3. git push\n4. Re-run this workflow (INCLUDE: common/wait-for-green-ci)"
+        message: "CI failed (pipeline {pipeline_id}).\n\nFailed-job diagnostics:\n{jobs}\n\nRead the CI logs, fix the issue, then:\n1. git add .\n2. git commit -m \"fix: ci failure\"\n3. git push\n4. Re-run this workflow (INCLUDE: common/wait-for-green-ci)"
