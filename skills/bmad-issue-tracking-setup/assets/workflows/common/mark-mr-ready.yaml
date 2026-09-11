@@ -66,33 +66,28 @@ print(parts[1])
 " {git_project}
           STORE: git_repo
         - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
+# Find MR/PR by source branch (atomic returns mr_iid, empty if none)
+- SET: { variable: source_branch, value: "{prd_branch}" }
+- INCLUDE: common/find-mr
 # Mark draft MR/PR ready
 - CHECK: git_platform eq "gitlab"
   TRUE:
-    - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}"
-      STORE: mr_list
-    - CHECK: empty mr_list
+    - CHECK: empty mr_iid
+      TRUE:
+        - OUTPUT:
+            message: "All epics done, but no draft MR found."
       FALSE:
-        - RUN: glab mr list --source-branch {prd_branch} --target-branch {default_branch} -R "{mr_repo}" --output json | uv run --no-project python -c "import json,sys; print(json.load(sys.stdin)[0]['iid'])"
-          STORE: mr_iid
         - RUN: glab mr update {mr_iid} --ready -R "{mr_repo}"
           EXPECT_EXIT: 0
         - OUTPUT:
             message: "All epics done — draft MR marked as ready for review."
-      TRUE:
-        - OUTPUT:
-            message: "All epics done, but no draft MR found."
   FALSE:
-    - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}"
-      STORE: pr_list
-    - CHECK: empty pr_list
-      FALSE:
-        - RUN: gh pr list --head {prd_branch} --base {default_branch} --json number -R "{mr_repo}" --jq '.[0].number'
-          STORE: pr_number
-        - RUN: gh pr ready {pr_number} -R "{mr_repo}"
-          EXPECT_EXIT: 0
-        - OUTPUT:
-            message: "All epics done — draft PR marked as ready for review."
+    - CHECK: empty mr_iid
       TRUE:
         - OUTPUT:
             message: "All epics done, but no draft PR found."
+      FALSE:
+        - RUN: gh pr ready {mr_iid} -R "{mr_repo}"
+          EXPECT_EXIT: 0
+        - OUTPUT:
+            message: "All epics done — draft PR marked as ready for review."
