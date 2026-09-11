@@ -203,6 +203,10 @@ else:
             store: do_merge
         - CHECK: do_merge eq "yes"
           TRUE:
+            # Resolve mr_iid via the existing source_branch (atomic sets mr_iid in scope).
+            # mr_repo + source_branch are set by common/check-mr-ci inside wait-for-green-ci
+            # (called above when review_status eq "done").
+            - INCLUDE: common/find-mr
             # Seed cross-platform vars (atomic references {git_host}/{git_project}/{git_owner}/{git_repo};
             # check-config doesn't produce them — mirror existing post-dev-complete.yaml L212-217, L235-250).
             - READ: _bmad/custom/issue-tracking.yaml
