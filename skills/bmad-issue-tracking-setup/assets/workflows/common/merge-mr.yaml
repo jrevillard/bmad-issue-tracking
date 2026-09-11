@@ -54,7 +54,7 @@ print(m.get('merge_commit_sha', '') or '')
           STORE: gh_merge_out
           PLATFORM: github
           EXPECT_EXIT: any
-        - RUN: gh api repos/{host}/{owner}/{repo}/pulls/{mr_iid} --jq .merge_commit_sha
+        - RUN: gh api repos/{host}/{project}/pulls/{mr_iid} --jq .merge_commit_sha
           STORE: merge_sha
           PLATFORM: github
 
