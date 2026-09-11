@@ -1,0 +1,46 @@
+# common/get-mr-pipeline.yaml
+#
+# Purpose: Get the latest pipeline id + status for a given MR/PR.
+# Input variables: mr_iid (numeric)
+# Output variables:
+#   - pipeline_id (string): gitlab pipeline id OR github workflow run id (unified name for cross-platform callers)
+#   - pipeline_status (string): gitlab pipeline.status OR github conclusion (success/failed/running/pending/cancelled/none)
+
+# GitLab: fetch MR's latest pipeline (paginated, take first)
+- RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}/pipelines" --hostname {host} --paginate | uv run --no-project python -c "
+import json, sys
+ps = json.load(sys.stdin)
+if ps:
+    print(str(ps[0]['id']))
+else:
+    print('')
+"
+  STORE: pipeline_id
+  PLATFORM: gitlab
+
+# GitLab: also fetch pipeline_status (separate RUN — multi-variable STORE has no precedent in this module; safer to split)
+- RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}/pipelines" --hostname {host} --paginate | uv run --no-project python -c "
+import json, sys
+ps = json.load(sys.stdin)
+print(ps[0]['status'] if ps else 'none')
+"
+  STORE: pipeline_status
+  PLATFORM: gitlab
+
+# GitHub: list recent workflow runs (per-branch), pick latest (rename run_id → pipeline_id for output unification)
+- RUN: gh run list --limit 1 -R "{host}/{owner}/{repo}" --json databaseId,status,conclusion | uv run --no-project python -c "
+import json, sys
+rs = json.load(sys.stdin)
+print(str(rs[0]['databaseId']) if rs else '')
+"
+  STORE: pipeline_id
+  PLATFORM: github
+
+# GitHub: pipeline_status from run's conclusion
+- RUN: gh run list --limit 1 -R "{host}/{owner}/{repo}" --json databaseId,status,conclusion | uv run --no-project python -c "
+import json, sys
+rs = json.load(sys.stdin)
+print(rs[0]['conclusion'] or rs[0]['status'] or 'unknown') if rs else print('none')
+"
+  STORE: pipeline_status
+  PLATFORM: github
