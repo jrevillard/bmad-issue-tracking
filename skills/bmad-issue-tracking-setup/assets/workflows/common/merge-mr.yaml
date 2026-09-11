@@ -1,0 +1,85 @@
+# common/merge-mr.yaml
+#
+# Purpose: Merge an MR/PR by IID. Cross-platform, 4 variants (gitlab/github × same/cross-platform target).
+# Input variables: mr_iid (numeric), squash (default "false")
+# Output variables:
+#   - merged ("true" if merge CLI succeeded)
+#   - merge_sha (string, from API after merge; empty if merge failed)
+#   - error (string, non-empty if merge failed)
+
+# Internal routing: determine target repo (same-platform uses host/project, cross-platform uses git_host/git_project)
+# Trigger on platform match first; fall back to git_platform for cross-platform case.
+
+# === GitLab — same-platform (issue tracker is gitlab) ===
+- CHECK: platform eq "gitlab"
+  TRUE:
+    - CHECK: git_platform eq platform
+      TRUE:
+        - RUN: glab mr merge --yes --squash={squash} -R "{host}/{project}" {mr_iid}
+          STORE: gl_merge_out
+          PLATFORM: gitlab
+          EXPECT_EXIT: any
+        # After merge, fetch the merge commit SHA via API (avoids the hardcoded git -C path issue)
+        - RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}" --hostname {host} | uv run --no-project python -c "
+import json, sys
+m = json.load(sys.stdin)
+print(m.get('merge_commit_sha', '') or '')
+"
+          STORE: merge_sha
+          PLATFORM: gitlab
+
+# === GitLab — cross-platform (git remote != issue tracker) ===
+- CHECK: platform eq "gitlab"
+  TRUE:
+    - CHECK: git_platform neq platform
+      TRUE:
+        - RUN: glab mr merge --yes --squash={squash} -R "{git_host}/{git_project}" {mr_iid}
+          STORE: gl_merge_out
+          PLATFORM: gitlab
+          EXPECT_EXIT: any
+        - RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}" --hostname {host} | uv run --no-project python -c "
+import json, sys
+m = json.load(sys.stdin)
+print(m.get('merge_commit_sha', '') or '')
+"
+          STORE: merge_sha
+          PLATFORM: gitlab
+
+# === GitHub — same-platform ===
+- CHECK: platform eq "github"
+  TRUE:
+    - CHECK: git_platform eq platform
+      TRUE:
+        - RUN: gh pr merge {mr_iid} --squash --delete-branch -R "{host}/{project}"
+          STORE: gh_merge_out
+          PLATFORM: github
+          EXPECT_EXIT: any
+        - RUN: gh api repos/{host}/{owner}/{repo}/pulls/{mr_iid} --jq .merge_commit_sha
+          STORE: merge_sha
+          PLATFORM: github
+
+# === GitHub — cross-platform ===
+- CHECK: platform eq "github"
+  TRUE:
+    - CHECK: git_platform neq platform
+      TRUE:
+        - RUN: gh pr merge {mr_iid} --squash --delete-branch -R "{git_host}/{git_owner}/{git_repo}"
+          STORE: gh_merge_out
+          PLATFORM: github
+          EXPECT_EXIT: any
+        - RUN: gh api repos/{git_host}/{git_owner}/{git_repo}/pulls/{mr_iid} --jq .merge_commit_sha
+          STORE: merge_sha
+          PLATFORM: github
+
+# Derive merged/error from CLI outputs (truth source = exit code, not pipeline_status)
+- RUN: uv run --no-project python -c "
+import sys
+gl = sys.argv[1].strip() if len(sys.argv) > 1 else ''
+gh = sys.argv[2].strip() if len(sys.argv) > 2 else ''
+# If either CLI produced output (stdout captured by the shell), the merge ran
+print('true' if (gl or gh) else 'false')
+" {gl_merge_out} {gh_merge_out}
+  STORE: merged
+- CHECK: merged eq "false"
+  TRUE:
+    - SET: { variable: error, value: "merge CLI failed (no stdout captured)" }
