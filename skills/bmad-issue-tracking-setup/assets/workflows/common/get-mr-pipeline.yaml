@@ -27,8 +27,9 @@ print(ps[0]['status'] if ps else 'none')
   STORE: pipeline_status
   PLATFORM: gitlab
 
-# GitHub: list recent workflow runs (per-branch), pick latest (rename run_id → pipeline_id for output unification)
-- RUN: gh run list --limit 1 -R "{host}/{owner}/{repo}" --json databaseId,status,conclusion | uv run --no-project python -c "
+# GitHub: list recent workflow runs (per-branch), pick latest (rename run_id → pipeline_id for output unification).
+# Note: {project} is already in owner/repo form (set by check-config); no separate owner/repo split needed for same-platform.
+- RUN: gh run list --limit 1 -R "{host}/{project}" --json databaseId,status,conclusion | uv run --no-project python -c "
 import json, sys
 rs = json.load(sys.stdin)
 print(str(rs[0]['databaseId']) if rs else '')
@@ -37,7 +38,7 @@ print(str(rs[0]['databaseId']) if rs else '')
   PLATFORM: github
 
 # GitHub: pipeline_status from run's conclusion
-- RUN: gh run list --limit 1 -R "{host}/{owner}/{repo}" --json databaseId,status,conclusion | uv run --no-project python -c "
+- RUN: gh run list --limit 1 -R "{host}/{project}" --json databaseId,status,conclusion | uv run --no-project python -c "
 import json, sys
 rs = json.load(sys.stdin)
 print(rs[0]['conclusion'] or rs[0]['status'] or 'unknown') if rs else print('none')
