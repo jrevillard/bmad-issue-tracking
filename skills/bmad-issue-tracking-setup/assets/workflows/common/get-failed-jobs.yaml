@@ -1,0 +1,35 @@
+# common/get-failed-jobs.yaml
+#
+# Purpose: List failed jobs for a given pipeline id, with trace tail per job.
+# Input variables: pipeline_id (gitlab pipeline id) or pipeline_id (github workflow run id)
+# Output variables: jobs (newline-separated JSON: each line {name, exitCode, trace_tail})
+
+# GitLab: list jobs in pipeline, filter failed, fetch trace tail per failed job (sequential — pipeline failure usually has 1-3 jobs)
+- RUN: glab api "projects/{project_enc}/pipelines/{pipeline_id}/jobs?per_page=50" --hostname {host} | uv run --no-project python -c "
+import json, subprocess, sys
+jobs = json.load(sys.stdin)
+results = []
+for j in jobs:
+    if j.get('status') == 'failed':
+        name = j.get('name', '')
+        exit_code = j.get('exit_code', 0)
+        try:
+            trace = subprocess.check_output(
+                ['glab', 'api', '--hostname', sys.argv[1], f\"projects/{sys.argv[2]}/jobs/{j['id']}/trace\"],
+                stderr=subprocess.DEVNULL
+            ).decode().splitlines()[-80:]
+            trace_tail = '\n'.join(trace)
+        except Exception:
+            trace_tail = ''
+        results.append(f\"{name}\t{exit_code}\t{trace_tail}\")
+print('\n'.join(results))
+" {host} {project_enc}
+  STORE: jobs
+  PLATFORM: gitlab
+  EXPECT_EXIT: any
+
+# GitHub: list jobs in workflow run, filter conclusion=failure, use `gh run view --log-failed` (built-in authenticated, handles private repos)
+- RUN: gh run view {pipeline_id} --log-failed 2>&1 | head -200 || true
+  STORE: jobs
+  PLATFORM: github
+  EXPECT_EXIT: any
