@@ -1,79 +1,49 @@
 # common/ensure-mr.yaml
 #
-# Purpose: Ensures a trace MR/PR exists for the story branch — finds it by source
-#          branch, creates it if missing with the issue reference. Reused by
-#          post-dev-complete phases (create-story and dev-finish).
+# Purpose: Ensures a trace MR/PR exists for the source branch — finds it by source
+#          branch, creates it if missing with the caller-supplied title, description
+#          body, and draft flag. Reused by both story-mode callers
+#          (post-dev-complete phases) and PRD-mode callers (bmad-prd/complete.yaml,
+#          create-prd/complete.yaml).
 # Input variables:
-#   - story_branch: the story branch name (source)
-#   - prd_branch: the target branch (PRD branch)
-#   - issue_id: the issue ID (IID for GitLab, number for GitHub) — for the reference
-#   - epic_num, story_num, prd_key, story_key: for the MR title/description
-# Output variables: (none)
+#   - mr_repo: full repo path (gitlab "host/group/project"; github "host/owner/project")
+#   - source_branch: branch with the work to merge (PRD: prd_branch; story: story_branch = prd_branch/story_key)
+#   - target_branch: branch to merge into (PRD: default_branch; story: prd_branch)
+#   - mr_title: title shown in the MR (story callers typically "Story N.M: Title" or
+#               "Story KEY — bmad-build-converge"; PRD callers "PRD: {prd_key}")
+#   - mr_description_file: path to a file containing the description body — caller
+#               is responsible for assembling the cross-platform issue reference
+#               ("Sprint key: ...\n\nRelated to #N" for story atomic; "Closes #N" for PRD)
+#   - mr_draft: "true" to create as draft, "false" for ready-to-merge (default "false")
+# Output variables: (none — call common/find-mr after to resolve mr_iid if needed)
 # Side effects: creates the MR/PR on the tracker if not found
 
-# Derive story_title from the story spec file (for the MR title, matching the
-# module's `Story N.N: Title` convention)
-- RUN: uv run --no-project python -c "
-import sys, re
-with open(sys.argv[1], 'r', encoding='utf-8') as f:
-    for line in f:
-        if line.startswith('# '):
-            heading = line[2:].strip()
-            m = re.match(r'Story\s+\d+\.\d+\s*:\s*(.+)', heading)
-            print(m.group(1).strip() if m else heading)
-            break
-" {implementation_artifacts}/{story_key}.md
-  STORE: story_title
-
-# Resolve the repo reference (same-platform vs cross-platform git remote)
-- CHECK: git_platform eq platform
-  TRUE:
-    - SET: { variable: mr_repo, value: "{host}/{project}" }
-  FALSE:
-    - CHECK: platform eq "gitlab"
-      TRUE:
-        - READ: _bmad/custom/issue-tracking.yaml
-          EXTRACT:
-            git_host: issue_tracking.git_host
-            git_project: issue_tracking.git_project
-        - SET: { variable: mr_repo, value: "{git_host}/{git_project}" }
-      FALSE:
-        - READ: _bmad/custom/issue-tracking.yaml
-          EXTRACT:
-            git_host: issue_tracking.git_host
-            git_project: issue_tracking.git_project
-        - RUN: uv run --no-project python -c "
-import sys
-parts = sys.argv[1].split('/')
-print(parts[0])
-" {git_project}
-          STORE: git_owner
-        - RUN: uv run --no-project python -c "
-import sys
-parts = sys.argv[1].split('/')
-print(parts[1])
-" {git_project}
-          STORE: git_repo
-        - SET: { variable: mr_repo, value: "{git_host}/{git_owner}/{git_repo}" }
-# Build the issue reference (same-platform -> #id, cross-platform -> full URL)
-- CHECK: git_platform eq platform
-  TRUE:
-    - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to #{issue_id}" }
-  FALSE:
-    - CHECK: platform eq "gitlab"
-      TRUE:
-        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/-/issues/{issue_id}" }
-      FALSE:
-        - SET: { variable: issue_ref, value: "Sprint key: {story_key}\n\nRelated to https://{host}/{project}/issues/{issue_id}" }
+# Read description body from caller-supplied file (single source of truth — caller
+# composes the cross-platform reference; atomic just transports the text).
+- RUN: cat {mr_description_file}
+  STORE: description_body
 # Check if an MR/PR already exists for this source branch (via atomic find-mr)
 - INCLUDE: common/find-mr
 - CHECK: empty mr_iid
   TRUE:
-    # No MR exists — create the trace MR (story branch -> PRD branch)
+    # No MR exists — create the trace MR (caller-supplied title/description/draft).
+    # --draft flag is conditional: emit only when mr_draft eq "true" so story callers
+    # (default mr_draft="false") keep a byte-identical command shape to the pre-refactor
+    # inline code.
     - CHECK: git_platform eq "gitlab"
       TRUE:
-        - RUN: glab mr create --title "Story {epic_num}.{story_num}: {story_title}" --description "{issue_ref}" --target-branch {prd_branch} --source-branch {story_branch} -R "{mr_repo}" 2>&1 | tee /dev/stderr | grep -oE 'https://[^ ]+' | head -1
-          STORE: mr_url
+        - CHECK: mr_draft eq "true"
+          TRUE:
+            - RUN: glab mr create --title "{mr_title}" --description "{description_body}" --target-branch {target_branch} --source-branch {source_branch} --draft -R "{mr_repo}" 2>&1 | tee /dev/stderr | grep -oE 'https://[^ ]+' | head -1
+              STORE: mr_url
+          FALSE:
+            - RUN: glab mr create --title "{mr_title}" --description "{description_body}" --target-branch {target_branch} --source-branch {source_branch} -R "{mr_repo}" 2>&1 | tee /dev/stderr | grep -oE 'https://[^ ]+' | head -1
+              STORE: mr_url
       FALSE:
-        - RUN: gh pr create --title "Story {epic_num}.{story_num}: {story_title}" --body "{issue_ref}" --base {prd_branch} --head {story_branch} -R "{mr_repo}" 2>&1 | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -1
-          STORE: mr_url
+        - CHECK: mr_draft eq "true"
+          TRUE:
+            - RUN: gh pr create --title "{mr_title}" --body "{description_body}" --base {target_branch} --head {source_branch} --draft -R "{mr_repo}" 2>&1 | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -1
+              STORE: mr_url
+          FALSE:
+            - RUN: gh pr create --title "{mr_title}" --body "{description_body}" --base {target_branch} --head {source_branch} -R "{mr_repo}" 2>&1 | grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' | head -1
+              STORE: mr_url
