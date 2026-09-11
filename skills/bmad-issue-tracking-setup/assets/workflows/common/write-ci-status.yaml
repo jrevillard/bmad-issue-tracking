@@ -1,12 +1,13 @@
 # common/write-ci-status.yaml
 #
-# Purpose: Writes {worktree}/ci-status.json from the ci_status + pipeline_info
-#          variables set by common/wait-for-green-ci. This is the contract read
-#          by ci-status.sh (bmad-loop [verify] command). Reused by the dev-finish
-#          and review-finish phases of post-dev-complete.
+# Purpose: Writes {worktree}/ci-status.json from the ci_status + pipeline_id +
+#          jobs variables set by common/wait-for-green-ci. This is the contract
+#          read by ci-status.sh (bmad-loop [verify] command). Reused by the
+#          dev-finish and review-finish phases of post-dev-complete.
 # Input variables:
 #   - ci_status: "passed" | "failed" | "timeout" | "no_ci" | "no_mr" (from wait-for-green-ci)
-#   - pipeline_info: diagnostic string on failure (from wait-for-green-ci)
+#   - pipeline_id: id of the failed pipeline (from wait-for-green-ci, set on failure-path)
+#   - jobs: failed-job diagnostics from common/get-failed-jobs (gitlab TSV, github raw text)
 #   - worktree: the worktree root (ci-status.json is written there)
 # Output variables: (none)
 # Side effects: writes {worktree}/ci-status.json
@@ -34,7 +35,7 @@
   TRUE:
     - WRITE:
         file: {worktree}/ci-status.json
-        content: '{"status": "red", "diagnostic": "{pipeline_info}"}'
+        content: '{"status": "red", "diagnostic": "pipeline {pipeline_id}\n{jobs}"}'
         mode: overwrite
 - CHECK: ci_status eq "timeout"
   TRUE:

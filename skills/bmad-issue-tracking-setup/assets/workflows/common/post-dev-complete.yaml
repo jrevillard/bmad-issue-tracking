@@ -9,7 +9,8 @@
 # Input variables:
 #   - phase: "create-story" | "dev-finish" | "review-finish" (set by dispatcher or caller)
 #   - ci_status: set by common/wait-for-green-ci (dev-finish, review-finish) — maps to ci-status.json
-#   - pipeline_info: set by common/wait-for-green-ci on failure — carried into ci-status.json diagnostic
+#   - pipeline_id: set by common/wait-for-green-ci on failure — carried into ci-status.json diagnostic
+#   - jobs: set by common/get-failed-jobs (via wait-for-green-ci) on failure — carried into ci-status.json diagnostic
 # Output variables:
 #   - issue_id: the issue IID (GitLab) or number (GitHub)
 # Side effects: pushes branch, writes {worktree}/ci-status.json (dev-finish), creates/updates issues on tracker, creates/merges MR
