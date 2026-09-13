@@ -124,3 +124,61 @@ When cutting a release:
 1. Bump `version` in every `skills/*/module-manifest.toml` so all skills declare the same release version (manifest is now the source of truth — `module.yaml` and `marketplace.json` no longer exist).
 2. Update `CHANGELOG.md` — replace `[Unreleased]` with the version and date, add comparison link.
 3. Create a git tag `v{version}` on the version bump commit and push it (`git push origin --tags`).
+
+## Step-authoring rules the test suite enforces
+
+These two are not style preferences — `tests/` fails a workflow that breaks them, and both
+have caught real defects:
+
+- **No raw shell variables in any step.** `test_command_patterns.py::test_no_unresolved_shell_vars`
+  rejects `$var` and `${var}` in every step's `raw_value` (only the awk built-in `NF` is
+  allowed). Variables are passed through the workflow language's `{placeholder}` scope —
+  which also means **there is no supported environment-variable channel into a workflow**,
+  so a caller cannot signal behaviour that way. `test_variable_flow.py` additionally flags
+  a `${X:-default}` colon as a hardcoded label separator, so even the shell-default idiom
+  is doubly unavailable.
+- **Every `common/*.yaml` needs the four-line header** — Purpose, Input variables, Output
+  variables, **Side effects**. `test_include_contracts.py` requires the Side effects line
+  even when the answer is "none" (`check-config` and `find-issue` both say
+  `Side effects: none`). Four MR atomics shipped without it and left the suite red; only
+  the first was ever reported, because `assert` aborts the test on the first failure.
+
+## Adding or removing a workflow file
+
+`skills/bmad-issue-tracking-setup/SKILL.md` carries an explicit per-file verify list
+(~lines 88-142) of every file the setup step must have copied. Adding
+`common/post-build-dispatch-auto.yaml` required adding it there; forgetting leaves the
+installer green while the file is missing in the consumer.
+
+## Which producer wrote the review section (post-dev-complete review-finish)
+
+Three producers reach `common/post-dev-complete.yaml`, and they disagree about the
+`## Review Triage Log` / `### Review Findings` section:
+
+| Producer | Section | How it is reached |
+|---|---|---|
+| `bmad-build-auto` | appends a `### <date> — Review pass` entry on EVERY pass | its `on_complete` hook |
+| `bmad-build` | one row PER FINDING → nothing on a clean review | `post-build-dispatch-interactive.yaml` |
+| `bmad-code-review` | nothing at all on a clean review | its `on_complete` hook → `post-dev-complete-review-finish.yaml` |
+
+Only `bmad-build-auto` guarantees a section, so only there does a missing/empty section
+mean "the review never ran". `common/post-build-dispatch-auto.yaml` — used solely by the
+`bmad-build-auto` hook — sets `review_producer="bmad-build-auto"`, and post-dev-complete
+halts on an absent/empty section **only** when that flag is present; every other flow
+warns and continues to the CI gate.
+
+Two things NOT to do here, both tried and reverted:
+- **`allow_merge` cannot discriminate.** It marks the interactive merge prompt and is
+  unset on BOTH the unattended and the `bmad-code-review` paths, so keying the halt on it
+  blocked clean `bmad-code-review` stories.
+- **Never let a sentinel reach `review_section`.** The block after the sentinels checks
+  `empty review_section` and posts whatever it holds. A warn branch that does not clear
+  the variable posts the literal string `SPEC_NO_REVIEW_SECTION` as the issue comment —
+  while its own message claims no comment was posted.
+
+Halt only on a missing spec FILE (`SPEC_NOT_FOUND`): that case is unambiguous and is the
+one that actually killed story 2-1, whose phase read the spec from an invented path
+(`{implementation_artifacts}/{story_key}.md`) with no error handling. The spec is now read
+from `{spec_file}` — the path the runtime resolves, per `bmad-workflow-lang.md:443-455`
+and BMAD's `tools/skill-validator.md:37` — with the legacy path kept as a second
+candidate so existing consumers do not regress.
