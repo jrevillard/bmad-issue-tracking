@@ -102,6 +102,7 @@ cp -rf <path>/workflows/* _bmad/_config/custom/workflows/
 - `_bmad/_config/custom/workflows/common/find-stories.yaml`
 - `_bmad/_config/custom/workflows/common/mark-mr-ready.yaml`
 - `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml`
+- `_bmad/_config/custom/workflows/common/post-build-dispatch-auto.yaml`
 - `_bmad/_config/custom/workflows/common/post-build-dispatch-interactive.yaml`
 - `_bmad/_config/custom/workflows/common/post-dev-complete.yaml`
 - `_bmad/_config/custom/workflows/common/post-dev-complete-create-story.yaml`

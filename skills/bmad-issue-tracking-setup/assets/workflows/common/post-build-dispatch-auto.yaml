@@ -1,0 +1,18 @@
+# common/post-build-dispatch-auto.yaml
+#
+# Purpose: Dispatcher for the UNATTENDED flow (bmad-build-auto) — sets the
+#          review_producer flag, then delegates to the common dispatcher.
+#          bmad-build-auto's step-04 appends a '### <date> — Review pass' entry to
+#          the spec's '## Review Triage Log' on EVERY pass, unconditionally. That is
+#          the only producer guarantee of its kind: bmad-build writes one row per
+#          finding and bmad-code-review writes nothing at all on a clean review, so
+#          for those two a missing or empty review section is legitimate. Setting the
+#          flag here — in a workflow step, not in hook prose — is what lets
+#          post-dev-complete halt on an unrun review without blocking the others.
+# Input variables: (none — dispatcher reads spec itself)
+# Output variables:
+#   - review_producer: "bmad-build-auto" (the only value that guarantees a section)
+# Side effects: dispatches to common/post-dev-complete with phase set
+
+- SET: { variable: review_producer, value: "bmad-build-auto" }
+- INCLUDE: common/post-build-dispatch

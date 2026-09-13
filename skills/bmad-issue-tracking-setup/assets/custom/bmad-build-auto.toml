@@ -16,5 +16,5 @@
 # Leave empty for no custom post-completion behavior.
 
 on_complete = """
-Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-build-dispatch.yaml` IN FULL (the dispatch will route to the correct phase of `common/post-dev-complete.yaml` based on the spec status). Do NOT run `git add .` — the worktree may have orchestrator-owned files (sprint-status.yaml, deferred-work.md) that must not be staged. post-dev-complete.yaml handles pushing safely without staging dirty files.
+Read `_bmad/_config/custom/bmad-workflow-lang.md` for the workflow language specification, then execute `_bmad/_config/custom/workflows/common/post-build-dispatch-auto.yaml` IN FULL (it marks the unattended review producer, then routes to the correct phase of `common/post-dev-complete.yaml` based on the spec status). Do NOT run `git add .` — the worktree may have orchestrator-owned files (sprint-status.yaml, deferred-work.md) that must not be staged. post-dev-complete.yaml handles pushing safely without staging dirty files.
 """

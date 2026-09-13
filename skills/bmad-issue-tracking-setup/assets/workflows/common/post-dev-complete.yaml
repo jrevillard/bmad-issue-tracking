@@ -261,28 +261,41 @@ print(body)
         #     block a story that is fine.
         # bmad-code-review never reaches this file (its workflow has no post-build
         # dispatcher), so its clean-review shortcut is not a factor here.
-        # WARN, never halt. THREE producers reach this file, and only one guarantees a
-        # section, so an absent or empty section cannot identify an unrun review:
-        #   bmad-build-auto  (unattended) appends a row on EVERY pass -> always present
-        #   bmad-build       (interactive) writes one row PER FINDING -> nothing if clean
-        #   bmad-code-review (its on_complete hook runs post-dev-complete-review-finish,
-        #                     which sets phase and includes this file) -> nothing if clean
-        # allow_merge does NOT separate them: it marks the interactive merge prompt, and
-        # the bmad-code-review path leaves it unset exactly like the unattended one does.
+        # Halt ONLY when the producer is known to always write a section. That is
+        # bmad-build-auto alone: its step-04 appends a review-log entry on EVERY pass.
+        # The other two producers that reach this file write nothing on a clean review
+        # (bmad-build: one row per finding; bmad-code-review via its on_complete hook),
+        # so for them a missing section is legitimate and only warns.
+        # review_producer is set by common/post-build-dispatch-auto.yaml — a workflow
+        # step, not hook prose — and is absent on every other path. allow_merge cannot
+        # be used for this: it marks the interactive merge prompt and is unset on BOTH
+        # the unattended and the bmad-code-review paths.
         #
-        # Clearing review_section is REQUIRED, not tidiness: the block below posts
-        # whatever the variable holds, so leaving the sentinel in place would post the
-        # literal string SPEC_NO_REVIEW_SECTION as the issue comment.
+        # The warn branch must clear review_section: the block below posts whatever the
+        # variable holds, so leaving the sentinel there would post the literal string
+        # SPEC_NO_REVIEW_SECTION as the issue comment.
         - CHECK: review_section eq "SPEC_NO_REVIEW_SECTION"
           TRUE:
-            - OUTPUT:
-                message: "WARNING: no review section in the spec — looked for '## Review Triage Log' (bmad-build-auto) and '### Review Findings'. No comment posted. Not treated as an error: a clean review in the interactive flow writes no section at all."
-            - SET: { variable: review_section, value: "" }
+            - CHECK: review_producer eq "bmad-build-auto"
+              TRUE:
+                - OUTPUT:
+                    message: "No review section in the spec. The unattended review appends a '### <date> — Review pass' entry on every pass, so its absence means the review step never ran. Refusing to merge an unreviewed story. Looked for '## Review Triage Log' and '### Review Findings'."
+                    stop: true
+              FALSE:
+                - OUTPUT:
+                    message: "WARNING: no review section in the spec — looked for '## Review Triage Log' and '### Review Findings'. No comment posted. Not treated as an error on this flow, whose review legitimately writes nothing when it finds nothing."
+                - SET: { variable: review_section, value: "" }
         - CHECK: review_section eq "SPEC_EMPTY_REVIEW_SECTION"
           TRUE:
-            - OUTPUT:
-                message: "WARNING: the review section exists but has no rows — no comment posted. Not treated as an error, for the same reason: see the note above."
-            - SET: { variable: review_section, value: "" }
+            - CHECK: review_producer eq "bmad-build-auto"
+              TRUE:
+                - OUTPUT:
+                    message: "The review section exists but has no rows — the unattended review always appends one, so this review never ran. Refusing to merge an unreviewed story."
+                    stop: true
+              FALSE:
+                - OUTPUT:
+                    message: "WARNING: the review section has no rows — no comment posted. Not treated as an error on this flow, for the same reason."
+                - SET: { variable: review_section, value: "" }
 
         - CHECK: empty review_section
           FALSE:
