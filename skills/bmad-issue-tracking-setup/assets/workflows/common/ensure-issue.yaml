@@ -9,8 +9,11 @@
 #   - story_num: the story number (second dash segment)
 #   - prd_key: the PRD key (from scope)
 #   - story_branch: the story branch name (for reference)
+#   - spec_file: the spec path the runtime resolved (optional; the legacy
+#     {implementation_artifacts}/{story_key}.md is the fallback)
 # Output variables:
 #   - issue_id: the issue IID (GitLab) or number (GitHub); empty if story file missing
+#   - spec_path: the resolved spec file (see the resolution step below); empty if none
 # Side effects: creates the issue on the tracker if not found; writes /tmp/issue-desc.md
 
 # Resolve the spec file. {spec_file} is the path the runtime already resolved, in
