@@ -70,6 +70,24 @@ pk = sys.argv[3]
 print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
 " {story_pattern} {story_key} {prd_key}
   STORE: story_branch
+# Caller-declared CI handling. A caller that polls CI itself (bmad-build-converge uses
+# scripts/ci-monitor.sh against the pipeline API, and its convergence loop deliberately
+# does NOT wait for CI between review iterations — "saves ~3-5min per iter") drops this
+# marker in the worktree before dispatching bmad-build-auto. The two CI blocks below
+# then stand aside instead of repeating that wait inside every build dispatch, which the
+# run traces measured at 47-305 s per dispatch.
+#
+# Absent for bmad-loop, so its contract is unchanged: its [verify] command still finds
+# the ci-status.json those blocks write (scripts/bmad-loop/ci-gate/ci-status.sh).
+#
+# A FILE rather than an environment variable because the workflow language has no env
+# channel — a step may not reference a shell variable at all; see
+# tests/test_command_patterns.py::test_no_unresolved_shell_vars. The marker lives inside
+# the worktree so it dies with it, and `cat` on a missing file is an expected non-zero
+# exit (EXPECT_EXIT: any), giving the empty value we branch on.
+- RUN: cat "{worktree}/.bmad-ci-handled" 2>/dev/null
+  STORE: ci_handled
+  EXPECT_EXIT: any
 # =============================================================================
 # PHASE 1: create-story — spec just created, no code yet
 # =============================================================================
@@ -117,8 +135,10 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
     - RUN: git commit --allow-empty -m "dev {story_key}" 2>/dev/null || true
     - RUN: git push
     # Wait CI + write ci-status.json (contract for ci-status.sh)
-    - INCLUDE: common/wait-for-green-ci
-    - INCLUDE: common/write-ci-status
+    - CHECK: empty ci_handled
+      TRUE:
+        - INCLUDE: common/wait-for-green-ci
+        - INCLUDE: common/write-ci-status
     # Ensure issue exists (find or create)
     - INCLUDE: common/ensure-issue
     # Translate caller scope into the new INPUT contract (the atomic no longer reads
@@ -308,8 +328,10 @@ print(body)
     # CI gate before merge + write ci-status.json (contract for ci-status.sh)
     - CHECK: review_status eq "done"
       TRUE:
-        - INCLUDE: common/wait-for-green-ci
-        - INCLUDE: common/write-ci-status
+        - CHECK: empty ci_handled
+          TRUE:
+            - INCLUDE: common/wait-for-green-ci
+            - INCLUDE: common/write-ci-status
     # Optional merge — only in interactive flows (bmad-build manual), never in unattended (bmad-build-auto)
     - CHECK: allow_merge eq "true"
       TRUE:
