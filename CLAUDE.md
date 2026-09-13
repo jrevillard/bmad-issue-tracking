@@ -186,6 +186,20 @@ candidate so existing consumers do not regress.
 
 ## Caller negotiation (both current channels)
 
+**When the marker is present, the module does none of the tracker work for that story** —
+no push, no MR, no CI, no issue status, no comment. That means the caller must cover all of
+it. `bmad-build-converge` does: it pushes, ensures the MR, polls the pipeline, merges, sets
+the story issue `in-progress` then `done` + close, and posts one comment carrying the
+implementation summary and the review findings. It reuses THIS module's atomics for the
+tracker calls (`post-issue-comment.yaml`, executed the way the hooks execute it), so the
+platform logic still lives here — but the extraction rule for the review section is
+duplicated in the caller (the module's workflow files cannot be imported). If you change
+how `## Review Triage Log` / `### Review Findings` are extracted in
+`common/post-dev-complete.yaml`, change it in `bmad-build-converge.js`'s
+`postStoryIssueComment` too.
+
+
+
 A caller cannot pass a variable into a workflow (see the step-authoring rules), so when a
 caller needs different behaviour it declares that through something a step CAN read:
 
