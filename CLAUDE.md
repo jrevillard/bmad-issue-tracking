@@ -136,7 +136,8 @@ have caught real defects:
   which also means **there is no supported environment-variable channel into a workflow**,
   so a caller cannot signal behaviour that way. `test_variable_flow.py` additionally flags
   a `${X:-default}` colon as a hardcoded label separator, so even the shell-default idiom
-  is doubly unavailable.
+  is doubly unavailable. **If a caller must influence a workflow, use a file** (see
+  "Caller negotiation" below) — never an env var.
 - **Every `common/*.yaml` needs the four-line header** — Purpose, Input variables, Output
   variables, **Side effects**. `test_include_contracts.py` requires the Side effects line
   even when the answer is "none" (`check-config` and `find-issue` both say
@@ -182,3 +183,23 @@ one that actually killed story 2-1, whose phase read the spec from an invented p
 from `{spec_file}` — the path the runtime resolves, per `bmad-workflow-lang.md:443-455`
 and BMAD's `tools/skill-validator.md:37` — with the legacy path kept as a second
 candidate so existing consumers do not regress.
+
+## Caller negotiation (both current channels)
+
+A caller cannot pass a variable into a workflow (see the step-authoring rules), so when a
+caller needs different behaviour it declares that through something a step CAN read:
+
+| Channel | Set by | Read by | Effect |
+|---|---|---|---|
+| `review_producer="bmad-build-auto"` | `common/post-build-dispatch-auto.yaml`, used only by the bmad-build-auto hook | post-dev-complete review-finish | halt on an absent/empty review section (the only producer that guarantees one) |
+| `<worktree>/.bmad-ci-handled` (file) | the caller, before dispatching | post-dev-complete, both phases | skip `wait-for-green-ci` + `write-ci-status` |
+
+The marker file exists because a caller (bmad-build-converge) polls CI itself and its
+convergence loop deliberately does not wait for CI between review iterations; the module's
+own blocks Duplicated that wait inside every build dispatch (measured 47-305 s per
+dispatch in the run traces). Absent marker → unchanged behaviour, so bmad-loop is
+untouched and still gets the `ci-status.json` its `[verify]` requires.
+
+Convention for any future channel: a **file or a workflow variable set by a wrapper we
+ship**, never a shell variable, and always with the "absent → previous behaviour"
+property so consumers that know nothing about it cannot regress.
