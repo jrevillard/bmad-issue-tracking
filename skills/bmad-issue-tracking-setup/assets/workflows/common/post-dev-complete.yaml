@@ -261,26 +261,29 @@ print(body)
         #     block a story that is fine.
         # bmad-code-review never reaches this file (its workflow has no post-build
         # dispatcher), so its clean-review shortcut is not a factor here.
+        # WARN, never halt. THREE producers reach this file, and only one guarantees a
+        # section, so an absent or empty section cannot identify an unrun review:
+        #   bmad-build-auto  (unattended) appends a row on EVERY pass -> always present
+        #   bmad-build       (interactive) writes one row PER FINDING -> nothing if clean
+        #   bmad-code-review (its on_complete hook runs post-dev-complete-review-finish,
+        #                     which sets phase and includes this file) -> nothing if clean
+        # allow_merge does NOT separate them: it marks the interactive merge prompt, and
+        # the bmad-code-review path leaves it unset exactly like the unattended one does.
+        #
+        # Clearing review_section is REQUIRED, not tidiness: the block below posts
+        # whatever the variable holds, so leaving the sentinel in place would post the
+        # literal string SPEC_NO_REVIEW_SECTION as the issue comment.
         - CHECK: review_section eq "SPEC_NO_REVIEW_SECTION"
           TRUE:
-            - CHECK: allow_merge eq "true"
-              TRUE:
-                - OUTPUT:
-                    message: "WARNING: no review section in the spec (interactive flow, so a clean review legitimately writes none). No comment posted. Looked for '## Review Triage Log' and '### Review Findings'."
-              FALSE:
-                - OUTPUT:
-                    message: "No review section in the spec. The unattended review appends a '### <date> - Review pass' entry on every pass, so its absence means the review step did not run. Refusing to merge an unreviewed story. Looked for '## Review Triage Log' and '### Review Findings'."
-                    stop: true
+            - OUTPUT:
+                message: "WARNING: no review section in the spec — looked for '## Review Triage Log' (bmad-build-auto) and '### Review Findings'. No comment posted. Not treated as an error: a clean review in the interactive flow writes no section at all."
+            - SET: { variable: review_section, value: "" }
         - CHECK: review_section eq "SPEC_EMPTY_REVIEW_SECTION"
           TRUE:
-            - CHECK: allow_merge eq "true"
-              TRUE:
-                - OUTPUT:
-                    message: "WARNING: the review section has no rows (interactive flow, where a clean review legitimately records none). No comment posted."
-              FALSE:
-                - OUTPUT:
-                    message: "The review section exists but has no rows — the unattended review always appends one, so this review never ran. Refusing to merge an unreviewed story."
-                    stop: true
+            - OUTPUT:
+                message: "WARNING: the review section exists but has no rows — no comment posted. Not treated as an error, for the same reason: see the note above."
+            - SET: { variable: review_section, value: "" }
+
         - CHECK: empty review_section
           FALSE:
             - WRITE:
