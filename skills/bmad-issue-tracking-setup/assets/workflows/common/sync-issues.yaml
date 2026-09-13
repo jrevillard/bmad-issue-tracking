@@ -110,14 +110,15 @@ import sys, os, glob
 base, entry = sys.argv[1], sys.argv[2]
 parts = entry.split('-')
 prefix = '-'.join(parts[:2]) if len(parts) >= 2 else entry
-# bmad-build-auto names the spec: sprint mode spec-<storyId>-<slug>.md, stories mode
-# stories/<storyId>-<slug>.md. The slug comes from the story TITLE, so the legacy
-# exact-key form below never matches in sprint mode - tried first only so existing
-# consumers do not regress.
-candidates = [os.path.join(base, entry + '.md')]
-if prefix and prefix != entry:
+# Producer names first: sprint mode writes spec-<storyId>-<slug>.md, stories mode
+# writes stories/<storyId>-<slug>.md. The legacy exact-key form is a last resort -
+# it never matches in sprint mode, because the slug comes from the story TITLE.
+# No 'prefix != entry' guard: a two-segment entry is exactly when the glob is needed.
+candidates = []
+if prefix:
     candidates += sorted(glob.glob(os.path.join(base, 'spec-' + prefix + '-*.md')))
     candidates += sorted(glob.glob(os.path.join(base, 'stories', prefix + '-*.md')))
+candidates.append(os.path.join(base, entry + '.md'))
 path = next((c for c in candidates if os.path.exists(c)), None)
 if path:
     with open(path, 'r', encoding='utf-8') as f:

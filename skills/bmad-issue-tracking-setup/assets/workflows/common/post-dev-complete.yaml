@@ -222,11 +222,11 @@ if path is None:
 content = path.read_text()
 match = re.search(r'(^## Review Triage Log\s*$.*?)(?=\n## |\Z)', content, re.DOTALL | re.MULTILINE)
 if not match:
-    match = re.search(r'(### Review Findings.*?)(?=\n## |\Z)', content, re.DOTALL)
+    match = re.search(r'(^### Review Findings.*?)(?=\n## |\Z)', content, re.DOTALL | re.MULTILINE)
 if not match:
     print('SPEC_NO_REVIEW_SECTION')
     sys.exit(0)
-body = re.sub(r'<!--.*?-->', '', match.group(1), flags=re.DOTALL).strip()
+body = re.sub(r'<!--[\s\S]{0,2000}?-->', '', match.group(1)).strip()
 # Strip HTML comments FIRST: the template ships an explanatory one under the heading,
 # so leaving it in would make an unrun review look non-empty AND would post the
 # template's own text as the issue comment. What remains must have real rows.
@@ -234,7 +234,7 @@ if not re.sub(r'^#+ .*$', '', body, flags=re.MULTILINE).strip():
     print('SPEC_EMPTY_REVIEW_SECTION')
     sys.exit(0)
 print(body)
-" {spec_file} {implementation_artifacts}/{story_key}.md
+" "{spec_file}" "{implementation_artifacts}/{story_key}.md"
           STORE: review_section
         - CHECK: review_section eq "SPEC_NOT_FOUND"
           TRUE:
@@ -244,7 +244,7 @@ print(body)
         - CHECK: review_section eq "SPEC_NO_REVIEW_SECTION"
           TRUE:
             - OUTPUT:
-                message: "No review section in the spec — looked for '## Review Triage Log' (written by bmad-build-auto) and '### Review Findings' (written by bmad-code-review). One of the two is always written, so neither being present means the review step did not run. Refusing to continue."
+                message: "No review section in the spec — looked for '## Review Triage Log' (written by bmad-build-auto, whose spec template always carries the heading) and '### Review Findings' (written by bmad-code-review). NOTE: bmad-code-review's clean-review shortcut writes NEITHER section when a review finds nothing, so a missing section can also mean a clean interactive review rather than an unrun one. Refusing to continue; if this story's review was clean, have the review record that pass explicitly."
                 stop: true
         - CHECK: review_section eq "SPEC_EMPTY_REVIEW_SECTION"
           TRUE:

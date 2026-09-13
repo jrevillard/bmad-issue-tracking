@@ -17,10 +17,11 @@ for line in sys.stdin:
     path = line.rstrip()
     if path.startswith(base + '/') or path.startswith(base + os.sep):
         fname = os.path.basename(path)
-        # Accept the producer's name too: bmad-build-auto writes spec-<storyId>-<slug>.md,
-# which the bare ^\d+-\d+- form rejects - leaving modified_stories empty and
-# silently skipping every downstream step of this workflow.
-if re.match(r'^(?:spec-)?\d+-\d+-.+\.md$', fname):
+        # Accept the producer's name too: bmad-build-auto writes
+        # spec-<storyId>-<slug>.md, which the bare ^\d+-\d+- form rejects -
+        # leaving modified_stories empty and silently skipping every
+        # downstream step of this workflow.
+        if re.match(r'^(?:spec-)?\d+-\d+-.+\.md$', fname):
             print(fname)
 " {implementation_artifacts}
   STORE: modified_stories
