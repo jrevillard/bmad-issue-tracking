@@ -206,10 +206,19 @@ print(pattern.replace('{prd_key}', pk).replace('{story_key}', key))
     # regress.
     #
     # Two producers write two different sections into the same file:
-    #   bmad-build-auto  -> '## Review Triage Log' with '### <date> - Review pass' rows
+    #   bmad-build-auto  -> '## Review Triage Log' with '### <date> — Review pass' rows
     #   bmad-code-review -> '### Review Findings'
     # Both are accepted; the triage log wins when both are present, because this
     # workflow's caller is bmad-build-auto.
+    #
+    # A MISSING file still halts — that is unambiguous, and it is what killed story
+    # 2-1 (the file was read from an invented path). A missing or empty SECTION only
+    # warns: bmad-code-review's clean-review shortcut writes no section at all on zero
+    # findings (steps/step-04-present.md §1), and because both spec templates carry
+    # '## Tasks & Acceptance' and '## Review Triage Log', nothing in the file
+    # distinguishes "clean review" from "review never ran" — so halting would block
+    # clean stories from merging. The original defect was the SILENCE, not the absence
+    # of a halt; a visible warning fixes that without the blocking.
     - CHECK: empty issue_id
       FALSE:
         - RUN: uv run --no-project python -c "
@@ -244,13 +253,11 @@ print(body)
         - CHECK: review_section eq "SPEC_NO_REVIEW_SECTION"
           TRUE:
             - OUTPUT:
-                message: "No review section in the spec — looked for '## Review Triage Log' (written by bmad-build-auto, whose spec template always carries the heading) and '### Review Findings' (written by bmad-code-review). NOTE: bmad-code-review's clean-review shortcut writes NEITHER section when a review finds nothing, so a missing section can also mean a clean interactive review rather than an unrun one. Refusing to continue; if this story's review was clean, have the review record that pass explicitly."
-                stop: true
+                message: "WARNING: no review section in the spec — looked for '## Review Triage Log' (bmad-build-auto, whose spec template always carries the heading) and '### Review Findings' (bmad-code-review). No comment will be posted. NOT treated as an error: bmad-code-review's clean-review shortcut writes neither section when a review finds nothing, and no in-file signal distinguishes that from a review that never ran — blocking here would stop clean stories from merging."
         - CHECK: review_section eq "SPEC_EMPTY_REVIEW_SECTION"
           TRUE:
             - OUTPUT:
-                message: "The review section exists but is empty — the review step never populated it. Refusing to merge on an unrun review. If the review genuinely produced nothing, have it record that pass explicitly."
-                stop: true
+                message: "WARNING: the review section exists but has no rows — no comment will be posted. NOT treated as an error, for the same reason: a template heading with nothing under it cannot be told apart from a review that legitimately recorded no findings."
         - CHECK: empty review_section
           FALSE:
             - WRITE:
