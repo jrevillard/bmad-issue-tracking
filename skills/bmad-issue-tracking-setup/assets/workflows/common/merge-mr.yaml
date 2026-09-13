@@ -6,6 +6,9 @@
 #   - merged ("true" if merge CLI succeeded)
 #   - merge_sha (string, from API after merge; empty if merge failed)
 #   - error (string, non-empty if merge failed)
+# Side effects: MERGES the MR/PR on the tracker (irreversible from here), then reads
+#   the resulting merge SHA from the API. Callers must treat a non-zero exit or a
+#   non-empty error as "not merged", never as "merge attempted".
 
 # Internal routing: determine target repo (same-platform uses host/project, cross-platform uses git_host/git_project)
 # Trigger on platform match first; fall back to git_platform for cross-platform case.

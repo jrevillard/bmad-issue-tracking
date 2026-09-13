@@ -3,6 +3,7 @@
 # Purpose: List failed jobs for a given pipeline id, with trace tail per job.
 # Input variables: pipeline_id (gitlab pipeline id) or pipeline_id (github workflow run id)
 # Output variables: jobs (newline-separated JSON: each line {name, exitCode, trace_tail})
+# Side effects: none (read-only; fetches job metadata and trace tails)
 
 # GitLab: list jobs in pipeline, filter failed, fetch trace tail per failed job (sequential — pipeline failure usually has 1-3 jobs)
 - RUN: glab api "projects/{project_enc}/pipelines/{pipeline_id}/jobs?per_page=50" --hostname {host} | uv run --no-project python -c "

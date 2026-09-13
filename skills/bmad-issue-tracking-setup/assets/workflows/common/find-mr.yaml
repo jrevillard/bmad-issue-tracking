@@ -3,6 +3,7 @@
 # Purpose: Find existing MR by source branch. Returns mr_iid (empty if none).
 # Input variables: mr_repo (full repo path: gitlab "host/group/project"; github "host/owner/project"), source_branch
 # Output variables: mr_iid (string, empty string if no MR exists)
+# Side effects: none (read-only search)
 
 # GitLab: list MRs filtered by source branch, extract first iid
 - RUN: glab mr list --source-branch {source_branch} -R "{mr_repo}" --output json | uv run --no-project python -c "

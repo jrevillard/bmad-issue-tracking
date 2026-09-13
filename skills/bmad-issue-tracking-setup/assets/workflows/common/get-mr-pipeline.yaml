@@ -5,6 +5,7 @@
 # Output variables:
 #   - pipeline_id (string): gitlab pipeline id OR github workflow run id (unified name for cross-platform callers)
 #   - pipeline_status (string): gitlab pipeline.status OR github conclusion (success/failed/running/pending/cancelled/none)
+# Side effects: none (read-only lookup)
 
 # GitLab: fetch MR's latest pipeline (paginated, take first)
 - RUN: glab api "projects/{project_enc}/merge_requests/{mr_iid}/pipelines" --hostname {host} --paginate | uv run --no-project python -c "
