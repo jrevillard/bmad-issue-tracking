@@ -13,14 +13,21 @@
 #   - issue_id: the issue IID (GitLab) or number (GitHub); empty if story file missing
 # Side effects: creates the issue on the tracker if not found; writes /tmp/issue-desc.md
 
+# Resolve the spec file. {spec_file} is the path the runtime already resolved, in
+# whichever mode applies (sprint: spec-<storyId>-<slug>.md; stories:
+# stories/<id>-<slug>.md). The legacy {implementation_artifacts}/{story_key}.md is
+# still tried second so existing consumers do not regress — but it never matches in
+# sprint mode, because the slug comes from the story TITLE, not the story key.
+- RUN: if [ -n "{spec_file}" ] && [ -f "{spec_file}" ]; then echo "{spec_file}"; elif [ -f "{implementation_artifacts}/{story_key}.md" ]; then echo "{implementation_artifacts}/{story_key}.md"; fi
+  STORE: spec_path
 # Derive story title and body from the story spec file
-- RUN: cat {implementation_artifacts}/{story_key}.md 2>/dev/null
+- RUN: cat "{spec_path}" 2>/dev/null
   STORE: story_body
 - CHECK: empty story_body
   TRUE:
     - SET: { variable: issue_id, value: "" }
     - OUTPUT:
-        message: "Story file not found at {implementation_artifacts}/{story_key}.md — cannot create issue"
+        message: "Story spec not found — tried '{spec_file}' then '{implementation_artifacts}/{story_key}.md' — cannot create issue"
   FALSE:
     - RUN: uv run --no-project python -c "
 import sys, re
@@ -31,7 +38,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
             m = re.match(r'Story\s+\d+\.\d+\s*:\s*(.+)', heading)
             print(m.group(1).strip() if m else heading)
             break
-" {implementation_artifacts}/{story_key}.md
+" {spec_path}
       STORE: story_title
     - WRITE:
         file: /tmp/issue-desc.md
