@@ -250,14 +250,37 @@ print(body)
             - OUTPUT:
                 message: "No spec file found — tried '{spec_file}' then '{implementation_artifacts}/{story_key}.md'. {spec_file} is the path the runtime resolved, so its absence means no spec was produced for this story. Nothing was posted and the merge must not proceed. Check what bmad-build-auto actually wrote on disk (sprint mode names it spec-<storyId>-<slug>.md)."
                 stop: true
+        # Halt on an unrun review ONLY in the unattended flow. The two real producers
+        # differ, and allow_merge separates them exactly:
+        #   bmad-build-auto (allow_merge unset) appends a '### <date> - Review pass'
+        #     entry on EVERY review pass (step-04-review.md step 4, unconditional), so an
+        #     absent or empty section means the review never ran - worth stopping for.
+        #   bmad-build (allow_merge="true", set by post-build-dispatch-interactive.yaml)
+        #     writes one row PER FINDING (step-04-review.md:42), so a clean review writes
+        #     nothing at all and the template heading stays empty - halting there would
+        #     block a story that is fine.
+        # bmad-code-review never reaches this file (its workflow has no post-build
+        # dispatcher), so its clean-review shortcut is not a factor here.
         - CHECK: review_section eq "SPEC_NO_REVIEW_SECTION"
           TRUE:
-            - OUTPUT:
-                message: "WARNING: no review section in the spec — looked for '## Review Triage Log' (bmad-build-auto, whose spec template always carries the heading) and '### Review Findings' (bmad-code-review). No comment will be posted. NOT treated as an error: bmad-code-review's clean-review shortcut writes neither section when a review finds nothing, and no in-file signal distinguishes that from a review that never ran — blocking here would stop clean stories from merging."
+            - CHECK: allow_merge eq "true"
+              TRUE:
+                - OUTPUT:
+                    message: "WARNING: no review section in the spec (interactive flow, so a clean review legitimately writes none). No comment posted. Looked for '## Review Triage Log' and '### Review Findings'."
+              FALSE:
+                - OUTPUT:
+                    message: "No review section in the spec. The unattended review appends a '### <date> - Review pass' entry on every pass, so its absence means the review step did not run. Refusing to merge an unreviewed story. Looked for '## Review Triage Log' and '### Review Findings'."
+                    stop: true
         - CHECK: review_section eq "SPEC_EMPTY_REVIEW_SECTION"
           TRUE:
-            - OUTPUT:
-                message: "WARNING: the review section exists but has no rows — no comment will be posted. NOT treated as an error, for the same reason: a template heading with nothing under it cannot be told apart from a review that legitimately recorded no findings."
+            - CHECK: allow_merge eq "true"
+              TRUE:
+                - OUTPUT:
+                    message: "WARNING: the review section has no rows (interactive flow, where a clean review legitimately records none). No comment posted."
+              FALSE:
+                - OUTPUT:
+                    message: "The review section exists but has no rows — the unattended review always appends one, so this review never ran. Refusing to merge an unreviewed story."
+                    stop: true
         - CHECK: empty review_section
           FALSE:
             - WRITE:
