@@ -17,7 +17,10 @@ for line in sys.stdin:
     path = line.rstrip()
     if path.startswith(base + '/') or path.startswith(base + os.sep):
         fname = os.path.basename(path)
-        if re.match(r'^\d+-\d+-.+\.md$', fname):
+        # Accept the producer's name too: bmad-build-auto writes spec-<storyId>-<slug>.md,
+# which the bare ^\d+-\d+- form rejects - leaving modified_stories empty and
+# silently skipping every downstream step of this workflow.
+if re.match(r'^(?:spec-)?\d+-\d+-.+\.md$', fname):
             print(fname)
 " {implementation_artifacts}
   STORE: modified_stories
@@ -29,18 +32,37 @@ for line in sys.stdin:
         do:
           - RUN: uv run --no-project python -c "
 import sys
-print(sys.argv[1].replace('.md', ''))
+name = sys.argv[1]
+if name.endswith('.md'):
+    name = name[:-3]
+if name.startswith('spec-'):
+    name = name[5:]
+print(name)
 " {story_file}
             STORE: story_key
           - RUN: uv run --no-project python -c "
 import sys
-parts = sys.argv[1].replace('.md', '').split('-')
+name = sys.argv[1]
+if name.endswith('.md'):
+    name = name[:-3]
+# bmad-build-auto prefixes the spec name with 'spec-' (spec-<storyId>-<slug>.md);
+# the story key is the name WITHOUT that prefix.
+if name.startswith('spec-'):
+    name = name[5:]
+parts = name.split('-')
 print(parts[0])
 " {story_file}
             STORE: epic_num
           - RUN: uv run --no-project python -c "
 import sys
-parts = sys.argv[1].replace('.md', '').split('-')
+name = sys.argv[1]
+if name.endswith('.md'):
+    name = name[:-3]
+# bmad-build-auto prefixes the spec name with 'spec-' (spec-<storyId>-<slug>.md);
+# the story key is the name WITHOUT that prefix.
+if name.startswith('spec-'):
+    name = name[5:]
+parts = name.split('-')
 print(parts[1])
 " {story_file}
             STORE: story_num

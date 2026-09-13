@@ -106,9 +106,20 @@ print('Epic ' + n + ': ' + title_line if title_line else 'Epic ' + n)
               - SET: { variable: entry_title, value: "Retrospective: Epic {epic_num}" }
             FALSE:
               - RUN: uv run --no-project python -c "
-import sys, os
-path = os.path.join(sys.argv[1], sys.argv[2] + '.md')
-if os.path.exists(path):
+import sys, os, glob
+base, entry = sys.argv[1], sys.argv[2]
+parts = entry.split('-')
+prefix = '-'.join(parts[:2]) if len(parts) >= 2 else entry
+# bmad-build-auto names the spec: sprint mode spec-<storyId>-<slug>.md, stories mode
+# stories/<storyId>-<slug>.md. The slug comes from the story TITLE, so the legacy
+# exact-key form below never matches in sprint mode - tried first only so existing
+# consumers do not regress.
+candidates = [os.path.join(base, entry + '.md')]
+if prefix and prefix != entry:
+    candidates += sorted(glob.glob(os.path.join(base, 'spec-' + prefix + '-*.md')))
+    candidates += sorted(glob.glob(os.path.join(base, 'stories', prefix + '-*.md')))
+path = next((c for c in candidates if os.path.exists(c)), None)
+if path:
     with open(path, 'r', encoding='utf-8') as f:
         for line in f:
             if line.startswith('#'):
@@ -116,16 +127,14 @@ if os.path.exists(path):
                 if heading.startswith('Story '):
                     print(heading)
                 else:
-                    parts = sys.argv[2].split('-')
                     print('Story ' + parts[0] + '.' + parts[1] + ': ' + heading if len(parts) >= 2 else heading)
                 break
 else:
-    parts = sys.argv[2].split('-')
     if len(parts) >= 2:
         title_part = ' '.join(parts[2:]).title() if len(parts) > 2 else 'Untitled'
         print('Story ' + parts[0] + '.' + parts[1] + ': ' + title_part)
     else:
-        print(sys.argv[2])
+        print(entry)
 " {implementation_artifacts} {entry}
                 STORE: entry_title
       # --- Parse status from sprint-status (format: "key: status") ---
