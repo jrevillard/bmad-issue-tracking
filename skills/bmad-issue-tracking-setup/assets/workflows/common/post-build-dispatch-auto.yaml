@@ -1,18 +1,54 @@
 # common/post-build-dispatch-auto.yaml
 #
-# Purpose: Dispatcher for the UNATTENDED flow (bmad-build-auto) — sets the
-#          review_producer flag, then delegates to the common dispatcher.
-#          bmad-build-auto's step-04 appends a '### <date> — Review pass' entry to
-#          the spec's '## Review Triage Log' on EVERY pass, unconditionally. That is
-#          the only producer guarantee of its kind: bmad-build writes one row per
-#          finding and bmad-code-review writes nothing at all on a clean review, so
-#          for those two a missing or empty review section is legitimate. Setting the
-#          flag here — in a workflow step, not in hook prose — is what lets
-#          post-dev-complete halt on an unrun review without blocking the others.
-# Input variables: (none — dispatcher reads spec itself)
+# Purpose: Dispatcher for the UNATTENDED flow (bmad-build-auto) — the entry point of its
+#          on_complete hook. Two behaviours, decided by a marker file:
+#
+#          1. CALLER OWNS THE CHAIN (<worktree>/.bmad-ci-handled exists) — do NOTHING.
+#             bmad-build-converge writes that marker before dispatching bmad-build-auto,
+#             because it already does this chain's work itself: it pushes, ensures the MR,
+#             polls the pipeline (scripts/ci-monitor.sh) and merges, and it syncs the story
+#             issue. Running the chain too would be a duplicate, and its CI wait would
+#             re-introduce inside every build dispatch the delay converge's convergence loop
+#             deliberately removed ("NO CI WAIT … saves ~3-5min per iter"): measured at
+#             47-305 s per dispatch in the run traces.
+#             The guard sits HERE, at the entry point, so nothing downstream runs — not
+#             check-config, not the spec read, not the status routing, not a phase.
+#
+#          2. NO MARKER (bmad-loop, and every other consumer) — behaviour is exactly as
+#             before: set review_producer and delegate to the common dispatcher.
+#
+#          review_producer marks the producer whose step-04 appends a
+#          '### <date> — Review pass' entry to the spec's '## Review Triage Log' on EVERY
+#          pass, unconditionally. That is the only producer guarantee of its kind:
+#          bmad-build writes one row per finding and bmad-code-review writes nothing at all
+#          on a clean review, so for those two a missing or empty section is legitimate.
+#          post-dev-complete halts on an unrun review only when this flag is set.
+# Input variables: (none — the marker is read from the worktree; the spec is read by the
+#                  common dispatcher)
 # Output variables:
-#   - review_producer: "bmad-build-auto" (the only value that guarantees a section)
-# Side effects: dispatches to common/post-dev-complete with phase set
+#   - review_producer: "bmad-build-auto" (the only value that guarantees a review section)
+#   - worktree: the worktree root, captured here because the marker lives in it
+#   - ci_handled: non-empty when the caller owns the post-completion chain
+# Side effects: when the marker is ABSENT, dispatches to common/post-build-complete with
+#               phase set (and so pushes, writes ci-status.json, updates the issue and
+#               ensures the MR). When the marker is PRESENT, none of that happens.
+#
+# `pwd` first: {worktree} is not in scope in this file (post-dev-complete.yaml sets it the
+# same way at its own top). The hook runs with cwd = the story worktree — both of
+# bmad-build-converge's build dispatches pass cwd: setup.worktreePath and the dispatch
+# wrapper cds into it — so this is exactly where the caller wrote the marker.
 
+- RUN: pwd
+  STORE: worktree
+# `cat` on a missing file is an expected non-zero exit; EXPECT_EXIT: any yields the empty
+# value the CHECK below branches on.
+- RUN: cat "{worktree}/.bmad-ci-handled" 2>/dev/null
+  STORE: ci_handled
+  EXPECT_EXIT: any
+- CHECK: empty ci_handled
+  FALSE:
+    - OUTPUT:
+        message: "The caller owns this story's post-completion chain ({worktree}/.bmad-ci-handled is present), so this hook does nothing — no push, no CI wait, no issue write. bmad-build-converge does all of it."
+        stop: true
 - SET: { variable: review_producer, value: "bmad-build-auto" }
 - INCLUDE: common/post-build-dispatch

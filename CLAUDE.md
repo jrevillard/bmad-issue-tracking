@@ -192,13 +192,16 @@ caller needs different behaviour it declares that through something a step CAN r
 | Channel | Set by | Read by | Effect |
 |---|---|---|---|
 | `review_producer="bmad-build-auto"` | `common/post-build-dispatch-auto.yaml`, used only by the bmad-build-auto hook | post-dev-complete review-finish | halt on an absent/empty review section (the only producer that guarantees one) |
-| `<worktree>/.bmad-ci-handled` (file) | the caller, before dispatching | post-dev-complete, both phases | skip `wait-for-green-ci` + `write-ci-status` |
+| `<worktree>/.bmad-ci-handled` (file) | the caller, before dispatching | `common/post-build-dispatch-auto.yaml`, at its FIRST step | the WHOLE chain does nothing — no `check-config`, no spec read, no routing, no phase |
 
-The marker file exists because a caller (bmad-build-converge) polls CI itself and its
-convergence loop deliberately does not wait for CI between review iterations; the module's
-own blocks Duplicated that wait inside every build dispatch (measured 47-305 s per
-dispatch in the run traces). Absent marker → unchanged behaviour, so bmad-loop is
-untouched and still gets the `ci-status.json` its `[verify]` requires.
+The marker file exists because a caller (bmad-build-converge) does the whole chain itself —
+it pushes, ensures the MR, polls the pipeline and merges — so running the module's chain too
+is a pure duplicate, and its CI wait re-introduces inside every build dispatch the delay the
+convergence loop deliberately removed (measured 47-305 s per dispatch in the run traces).
+Absent marker → unchanged behaviour, so bmad-loop is untouched and still gets the
+`ci-status.json` its `[verify]` requires. The guard lives at the ENTRY POINT
+(`post-build-dispatch-auto.yaml`, before the INCLUDE) precisely so nothing downstream runs;
+placing it later would leave `check-config`, the spec read and the routing executing.
 
 Convention for any future channel: a **file or a workflow variable set by a wrapper we
 ship**, never a shell variable, and always with the "absent → previous behaviour"
