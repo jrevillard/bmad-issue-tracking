@@ -94,6 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All Python invocations use `uv run --no-project python -c` so `uv run` does not create `.venv`/`uv.lock` in consuming projects with a `pyproject.toml` (which `git add .` would otherwise commit into worktrees)
 - `test_python_sys_argv_has_import` now scans the full multi-line `uv run python` body instead of only the first line of each RUN step — the missing-imports bug was invisible to the previous check
 
+### Changed
+
+- README: corrected the documented `module` key in `module-manifest.toml` from `issue-tracking` to the actual `bmad-issue-tracking`; added a Development setup section explaining that BMM core is not colocated in this repo.
+
 ## [2.2.0] - 2026-05-28
 
 [compare v2.1.0...v2.2.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.1.0...v2.2.0)

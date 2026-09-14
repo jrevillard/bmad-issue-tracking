@@ -2,7 +2,7 @@
 
 BMAD module that mirrors sprint tracking to GitLab Issues or GitHub Issues. Supports both cloud and self-hosted instances via their respective CLIs (`glab` / `gh`).
 
-Uses native BMad TOML customization for workflow integrations. Ships as a Skills-as-modules module (manifest declares `module = "issue-tracking"`).
+Uses native BMad TOML customization for workflow integrations. Ships as a Skills-as-modules module (manifest declares `module = "bmad-issue-tracking"`).
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ From the project root:
 npx skills add jrevillard/bmad-issue-tracking
 ```
 
-The installer reads each `skills/<name>/module-manifest.toml`; both declare `module = "issue-tracking"`. After install, two slash commands become available:
+The installer reads each `skills/<name>/module-manifest.toml`; both declare `module = "bmad-issue-tracking"`. After install, two slash commands become available:
 
 - `/bmad-issue-tracking-sync` — Sync sprint status to issues
 - `/bmad-issue-tracking-setup` — Deploy TOML overrides and shared tasks (run once)
@@ -82,6 +82,22 @@ Handy when iterating on `<skill>/module-manifest.toml`, `references/help.md`, or
 
 - `npx skills update` won't roll either form forward to a tagged release — you'll need to remove the dev install (`npx skills remove`) and reinstall via the production command.
 - The `bmad setup` doctor's `state: "blocked"` for the `issue-tracking` module is *expected* until you publish a tag matching the manifest's `version`. The install itself is healthy — only the release comparability check fails.
+
+## Development setup
+
+This repo ships **only this module's two skills** (`bmad-issue-tracking-setup`,
+`bmad-issue-tracking-sync`). BMM core is NOT colocated here.
+
+To test the install flow end-to-end, use a throwaway consumer project — never
+reinstall BMM into this repo:
+
+```bash
+mkdir /tmp/bmad-issue-tracking-consumer
+cd /tmp/bmad-issue-tracking-consumer
+npx skills add bmad-code-org/BMAD-METHOD
+npx skills add /home/jerome/git_projects/bmad-issue-tracking   # this repo
+# picker lists exactly 2 skills
+```
 
 ## What gets installed
 
