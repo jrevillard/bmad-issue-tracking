@@ -1,6 +1,18 @@
 # common/update-issue-description.yaml
 #
 # Purpose: Updates an issue description from a pre-written file.
+#          Body refresh is INVOKED ONLY when an upstream artifact changed
+#          (PRD / architecture / UX / sprint epics or stories) — the
+#          consumers are the workflow `complete.yaml` flows: bmad-prd,
+#          edit-prd, and correct-course (see grep call sites below).
+#          Label-only sync (sprint-status changes) deliberately does NOT
+#          call this — see common/sync-issues.yaml. The split keeps the
+#          unattended sync idempotent (no body thrash on every label
+#          reconcile) and prevents manual edits to issue bodies from
+#          being silently overwritten when only the status label flips.
+#          Callers (grep `INCLUDE: common/update-issue-description` under
+#          assets/workflows/): bmad-prd/complete.yaml, edit-prd/complete.yaml,
+#          correct-course/complete.yaml (3 sites).
 # Input variables:
 #   - issue_id: the numeric ID of the issue (IID for GitLab, number for GitHub)
 #   - description_file: path to the file containing the new description

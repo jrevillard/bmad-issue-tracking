@@ -178,6 +178,10 @@ for l in json.load(sys.stdin)['labels']:
                 - RUN: gh api "repos/{project}/issues/{issue_id}" --hostname {host} --jq '[.labels[] | select(.name | startswith("status:")) | .name][0] // "none"'
                   STORE: current_status_label
                   PLATFORM: github
+          # Body reconciliation is intentionally absent here. This flow mirrors
+          # sprint-status.yaml to STATUS LABELS only — common/update-issue-description
+          # is invoked by the workflow complete.yaml flows (bmad-prd, edit-prd,
+          # correct-course) when an upstream artifact actually changed.
           - CHECK: current_status_label eq "status{sep}{mapped_status}"
             TRUE:
               # Already in sync

@@ -98,6 +98,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - README: corrected the documented `module` key in `module-manifest.toml` from `issue-tracking` to the actual `bmad-issue-tracking`; added a Development setup section explaining that BMM core is not colocated in this repo.
 
+### Changed
+
+- `common/update-issue-description.yaml`: header `Purpose` expanded with design note explaining the file is invoked only when an upstream artifact changes (5 known `complete.yaml` call sites), and the rationale for excluding it from label-sync.
+- `common/sync-issues.yaml`: inline comment near the status-check block clarifying that body reconciliation is intentionally absent — label-sync and body-refresh are deliberately split.
+
 ## [2.2.0] - 2026-05-28
 
 [compare v2.1.0...v2.2.0](https://github.com/jrevillard/bmad-issue-tracking/compare/v2.1.0...v2.2.0)
