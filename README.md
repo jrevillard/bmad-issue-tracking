@@ -11,6 +11,26 @@ Uses native BMad TOML customization for workflow integrations. Ships as a Skills
 - Repository with Issues enabled
 - `uv` (mandatory from BMM 6.12.0+)
 
+## Architecture
+
+The module plugs into BMM via two TOML hooks per target workflow:
+
+- **`activation_steps_append`** — runs *before* the BMM workflow: sets up the worktree, resolves variables (`prd_key`, `story_key`, branch patterns), captures context.
+- **`on_complete`** — runs *after* the BMM workflow: commits, pushes, creates/updates issues, manages MRs, posts comments.
+
+The TOML files in `assets/custom/` are pure pointers — they reference workflow YAML files in `assets/workflows/` (deployed to `_bmad/_config/custom/workflows/`) that carry the actual logic. No business logic lives in TOML.
+
+For the full architecture — branch/MR direction table, platform differences, step-authoring rules, caller-negotiation channels, bmad-loop integration design — see [CLAUDE.md](./CLAUDE.md).
+
+## CI integration
+
+The module participates in your CI pipeline via two layers:
+
+- **`common/wait-for-green-ci.yaml`** — the on_complete hook polls the MR/PR pipeline (via `common/get-mr-pipeline.yaml` + `common/get-failed-jobs.yaml`) and blocks until green.
+- **`ci-status.sh`** — the bmad-loop `[verify]` command (deployed to `.bmad-loop/ci-status.sh` by the setup skill). Reads the latest `ci-status.json` written by the unified workflow; exits 0 (green) or 1 (red, with diagnostic). The intelligent work (polling, log parsing, distinguishing flaky from real) is done by the on_complete hook — `ci-status.sh` is a fast, deterministic file-read.
+
+In the manual flow (`/bmad-build`), the hook blocks the workflow on CI. In the bmad-loop flow, a red CI triggers an automatic repair session (re-invoke `bmad-build-auto` with the diagnostic) up to `max_dev_attempts` before deferring the story.
+
 ## Installation
 
 ### 1. Install BMad core first (one-time per project)
@@ -21,7 +41,7 @@ The issue-tracking module extends a project that already has BMad set up:
 npx skills add bmad-code-org/BMAD-METHOD
 ```
 
-Then open your coding tool in the project and ask the `bmad` skill to run `bmad setup` (this materializes `_bmad/` in your project, including `bmm` ≥ 6.11.0).
+Then open your coding tool in the project and ask the `bmad` skill to run `bmad setup` (this materializes `_bmad/` in your project, including `bmm` ≥ 6.12.0).
 
 ### 2. Add the issue-tracking module
 
@@ -50,7 +70,7 @@ This deploys TOML overrides to `_bmad/custom/`, shared tasks to `_bmad/_config/c
 - **Connection** (host and project) — always configured explicitly
 - **Branch patterns** (PRD branch, story branches) — controls automatic branch and MR/PR creation
 
-### 3. PRD key
+### 4. PRD key
 
 `prd_key` is captured automatically when running `/bmad-create-prd` (via `activation_steps_append`). No manual configuration needed.
 
@@ -119,18 +139,18 @@ Deployed to `_bmad/custom/`. Survive BMM updates automatically.
 | `bmad-create-prd.toml` | `create-prd` | `activation_steps_append`, `on_complete` | Captures `prd_key` at activation, creates PRD issue + PRD branch + draft PR/MR on completion. Superseded by `bmad-prd.toml` |
 | `bmad-prd.toml` | `bmad-prd` | `activation_steps_append`, `on_complete` | Unified PRD override: detects create/update/validate intent, replaces `bmad-create-prd.toml` and `bmad-edit-prd.toml` |
 | `bmad-create-architecture.toml` | `create-architecture` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
-| `bmad-ux.toml` | `bmad-ux` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion. Replaces `bmad-create-ux-design.toml` (skill removed in BMM 6.11.0) |
+| `bmad-ux.toml` | `bmad-ux` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion. Replaces `bmad-create-ux-design.toml` (skill removed in BMM 6.12.0) |
 | `bmad-create-epics-and-stories.toml` | `create-epics-and-stories` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, commits and pushes on completion |
 | `bmad-create-story.toml` | `create-story` | `activation_steps_append`, `on_complete` | Sets up story worktree at activation, creates issue + MR on completion (shim — deprecated upstream, `bmad-build` is the official path) |
 | `bmad-dev-story.toml` | `dev-story` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts summary, updates status (shim — deprecated upstream, `bmad-build` is the official path) |
 | `bmad-code-review.toml` | `code-review` | `activation_steps_append`, `on_complete` | Switches to story worktree at activation, posts review, updates status |
 | `bmad-sprint-planning.toml` | `sprint-planning` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync |
-| `bmad-sprint-status.toml` | `sprint-status` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync (consolidated into `bmad-sprint-planning` in BMM 6.11.0, retained as shim alias) |
+| `bmad-sprint-status.toml` | `sprint-status` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, triggers full issue sync (consolidated into `bmad-sprint-planning` in BMM 6.12.0, retained as shim alias) |
 | `bmad-edit-prd.toml` | `edit-prd` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates PRD issue description. Superseded by `bmad-prd.toml` |
 | `bmad-correct-course.toml` | `correct-course` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, updates issue descriptions for modified stories/epics/PRD |
 | `bmad-retrospective.toml` | `retrospective` | `activation_steps_append`, `on_complete` | Switches to PRD worktree at activation, creates issue with retrospective content |
 
-> **Note:** All overrides require BMM 6.11.0+ (uniform customize.toml support across all BMM workflows; targets the 6.11.0 skill set).
+> **Note:** All overrides require BMM 6.12.0+ (uniform customize.toml support across all BMM workflows; targets the 6.12.0 skill set).
 
 ### Shared custom tasks (via setup)
 
@@ -178,7 +198,7 @@ When `branch_patterns` is configured in the setup:
 
 The module is compatible with [`bmad-loop`](https://github.com/bmad-code-org/bmad-loop) (deterministic orchestrator that drives `bmad-build-auto` per story in isolated worktrees). bmad-loop is the single writer of `sprint-status.yaml`; the module mirrors it to issues. **Zero user interaction** during the run.
 
-**Prerequisites:** bmad-loop ≥ 0.9.0, BMM ≥ 6.10.0, `sprint-status.yaml` from `bmad-sprint-planning`.
+**Prerequisites:** bmad-loop ≥ 0.9.0, BMM ≥ 6.12.0, `sprint-status.yaml` from `bmad-sprint-planning`.
 
 **Flow:**
 
@@ -235,6 +255,20 @@ The architecture is simpler: at the end of every `bmad-build-auto` session, the 
 
 Set `issue_tracking.enabled: false` in `_bmad/custom/issue-tracking.yaml`.
 
+## Troubleshooting
+
+**`bmad doctor` reports `state: "blocked"` for `issue-tracking`.** Expected until a tag matching the manifest's `version` is published. The install itself is healthy — only the release comparability check fails. (Dev installs always show this.)
+
+**`/bmad-issue-tracking-setup` says "platform mismatch".** Your git remote (origin) and issue tracker are on different platforms (e.g. code on GitLab, issues on GitHub). The setup skill detects the mismatch and asks for the issue tracker host and project explicitly. The `git_platform` is set from the remote; `platform` is set from your answer. Issue ops use `platform`; MR/PR ops use `git_platform`. See [CLAUDE.md § Platform differences](./CLAUDE.md#platform-differences).
+
+**Stories appear in the wrong issue.** Parallel PRDs collide on story keys (`1-3-login-form` in two PRDs). `common/find-issue.yaml` is scoped by `prd_key` — pass it explicitly from the workflow (`prd_key` is captured during PRD activation and re-derived from `prd.md` in unattended flows).
+
+**`/bmad-issue-tracking-sync` prompts for `prd_key`.** You're running it without a PRD worktree. Use `common/find-prd-key.yaml` (auto-resolves from `prd.md` at the repo root, fails closed) or pass `prd_key` via the workflow variable scope. The bmad-loop flow runs unattended — see [CLAUDE.md § bmad-loop flow](./CLAUDE.md#bmad-loop-flow-unattended).
+
+**`ci-status.json` missing on disk.** The on_complete hook didn't run — typically because the build session was interrupted before reaching the hook. Re-run the build to regenerate. The `ci-status.sh` verify treats missing `ci-status.json` as fixable (rc=1), so bmad-loop retries via a repair session rather than escalating.
+
+**`prd_key` is empty in `_bmad/custom/issue-tracking.yaml`.** Normal for new installs — it's captured automatically the first time `/bmad-create-prd` (or `bmad-prd` with create intent) runs via `activation_steps_append`. Not a bug.
+
 ## Configuration
 
 The `issue_tracking` block in `_bmad/custom/issue-tracking.yaml` controls the integration:
@@ -256,4 +290,8 @@ issue_tracking:
 - **`branch_patterns.prd`** — required. Pattern for the PRD branch. Must contain `{prd_key}`.
 - **`branch_patterns.story`** — required. Pattern for story branches. Must contain `{prd_key}` and `{story_key}`.
 
-**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), the setup skill detects the mismatch and asks for the issue tracker host and project explicitly.
+**Cross-platform scenario:** If your code is on GitLab but you want to track issues on GitHub (or vice versa), the setup skill detects the mismatch and asks for the issue tracker host and project explicitly. The `git_platform` (from the remote) drives MR/PR ops; the `platform` (from your answer) drives issue ops.
+
+## License
+
+Released under the MIT License. A `LICENSE` file should accompany releases — if you cloned this repo and it is missing, request it from the maintainer or open an issue.
