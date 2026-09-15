@@ -14,6 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved bmad-loop integration scripts from `skills/bmad-issue-tracking-setup/assets/bmad-loop/` to `skills/bmad-issue-tracking-setup/scripts/bmad-loop/` and `skills/bmad-issue-tracking-setup/scripts/close-trace-mr/`. The setup skill's `module-manifest.toml` declares these in its `scripts = [...]` field so the new installer publishes them.
 - TOML overrides (`assets/custom/bmad-*.toml`), workflow YAMLs (`assets/workflows/**`), and `assets/bmad-workflow-lang.md` keep their current locations — they remain consumer-deployed `cp` payloads driven by the setup skill.
 - Version bumped to **3.0.0** (major: install mechanism change is not backward-compatible).
+- `bmad-create-story.toml`, `bmad-dev-story.toml`, `bmad-code-review.toml`: `on_complete` hooks now delegate to the unified wrapper workflows instead of running the post-completion logic inline. Single source of truth for the issue-tracking lifecycle.
+- Removed the `story-track-dev` and `story-track-review` bmad-loop plugins. They were redundant: the `bmad-build-auto.toml` `on_complete` hook (which the bmad-build-auto skill executes at the end of every session — including when bmad-loop invokes it) already drives the unified workflow. The setup step 3c now deploys only `ci-status.sh`; no `[plugins] enabled` entries are needed.
+- `ci-status.sh`: missing or invalid `ci-status.json` now exits `1` (fixable) instead of `126` (env-fault). The bmad-loop verify classification changes accordingly: missing ci-status.json triggers a repair session instead of a CRITICAL escalation, so the bmad-loop run can self-heal across multiple stories.
+- **Requires BMM 6.12.0+** (was 6.4.0+): targets the 6.12.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
+- All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.12.0 makes `uv` a real requirement and stops assuming a system Python).
+- `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.12.0.
+- `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.12.0 shim honors the legacy override fields).
+- `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
+- **CI architecture restructured**: `ci-wait.sh` (shell script that waited for CI) replaced by `ci-status.sh` (shell script that reads `ci-status.json`) + two LLM workflows (`story-track-dev` at `post_dev_phase` + `story-track-review` at `post_review_result`). The two-stage architecture ensures every story that completes dev gets pushed + CI + MR, and stories that complete review get review modifications committed + pushed + CI + issue tracking.
+- `code-review/complete.yaml` and `dev-story/complete.yaml` now `INCLUDE common/post-issue-comment` instead of inlining platform-specific glab/gh comment steps — single source of truth for comment posting logic.
+- `story-track-dev` (bmad-loop plugin, `post_dev_phase`) now sets the story issue to `status::in-progress` after the trace MR is created. Uses `common/find-issue.yaml` + `common/update-issue-status.yaml` (no inline glab/gh calls). Skips silently on any failure. Skipped when the story is `awaiting-operator`. The "Do NOT track issues" constraint is removed.
+- `story-track-review` (bmad-loop plugin, `post_review_result`) now references `common/find-issue.yaml`, `common/update-issue-status.yaml`, and `common/post-issue-comment.yaml` instead of inlining platform-specific API calls. CI green → `status::done` + close; CI red → `status::in-progress` + keep open + comment with failure details; issue not found → OUTPUT message + skip; comment fails → best-effort + OUTPUT message + continue.
+- README: corrected the documented `module` key in `module-manifest.toml` from `issue-tracking` to the actual `bmad-issue-tracking`; added a Development setup section explaining that BMM core is not colocated in this repo.
+- `common/update-issue-description.yaml`: header `Purpose` expanded with design note explaining the file is invoked only when an upstream artifact changes (5 known `complete.yaml` call sites), and the rationale for excluding it from label-sync.
+- `common/sync-issues.yaml`: inline comment near the status-check block clarifying that body reconciliation is intentionally absent — label-sync and body-refresh are deliberately split.
 
 ### Added
 
@@ -26,25 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `common/ensure-issue.yaml` reusable workflow: finds the story's issue by title (scoped by prd label) and creates it if missing, with the story spec body, sprint key, epic and prd context. Used by `create-story` and `dev-finish` phases.
 - `common/ensure-mr.yaml` reusable workflow: finds the story's trace MR/PR by source branch and creates it if missing, with the issue reference (same-platform `#id`, cross-platform full URL). Used by `create-story` and `dev-finish` phases.
 - `bmad-build.toml` and `bmad-build-auto.toml` workflow overrides: route the `on_complete` hook to `common/post-build-dispatch.yaml`. Both flows (manual `/bmad-build` and bmad-loop `/bmad-build-auto`) now share the same unified post-completion logic.
-
-### Changed
-
-- `bmad-create-story.toml`, `bmad-dev-story.toml`, `bmad-code-review.toml`: `on_complete` hooks now delegate to the unified wrapper workflows instead of running the post-completion logic inline. Single source of truth for the issue-tracking lifecycle.
-- Removed the `story-track-dev` and `story-track-review` bmad-loop plugins. They were redundant: the `bmad-build-auto.toml` `on_complete` hook (which the bmad-build-auto skill executes at the end of every session — including when bmad-loop invokes it) already drives the unified workflow. The setup step 3c now deploys only `ci-status.sh`; no `[plugins] enabled` entries are needed.
-- `ci-status.sh`: missing or invalid `ci-status.json` now exits `1` (fixable) instead of `126` (env-fault). The bmad-loop verify classification changes accordingly: missing ci-status.json triggers a repair session instead of a CRITICAL escalation, so the bmad-loop run can self-heal across multiple stories.
-
-
-### Changed
-
-- **Requires BMM 6.11.0+** (was 6.4.0+): targets the 6.11.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
-- All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.11.0 makes `uv` a real requirement and stops assuming a system Python).
-- `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.11.0.
-- `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
-- `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
-- **CI architecture restructured**: `ci-wait.sh` (shell script that waited for CI) replaced by `ci-status.sh` (shell script that reads `ci-status.json`) + two LLM workflows (`story-track-dev` at `post_dev_phase` + `story-track-review` at `post_review_result`). The two-stage architecture ensures every story that completes dev gets pushed + CI + MR, and stories that complete review get review modifications committed + pushed + CI + issue tracking.
-- `code-review/complete.yaml` and `dev-story/complete.yaml` now `INCLUDE common/post-issue-comment` instead of inlining platform-specific glab/gh comment steps — single source of truth for comment posting logic.
-- `story-track-dev` (bmad-loop plugin, `post_dev_phase`) now sets the story issue to `status::in-progress` after the trace MR is created. Uses `common/find-issue.yaml` + `common/update-issue-status.yaml` (no inline glab/gh calls). Skips silently on any failure. Skipped when the story is `awaiting-operator`. The "Do NOT track issues" constraint is removed.
-- `story-track-review` (bmad-loop plugin, `post_review_result`) now references `common/find-issue.yaml`, `common/update-issue-status.yaml`, and `common/post-issue-comment.yaml` instead of inlining platform-specific API calls. CI green → `status::done` + close; CI red → `status::in-progress` + keep open + comment with failure details; issue not found → OUTPUT message + skip; comment fails → best-effort + OUTPUT message + continue.
+- **bmad-loop integration** (unattended dev loop): the module now mirrors sprint-status maintained by `bmad-loop` (single writer of `sprint-status.yaml`, compatible status values).
+- **Two-stage story tracking**: `story-track-dev` (at `post_dev_phase`) pushes code + waits CI + creates MR for every completed story; `story-track-review` (at `post_review_result`) commits review changes + waits CI + tracks issue only when review completes. Fixes bug where stories that skip review weren't pushed.
+- **`ci-status.sh`** bmad-loop `[verify]` command (`assets/bmad-loop/ci-gate/ci-status.sh`, deployed by setup step 3c): reads `ci-status.json` (written by story-track-dev or story-track-review), exits 0 (green) or 1 (red with diagnostic). Replaces old `ci-wait.sh` (238 lines → 57 lines).
+- `/bmad-bmm-issue-sync` is now **unattended**: new `common/find-prd-key.yaml` resolves `prd_key` from `prd.md` without a PRD worktree or prompts (fails closed); `common/mark-mr-ready.yaml` is a no-op when no MR exists. Run it after `bmad-loop run`, then `git push origin main`.
+- `awaiting-operator` status support (bmad-loop): `status::awaiting-operator` label created and the issue stays **open** (external action pending, confirmed via `bmad-loop confirm`).
 
 ### Fixed
 
@@ -61,47 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.11.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.
-
-- **Requires BMM 6.11.0+** (was 6.4.0+): targets the 6.11.0 skill set — `bmad-ux`, consolidated `bmad-sprint-planning`, `uv`-based tooling. Version gate in setup updated.
-- All Python invocations in workflow YAMLs migrated from `python3 -c` to `uv run python -c` (BMM 6.11.0 makes `uv` a real requirement and stops assuming a system Python).
-- `bmad-create-ux-design` override renamed to `bmad-ux` (workflow `create-ux-design/` → `bmad-ux/`) — the skill was removed in BMM 6.11.0.
-- `bmad-sprint-status` documented as consolidated into `bmad-sprint-planning` (retained as a shim alias — the BMM 6.11.0 shim honors the legacy override fields).
-- `bmad-create-story` / `bmad-dev-story` documented as shims (deprecated upstream in favor of `bmad-build`).
-- **CI architecture restructured**: `ci-wait.sh` (shell script that waited for CI) replaced by `ci-status.sh` (shell script that reads `ci-status.json`) + two LLM workflows (`story-track-dev` at `post_dev_phase` + `story-track-review` at `post_review_result`). The two-stage architecture ensures every story that completes dev gets pushed + CI + MR, and stories that complete review get review modifications committed + pushed + CI + issue tracking.
-
-### Added
-
-- **bmad-loop integration** (unattended dev loop): the module now mirrors sprint-status maintained by `bmad-loop` (single writer of `sprint-status.yaml`, compatible status values).
-- **Two-stage story tracking**: `story-track-dev` (at `post_dev_phase`) pushes code + waits CI + creates MR for every completed story; `story-track-review` (at `post_review_result`) commits review changes + waits CI + tracks issue only when review completes. Fixes bug where stories that skip review weren't pushed.
-- **`ci-status.sh`** bmad-loop `[verify]` command (`assets/bmad-loop/ci-gate/ci-status.sh`, deployed by setup step 3c): reads `ci-status.json` (written by story-track-dev or story-track-review), exits 0 (green) or 1 (red with diagnostic). Replaces old `ci-wait.sh` (238 lines → 57 lines).
-- `/bmad-bmm-issue-sync` is now **unattended**: new `common/find-prd-key.yaml` resolves `prd_key` from `prd.md` without a PRD worktree or prompts (fails closed); `common/mark-mr-ready.yaml` is a no-op when no MR exists. Run it after `bmad-loop run`, then `git push origin main`.
-- `awaiting-operator` status support (bmad-loop): `status::awaiting-operator` label created and the issue stays **open** (external action pending, confirmed via `bmad-loop confirm`).
-
-### Removed
-
-- `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.11.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.
-
-### Fixed
-
-- **GitLab nested-group namespaces fixed**: the GitLab API requires the URL-encoded project path (`projects/un%2Fitu%2Fgenie-ai`, not `projects/un/itu/genie-ai`). `common/check-config.yaml` now computes `project_enc` and all `glab api "projects/..."` calls (issue sync, find/create/update issues, labels, board, code-review/dev-story comments, `ci-wait.sh`, `story-track`) use it — projects under group/subgroup namespaces work.
-- `ci-wait.sh` (bmad-loop CI gate): configuration/environment errors now exit **126** (bmad-loop's env-fault class → the run escalates/pauses, budget resets) instead of 1 (fixable → futile repair burn → story defer). A red/timeout CI still exits 1 → `_fix_phase`.
-- `ci-wait.sh`: platform resolved from `_bmad/custom/issue-tracking.yaml` (`git_platform`) so self-hosted GitLab/GitHub instances work; inline YAML comments stripped; glab/gh API or auth failures escalate instead of silently passing as "no pipeline".
-- `story-track`: the trace MR now targets the **PRD branch** (`branch_patterns.prd`) instead of `main`, its title follows the module's convention `Story {epic}.{story}: {title}` instead of `CI: {branch}`, and a re-driven story's stale trace MR is **closed with a new one created on the current branch** (the GitLab API does not support changing an MR's source branch) — one active trace MR per story.
-- `ensure-board.yaml`: added missing `--paginate` to `glab api projects/{project}/labels` — projects with >20 labels would miss status labels beyond the first page, causing board columns to not be created
-- `find-issue.yaml`: added missing `--paginate` to GitHub `gh api search/issues` — could miss issue matches beyond the first 100 results
-- `sync-issues.yaml`: four `uv run python` blocks referenced `sys.argv` without `import sys` (NameError at runtime) — added the missing imports
-- All Python invocations use `uv run --no-project python -c` so `uv run` does not create `.venv`/`uv.lock` in consuming projects with a `pyproject.toml` (which `git add .` would otherwise commit into worktrees)
-- `test_python_sys_argv_has_import` now scans the full multi-line `uv run python` body instead of only the first line of each RUN step — the missing-imports bug was invisible to the previous check
-
-### Changed
-
-- README: corrected the documented `module` key in `module-manifest.toml` from `issue-tracking` to the actual `bmad-issue-tracking`; added a Development setup section explaining that BMM core is not colocated in this repo.
-
-### Changed
-
-- `common/update-issue-description.yaml`: header `Purpose` expanded with design note explaining the file is invoked only when an upstream artifact changes (5 known `complete.yaml` call sites), and the rationale for excluding it from label-sync.
-- `common/sync-issues.yaml`: inline comment near the status-check block clarifying that body reconciliation is intentionally absent — label-sync and body-refresh are deliberately split.
+- `bmad-check-implementation-readiness` override — the skill was removed in BMM 6.12.0 (readiness validation folded into `bmad-sprint-planning`). Its "update issue descriptions if artifacts modified" behavior is not carried over; issue statuses are maintained by the regular issue sync.
 
 ## [2.2.0] - 2026-05-28
 
